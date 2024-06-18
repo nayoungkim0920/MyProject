@@ -1,0 +1,5 @@
+-DWIN32
+--compiler-flavor=msvc
+-o
+C:/myLab/Project1/Project1/build/moc_ImageProcessor.cpp
+C:/myLab/Project1/Project1/ImageProcessor.h

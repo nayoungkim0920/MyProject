@@ -1,0 +1,80 @@
+cmake_minimum_required(VERSION 3.14)
+project(Project1)
+
+# Qt 및 OpenCV 설정
+set(CMAKE_PREFIX_PATH "C:/Qt/6.7.1/msvc2019_64" "C:/opencv/sources/build")
+
+# Qt 및 OpenCV 패키지 찾기
+find_package(Qt6 REQUIRED COMPONENTS Widgets Core Gui)
+find_package(OpenCV REQUIRED)
+
+# 실행 파일 추가
+add_executable(Project1
+    main.cpp
+    MainWindow.cpp
+    MainWindow.h
+    MainWindow.ui
+    ImageProcessor.cpp
+    ImageProcessor.h
+)
+
+# Qt 및 OpenCV 라이브러리 링크
+target_link_libraries(Project1
+    Qt6::Widgets
+    Qt6::Core
+    Qt6::Gui
+    ${OpenCV_LIBS}
+)
+
+# 실행 파일 출력 디렉토리 설정
+set_target_properties(Project1 PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/Debug"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/Release"
+)
+
+# DLL 복사
+# 디버그 빌드에서의 OpenCV opencv_world DLL 복사
+add_custom_command(TARGET Project1 POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "C:/opencv/build/x64/vc16/bin/opencv_world490d.dll" "$<TARGET_FILE_DIR:Project1>"
+    COMMENT "Copying OpenCV Debug opencv_world DLL to output directory"
+)
+
+# 릴리스 빌드에서의 OpenCV opencv_world DLL 복사
+add_custom_command(TARGET Project1 POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "C:/opencv/build/x64/vc16/bin/opencv_world490.dll" "$<TARGET_FILE_DIR:Project1>"
+    COMMENT "Copying OpenCV Release opencv_world DLL to output directory"
+)
+
+# 디버그 빌드에서의 OpenCV DLL 복사
+add_custom_command(TARGET Project1 POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "C:/opencv/sources/build/bin/Debug/opencv_imgcodecs490d.dll" "$<TARGET_FILE_DIR:Project1>"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "C:/opencv/sources/build/bin/Debug/opencv_core490d.dll" "$<TARGET_FILE_DIR:Project1>"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "C:/opencv/sources/build/bin/Debug/opencv_imgproc490d.dll" "$<TARGET_FILE_DIR:Project1>"
+    COMMENT "Copying OpenCV Debug DLLs to output directory"
+)
+
+# 릴리스 빌드에서의 OpenCV DLL 복사
+add_custom_command(TARGET Project1 POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "C:/opencv/sources/build/bin/Release/opencv_imgcodecs490.dll" "$<TARGET_FILE_DIR:Project1>"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "C:/opencv/sources/build/bin/Release/opencv_core490.dll" "$<TARGET_FILE_DIR:Project1>"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "C:/opencv/sources/build/bin/Release/opencv_imgproc490.dll" "$<TARGET_FILE_DIR:Project1>"
+    COMMENT "Copying OpenCV Release DLLs to output directory"
+)
+
+
+# MOC 파일 생성
+qt6_wrap_cpp(MOC_FILES
+    MainWindow.h
+    ImageProcessor.h
+)
+
+# 생성된 MOC 파일을 소스에 추가
+target_sources(Project1 PRIVATE ${MOC_FILES})

@@ -1,0 +1,5 @@
+-DWIN32
+--compiler-flavor=msvc
+-o
+C:/myLab/Project1/Project1/build/moc_MainWindow.cpp
+C:/myLab/Project1/Project1/MainWindow.h

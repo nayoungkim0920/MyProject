@@ -1,0 +1,56 @@
+cmake_minimum_required(VERSION 3.14)
+project(Project1)
+
+# Qt 및 OpenCV 설정
+set(CMAKE_PREFIX_PATH "C:/Qt/6.7.1/msvc2019_64" "C:/opencv/sources/build")
+
+# Qt 및 OpenCV 패키지 찾기
+find_package(Qt6 REQUIRED COMPONENTS Widgets Core Gui)
+find_package(OpenCV REQUIRED)
+
+# 실행 파일 추가
+add_executable(Project1
+    main.cpp
+    MainWindow.cpp
+    MainWindow.h
+    MainWindow.ui
+    ImageProcessor.cpp
+    ImageProcessor.h
+)
+
+# Qt 및 OpenCV 라이브러리 링크
+target_link_libraries(Project1
+    Qt6::Widgets
+    Qt6::Core
+    Qt6::Gui
+    ${OpenCV_LIBS}
+)
+
+# 실행 파일 출력 디렉토리 설정
+set_target_properties(Project1 PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/Debug"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/Release"
+)
+
+# 디버그와 릴리스 구성에 따라 OpenCV DLL 복사
+add_custom_command(TARGET Project1 POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${OpenCV_DIR}/bin/opencv_world${OpenCV_VERSION_MAJOR}${OpenCV_VERSION_MINOR}${OpenCV_VERSION_PATCH}d.dll"
+    "$<TARGET_FILE_DIR:Project1>"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${OpenCV_DIR}/bin/opencv_world${OpenCV_VERSION_MAJOR}${OpenCV_VERSION_MINOR}${OpenCV_VERSION_PATCH}.dll"
+    "$<TARGET_FILE_DIR:Project1>"
+    COMMENT "Copying OpenCV DLLs to output directory"
+)
+
+# Qt의 MOC 파일 직접 추가
+qt6_wrap_cpp(MOC_FILES ImageProcessor.h)
+
+# 생성된 MOC 파일을 소스에 추가
+target_sources(Project1 PRIVATE ${MOC_FILES})
+
+# MainWindow 클래스에 대한 MOC 파일 생성
+qt6_wrap_cpp(MOC_FILES_MAIN MainWindow.h)
+
+# 생성된 MOC 파일을 소스에 추가
+target_sources(Project1 PRIVATE ${MOC_FILES_MAIN})
