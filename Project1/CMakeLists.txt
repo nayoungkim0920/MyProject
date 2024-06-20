@@ -8,13 +8,6 @@ set(CMAKE_PREFIX_PATH "C:/Qt/6.7.1/msvc2019_64" "C:/opencv/sources/build")
 find_package(Qt6 REQUIRED COMPONENTS Widgets Core Gui)
 find_package(OpenCV REQUIRED)
 
-# Intel oneAPI IPP 추가
-set(IPP_INCLUDE_DIR "C:/Program Files (x86)/Intel/oneAPI/ipp/2021.11/include")
-set(IPP_LIB_DIR "C:/Program Files (x86)/Intel/oneAPI/ipp/2021.11/lib")
-
-# 추가 포함 디렉터리 설정
-include_directories(${IPP_INCLUDE_DIR})
-
 # 실행 파일 추가
 add_executable(Project1
     main.cpp
@@ -31,18 +24,6 @@ target_link_libraries(Project1
     Qt6::Core
     Qt6::Gui
     ${OpenCV_LIBS}
-)
-
-# Intel oneAPI IPP 라이브러리 링크
-target_link_libraries(Project1
-    "${IPP_LIB_DIR}/ippimt.lib"
-    "${IPP_LIB_DIR}/ippvmmt.lib"
-    "${IPP_LIB_DIR}/ippsmt.lib"
-    "${IPP_LIB_DIR}/ippcoremt.lib"
-    "${IPP_LIB_DIR}/ippcore.lib"
-    "${IPP_LIB_DIR}/ippi.lib"
-    "${IPP_LIB_DIR}/ipps.lib"
-    "${IPP_LIB_DIR}/ippcvmt.lib"
 )
 
 # 실행 파일 출력 디렉토리 설정

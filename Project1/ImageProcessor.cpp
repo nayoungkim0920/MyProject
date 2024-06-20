@@ -28,50 +28,46 @@ bool ImageProcessor::saveImage(const std::string& fileName, const cv::Mat& image
     return true;
 }
 
-QFuture<bool> ImageProcessor::rotateImage(cv::Mat& image) {
-
-    return QtConcurrent::run([this, &image]()->bool {
-
-        QMutexLocker locker(&mutex);
-
+QFuture<bool> ImageProcessor::rotateImage(cv::Mat& image)
+{
+    return QtConcurrent::run([this, &image]() -> bool {
         try {
-
             if (image.empty()) {
                 qDebug() << "Input image is empty.";
                 return false;
             }
 
-            //이미지 회전
+            QMutexLocker locker(&mutex);
+
             cv::Mat rotatedImage;
-            cv::rotate(image, rotatedImage, cv::ROTATE_90_CLOCKWISE);
+            cv::transpose(image, rotatedImage);
+            cv::flip(rotatedImage, rotatedImage, 1);
+            image = rotatedImage;
+            lastProcessedImage = image.clone();//복사
 
-            image = rotatedImage.clone();
-            lastProcessedImage = image.clone();
+            emit imageProcessed(lastProcessedImage);
 
-            emit imageProcessed(image);
-
+            return true;
         }
         catch (const cv::Exception& e) {
             qDebug() << "Exception occured while rotating image:"
                 << e.what();
             return false;
         }
-        
     });
-
 }
 
 QFuture<bool> ImageProcessor::zoomImage(cv::Mat& image, double scaleFactor)
 {
-    return QtConcurrent::run([this, &image, scaleFactor]() -> bool {
+    return QtConcurrent::run([this, &image, scaleFactor]()->bool {
         try {
             if (image.empty()) {
-                qDebug() << "입력 이미지가 비어 있습니다.";
+                qDebug() << "Input image is empty.";
                 return false;
             }
 
             if (scaleFactor <= 0) {
-                qDebug() << "잘못된 확대/축소 배율입니다.";
+                qDebug() << "Invalid scale factor.";
                 return false;
             }
 
@@ -81,16 +77,21 @@ QFuture<bool> ImageProcessor::zoomImage(cv::Mat& image, double scaleFactor)
             int newHeight = static_cast<int>(image.rows * scaleFactor);
 
             cv::Mat zoomedImage;
-            cv::resize(image, zoomedImage, cv::Size(newWidth, newHeight), 0, 0, cv::INTER_LINEAR);
-            image = zoomedImage.clone(); // 이미지를 복사하여 업데이트
+            cv::resize(image,
+                zoomedImage,
+                cv::Size(newWidth, newHeight),
+                0,0,cv::INTER_LINEAR);
+            image = zoomedImage;
+            lastProcessedImage = image.clone();
 
-            emit imageProcessed(image); // 이미지 처리 완료 시그널 발생
+            emit imageProcessed(lastProcessedImage);
 
             return true;
         }
         catch (const cv::Exception& e) {
-            qDebug() << "이미지 확대/축소 중 예외가 발생했습니다:" << e.what();
+            qDebug() << "Exception occurred while zooming image:"
+                << e.what();
             return false;
         }
-        });
+    });
 }
