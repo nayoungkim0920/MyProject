@@ -9,6 +9,7 @@
 #include <QMessageBox>
 #include <opencv2/opencv.hpp>
 #include "ImageProcessor.h"
+#include "ui_MainWindow.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }

@@ -5,8 +5,13 @@
 #include <QObject>
 #include <QDebug>
 #include <QMutex>
+#include <QMutexLocker>
 #include <QtConcurrent/QtConcurrent>
+#include <opencv2/core.hpp>
 #include <opencv2/opencv.hpp>
+#include <opencv2/imgproc.hpp>
+//#include <ipp.h>
+//#include <ipp/ippi.h>
 
 class ImageProcessor : public QObject
 {
