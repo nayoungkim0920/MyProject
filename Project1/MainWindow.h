@@ -7,6 +7,7 @@
 #include <QPixmap>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QInputDialog>
 #include <opencv2/opencv.hpp>
 #include "ImageProcessor.h"
 #include "ui_MainWindow.h"
@@ -29,6 +30,9 @@ private slots:
     void rotateImage();
     void zoomInImage();
     void zoomOutImage();
+    void convertToGrayscale();
+    void applyGaussianBlur();
+    void detectEdges();
 
 private:
     Ui::MainWindow* ui;

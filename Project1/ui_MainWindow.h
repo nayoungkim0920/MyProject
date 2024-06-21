@@ -31,12 +31,16 @@ public:
     QAction *actionRotate;
     QAction *actionZoomIn;
     QAction *actionZoomOut;
+    QAction *actionGrayscale;
+    QAction *actionGaussianBlur;
+    QAction *actionDetectEdges;
     QWidget *centralwidget;
     QVBoxLayout *verticalLayout;
     QLabel *label;
     QMenuBar *menubar;
     QMenu *menuFile;
     QMenu *menuEdit;
+    QMenu *menuFilters;
     QStatusBar *statusbar;
     QToolBar *mainToolBar;
 
@@ -55,6 +59,12 @@ public:
         actionZoomIn->setObjectName("actionZoomIn");
         actionZoomOut = new QAction(MainWindow);
         actionZoomOut->setObjectName("actionZoomOut");
+        actionGrayscale = new QAction(MainWindow);
+        actionGrayscale->setObjectName("actionGrayscale");
+        actionGaussianBlur = new QAction(MainWindow);
+        actionGaussianBlur->setObjectName("actionGaussianBlur");
+        actionDetectEdges = new QAction(MainWindow);
+        actionDetectEdges->setObjectName("actionDetectEdges");
         centralwidget = new QWidget(MainWindow);
         centralwidget->setObjectName("centralwidget");
         verticalLayout = new QVBoxLayout(centralwidget);
@@ -73,6 +83,8 @@ public:
         menuFile->setObjectName("menuFile");
         menuEdit = new QMenu(menubar);
         menuEdit->setObjectName("menuEdit");
+        menuFilters = new QMenu(menubar);
+        menuFilters->setObjectName("menuFilters");
         MainWindow->setMenuBar(menubar);
         statusbar = new QStatusBar(MainWindow);
         statusbar->setObjectName("statusbar");
@@ -83,11 +95,15 @@ public:
 
         menubar->addAction(menuFile->menuAction());
         menubar->addAction(menuEdit->menuAction());
+        menubar->addAction(menuFilters->menuAction());
         menuFile->addAction(actionOpen);
         menuFile->addAction(actionSave);
         menuEdit->addAction(actionRotate);
         menuEdit->addAction(actionZoomIn);
         menuEdit->addAction(actionZoomOut);
+        menuFilters->addAction(actionGrayscale);
+        menuFilters->addAction(actionGaussianBlur);
+        menuFilters->addAction(actionDetectEdges);
         mainToolBar->addAction(actionRotate);
         mainToolBar->addAction(actionZoomIn);
         mainToolBar->addAction(actionZoomOut);
@@ -104,9 +120,13 @@ public:
         actionRotate->setText(QCoreApplication::translate("MainWindow", "Rotate", nullptr));
         actionZoomIn->setText(QCoreApplication::translate("MainWindow", "Zoom In", nullptr));
         actionZoomOut->setText(QCoreApplication::translate("MainWindow", "Zoom Out", nullptr));
+        actionGrayscale->setText(QCoreApplication::translate("MainWindow", "Convert to Grayscale", nullptr));
+        actionGaussianBlur->setText(QCoreApplication::translate("MainWindow", "Apply Gaussian Blur", nullptr));
+        actionDetectEdges->setText(QCoreApplication::translate("MainWindow", "Detect Edges", nullptr));
         label->setText(QCoreApplication::translate("MainWindow", "Image Display", nullptr));
         menuFile->setTitle(QCoreApplication::translate("MainWindow", "File", nullptr));
         menuEdit->setTitle(QCoreApplication::translate("MainWindow", "Edit", nullptr));
+        menuFilters->setTitle(QCoreApplication::translate("MainWindow", "Filters", nullptr));
         (void)MainWindow;
     } // retranslateUi
 

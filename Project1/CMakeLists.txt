@@ -97,3 +97,8 @@ qt6_wrap_cpp(MOC_FILES
 
 # 생성된 MOC 파일을 소스에 추가
 target_sources(Project1 PRIVATE ${MOC_FILES})
+
+# IPP 헤더 파일 포함
+target_include_directories(Project1 PRIVATE
+    ${IPP_INCLUDE_DIR}
+)

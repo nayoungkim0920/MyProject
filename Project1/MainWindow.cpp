@@ -12,9 +12,14 @@ MainWindow::MainWindow(QWidget* parent)
 
     connect(ui->actionOpen, &QAction::triggered, this, &MainWindow::openFile);
     connect(ui->actionSave, &QAction::triggered, this, &MainWindow::saveFile);
+    
     connect(ui->actionRotate, &QAction::triggered, this, &MainWindow::rotateImage);
     connect(ui->actionZoomIn, &QAction::triggered, this, &MainWindow::zoomInImage);
     connect(ui->actionZoomOut, &QAction::triggered, this, &MainWindow::zoomOutImage);
+
+    connect(ui->actionGrayscale, &QAction::triggered, this, &MainWindow::convertToGrayscale);
+    connect(ui->actionGaussianBlur, &QAction::triggered, this, &MainWindow::applyGaussianBlur);
+    connect(ui->actionDetectEdges, &QAction::triggered, this, &MainWindow::detectEdges);
 
     // Connect ImageProcessor's signal to displayImage slot
     connect(imageProcessor, &ImageProcessor::imageProcessed, this, &MainWindow::displayImage);
@@ -96,6 +101,52 @@ void MainWindow::zoomOutImage()
             displayImage(currentImage);
         }else {
             qDebug() << "Failed to zoom out image.";
+        }
+    }
+}
+
+void MainWindow::convertToGrayscale()
+{
+    if (!currentImage.empty()) {
+        auto future = imageProcessor->convertToGrayscale(currentImage);
+        future.waitForFinished();
+        if (future.result()) {
+            displayImage(currentImage);
+        }
+        else {
+            qDebug() << "Failed to convert image to grayscale.";
+        }
+    }
+}
+
+void MainWindow::applyGaussianBlur()
+{
+    if (!currentImage.empty()) {
+        bool ok;
+        int kernelSize = QInputDialog::getInt(this, tr("Gaussian Blur"), tr("Enter kernel size (odd number):"), 5, 1, 101, 2, &ok);
+        if (ok) {
+            auto future = imageProcessor->applyGaussianBlur(currentImage, kernelSize);
+            future.waitForFinished();
+            if (future.result()) {
+                displayImage(currentImage);
+            }
+            else {
+                qDebug() << "Failed to apply Gaussian blur.";
+            }
+        }
+    }
+}
+
+void MainWindow::detectEdges()
+{
+    if (!currentImage.empty()) {
+        auto future = imageProcessor->detectEdges(currentImage);
+        future.waitForFinished();
+        if (future.result()) {
+            displayImage(currentImage);
+        }
+        else {
+            qDebug() << "Failed to detect edgas.";
         }
     }
 }

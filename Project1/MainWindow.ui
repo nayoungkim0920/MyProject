@@ -40,7 +40,6 @@
     <addaction name="actionOpen"/>
     <addaction name="actionSave"/>
    </widget>
-   <addaction name="menuFile"/>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
      <string>Edit</string>
@@ -49,7 +48,17 @@
     <addaction name="actionZoomIn"/>
     <addaction name="actionZoomOut"/>
    </widget>
+   <widget class="QMenu" name="menuFilters">
+    <property name="title">
+     <string>Filters</string>
+    </property>
+    <addaction name="actionGrayscale"/>
+    <addaction name="actionGaussianBlur"/>
+    <addaction name="actionDetectEdges"/>
+   </widget>
+   <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
+   <addaction name="menuFilters"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QToolBar" name="mainToolBar">
@@ -86,6 +95,21 @@
   <action name="actionZoomOut">
    <property name="text">
     <string>Zoom Out</string>
+   </property>
+  </action>
+  <action name="actionGrayscale">
+   <property name="text">
+    <string>Convert to Grayscale</string>
+   </property>
+  </action>
+  <action name="actionGaussianBlur">
+   <property name="text">
+    <string>Apply Gaussian Blur</string>
+   </property>
+  </action>
+  <action name="actionDetectEdges">
+   <property name="text">
+    <string>Detect Edges</string>
    </property>
   </action>
  </widget>

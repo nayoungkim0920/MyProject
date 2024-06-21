@@ -12,6 +12,8 @@
 #include <opencv2/imgproc.hpp>
 //#include <ipp.h>
 //#include <ipp/ippi.h>
+//#include <ipp/ippcc.h>
+//#include <opencv2/cuda>
 
 class ImageProcessor : public QObject
 {
@@ -25,6 +27,9 @@ public:
     bool saveImage(const std::string& fileName, const cv::Mat& image);
     QFuture<bool> rotateImage(cv::Mat& image);
     QFuture<bool> zoomImage(cv::Mat& image, double scaleFactor);
+    QFuture<bool> convertToGrayscale(cv::Mat& image);
+    QFuture<bool> applyGaussianBlur(cv::Mat& image, int kernelSize);
+    QFuture<bool> detectEdges(cv::Mat& image);
 
 signals: //이벤트 발생을 알림
     void imageProcessed(const cv::Mat& processedImage);
