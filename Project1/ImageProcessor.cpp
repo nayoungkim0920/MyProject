@@ -34,6 +34,8 @@ QFuture<bool> ImageProcessor::rotateImage(cv::Mat& image) {
 
         QMutexLocker locker(&mutex);
 
+        pushToUndoStack(image);
+
         try {
 
             if (image.empty()) {
@@ -64,7 +66,13 @@ QFuture<bool> ImageProcessor::rotateImage(cv::Mat& image) {
 QFuture<bool> ImageProcessor::zoomImage(cv::Mat& image, double scaleFactor)
 {
     return QtConcurrent::run([this, &image, scaleFactor]() -> bool {
+        
+        QMutexLocker locker(&mutex);
+
+        pushToUndoStack(image);
+        
         try {
+            
             if (image.empty()) {
                 qDebug() << "입력 이미지가 비어 있습니다.";
                 return false;
@@ -73,16 +81,16 @@ QFuture<bool> ImageProcessor::zoomImage(cv::Mat& image, double scaleFactor)
             if (scaleFactor <= 0) {
                 qDebug() << "잘못된 확대/축소 배율입니다.";
                 return false;
-            }
-
-            QMutexLocker locker(&mutex);
+            }            
 
             int newWidth = static_cast<int>(image.cols * scaleFactor);
             int newHeight = static_cast<int>(image.rows * scaleFactor);
 
             cv::Mat zoomedImage;
             cv::resize(image, zoomedImage, cv::Size(newWidth, newHeight), 0, 0, cv::INTER_LINEAR);
+            
             image = zoomedImage.clone(); // 이미지를 복사하여 업데이트
+            lastProcessedImage = image.clone();
 
             emit imageProcessed(image); // 이미지 처리 완료 시그널 발생
 
@@ -98,7 +106,11 @@ QFuture<bool> ImageProcessor::zoomImage(cv::Mat& image, double scaleFactor)
 QFuture<bool> ImageProcessor::convertToGrayscale(cv::Mat& image)
 {
     return QtConcurrent::run([this, &image]() -> bool {
+
         QMutexLocker locker(&mutex);
+
+        pushToUndoStack(image);
+
         try {
             if (image.empty()) {
                 qDebug() << "Input image is empty.";
@@ -136,7 +148,11 @@ QFuture<bool> ImageProcessor::convertToGrayscale(cv::Mat& image)
 QFuture<bool> ImageProcessor::applyGaussianBlur(cv::Mat& image, int kernelSize)
 {
     return QtConcurrent::run([this, &image, kernelSize]() -> bool {
+        
         QMutexLocker locker(&mutex);
+
+        pushToUndoStack(image);
+
         try {
             if (image.empty()) {
                 qDebug() << "Input image is empty.";
@@ -166,10 +182,15 @@ QFuture<bool> ImageProcessor::applyGaussianBlur(cv::Mat& image, int kernelSize)
     });
 }
 
+//Canny
 QFuture<bool> ImageProcessor::detectEdges(cv::Mat& image)
 {
     return QtConcurrent::run([this, &image]() -> bool {
+
         QMutexLocker locker(&mutex);
+
+        pushToUndoStack(image);
+
         try {
             if (image.empty()) {
                 qDebug() << "Input image is empty.";
@@ -197,4 +218,61 @@ QFuture<bool> ImageProcessor::detectEdges(cv::Mat& image)
             return false;
         }
         });
+}
+
+bool ImageProcessor::canUndo() const
+{
+    return !undoStack.empty();
+}
+
+bool ImageProcessor::canRedo() const
+{
+    return !redoStack.empty();
+}
+
+//실행취소
+bool ImageProcessor::undo()
+{
+    if (!canUndo())
+        return false;
+
+    cv::Mat imageToRestore = undoStack.top();
+    redoStack.push(lastProcessedImage);
+    lastProcessedImage = imageToRestore.clone();
+    undoStack.pop();
+
+    emit imageProcessed(lastProcessedImage);
+
+    return true;
+}
+
+//재실행
+bool ImageProcessor::redo()
+{
+    if (!canRedo())
+        return false;
+
+    cv::Mat imageToRestore = redoStack.top();
+    undoStack.push(lastProcessedImage);
+    lastProcessedImage = imageToRestore.clone();
+    redoStack.pop();
+
+    emit imageProcessed(lastProcessedImage);
+
+    return true;
+}
+
+const cv::Mat& ImageProcessor::getLastProcessedImage() const
+{
+    return lastProcessedImage;
+}
+
+void ImageProcessor::pushToUndoStack(const cv::Mat& image)
+{
+    undoStack.push(image.clone());
+}
+
+void ImageProcessor::pushToRedoStack(const cv::Mat& image)
+{
+    redoStack.push(image.clone());
 }

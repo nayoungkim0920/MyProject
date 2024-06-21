@@ -2,6 +2,7 @@
 #ifndef IMAGEPROCESSOR_H
 #define IMAGEPROCESSOR_H
 
+#include <stack>
 #include <QObject>
 #include <QDebug>
 #include <QMutex>
@@ -31,6 +32,13 @@ public:
     QFuture<bool> applyGaussianBlur(cv::Mat& image, int kernelSize);
     QFuture<bool> detectEdges(cv::Mat& image);
 
+    bool canUndo() const;
+    bool canRedo() const;
+    bool undo();
+    bool redo();
+
+    const cv::Mat& getLastProcessedImage() const;
+
 signals: //이벤트 발생을 알림
     void imageProcessed(const cv::Mat& processedImage);
 
@@ -39,6 +47,11 @@ signals: //이벤트 발생을 알림
 private: 
     cv::Mat lastProcessedImage;
     QMutex mutex;
+    std::stack<cv::Mat> undoStack;
+    std::stack<cv::Mat> redoStack;
+
+    void pushToUndoStack(const cv::Mat& image);
+    void pushToRedoStack(const cv::Mat& image);
 };
 
 #endif // IMAGEPROCESSOR_H

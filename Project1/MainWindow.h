@@ -33,6 +33,10 @@ private slots:
     void convertToGrayscale();
     void applyGaussianBlur();
     void detectEdges();
+    void exitApplication();
+    void redoAction();
+    void undoAction();
+    void displayImage(const cv::Mat& image);
 
 private:
     Ui::MainWindow* ui;
@@ -40,7 +44,10 @@ private:
     ImageProcessor* imageProcessor;
     double scaleFactor;
 
-    void displayImage(const cv::Mat& image);
+    
+    void connectActions();
+    void connectImageProcessor();
+    void setInitialWindowGeometry();
 };
 
 #endif // MAINWINDOW_H

@@ -4,25 +4,16 @@
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
+    , imageProcessor(new ImageProcessor)
+    , scaleFactor(1.0)
 {
     ui->setupUi(this);
 
-    imageProcessor = new ImageProcessor(this);
-    scaleFactor = 1.0;
+    connectActions();
 
-    connect(ui->actionOpen, &QAction::triggered, this, &MainWindow::openFile);
-    connect(ui->actionSave, &QAction::triggered, this, &MainWindow::saveFile);
-    
-    connect(ui->actionRotate, &QAction::triggered, this, &MainWindow::rotateImage);
-    connect(ui->actionZoomIn, &QAction::triggered, this, &MainWindow::zoomInImage);
-    connect(ui->actionZoomOut, &QAction::triggered, this, &MainWindow::zoomOutImage);
+    connectImageProcessor();
 
-    connect(ui->actionGrayscale, &QAction::triggered, this, &MainWindow::convertToGrayscale);
-    connect(ui->actionGaussianBlur, &QAction::triggered, this, &MainWindow::applyGaussianBlur);
-    connect(ui->actionDetectEdges, &QAction::triggered, this, &MainWindow::detectEdges);
-
-    // Connect ImageProcessor's signal to displayImage slot
-    connect(imageProcessor, &ImageProcessor::imageProcessed, this, &MainWindow::displayImage);
+    setInitialWindowGeometry();
 }
 
 MainWindow::~MainWindow()
@@ -151,6 +142,31 @@ void MainWindow::detectEdges()
     }
 }
 
+void MainWindow::exitApplication()
+{
+    QApplication::quit();
+}
+
+void MainWindow::redoAction()
+{
+    if (imageProcessor->canRedo()) {
+        if (imageProcessor->redo()) {
+            currentImage = imageProcessor->getLastProcessedImage();
+            displayImage(currentImage);
+        }        
+    }
+}
+
+void MainWindow::undoAction()
+{
+    if (imageProcessor->canUndo()) {
+        if (imageProcessor->undo()) {
+            currentImage = imageProcessor->getLastProcessedImage();
+            displayImage(currentImage);
+        }        
+    }
+}
+
 void MainWindow::displayImage(const cv::Mat& image)
 {
     QImage qImage(image.data,
@@ -160,4 +176,38 @@ void MainWindow::displayImage(const cv::Mat& image)
         QImage::Format_BGR888);
     ui->label->setPixmap(QPixmap::fromImage(qImage));
     ui->label->adjustSize();
+}
+
+void MainWindow::connectActions()
+{
+    connect(ui->actionOpen, &QAction::triggered, this, &MainWindow::openFile);
+    connect(ui->actionSave, &QAction::triggered, this, &MainWindow::saveFile);
+    connect(ui->actionExit, &QAction::triggered, this, &MainWindow::exitApplication);
+
+    connect(ui->actionRotate, &QAction::triggered, this, &MainWindow::rotateImage);
+    connect(ui->actionZoomIn, &QAction::triggered, this, &MainWindow::zoomInImage);
+    connect(ui->actionZoomOut, &QAction::triggered, this, &MainWindow::zoomOutImage);
+    connect(ui->actionRedo, &QAction::triggered, this, &MainWindow::redoAction);
+    connect(ui->actionUndo, &QAction::triggered, this, &MainWindow::undoAction);
+
+    connect(ui->actionGrayscale, &QAction::triggered, this, &MainWindow::convertToGrayscale);
+    connect(ui->actionGaussianBlur, &QAction::triggered, this, &MainWindow::applyGaussianBlur);
+    connect(ui->actionDetectEdges, &QAction::triggered, this, &MainWindow::detectEdges);
+
+    
+}
+
+void MainWindow::connectImageProcessor()
+{
+    // Connect ImageProcessor's signal to displayImage slot
+    connect(imageProcessor, &ImageProcessor::imageProcessed, this, &MainWindow::displayImage);
+}
+
+void MainWindow::setInitialWindowGeometry()
+{
+    const int initialWidth = 800;
+    const int initialHeight = 600;
+    const int initialX = 100;
+    const int initialY = 100;
+    this->setGeometry(initialX, initialY, initialWidth, initialHeight);
 }
