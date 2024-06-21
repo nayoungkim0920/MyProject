@@ -57,12 +57,7 @@ void MainWindow::rotateImage()
     if (!currentImage.empty()) {
         auto future = imageProcessor->rotateImage(currentImage);
         future.waitForFinished();
-        if (future.result()) {
-            displayImage(currentImage);
-        }
-        else {
-            qDebug() << "Failed to rotate image.";
-        }
+        future.result();
     }
 }
 
@@ -73,11 +68,7 @@ void MainWindow::zoomInImage()
         auto future = imageProcessor->zoomImage(currentImage,
             scaleFactor);
         future.waitForFinished();
-        if (future.result()) {
-            displayImage(currentImage);
-        }else {
-            qDebug() << "Failed to zoom in image.";
-        }
+        future.result();
     }
 }
 
@@ -88,25 +79,16 @@ void MainWindow::zoomOutImage()
         auto future = imageProcessor->zoomImage(currentImage,
             scaleFactor);
         future.waitForFinished();
-        if (future.result()) {
-            displayImage(currentImage);
-        }else {
-            qDebug() << "Failed to zoom out image.";
-        }
+        future.result();
     }
 }
 
 void MainWindow::convertToGrayscale()
 {
     if (!currentImage.empty()) {
-        auto future = imageProcessor->convertToGrayscale(currentImage);
+        auto future = imageProcessor->convertToGrayscaleAsync(currentImage);
         future.waitForFinished();
-        if (future.result()) {
-            displayImage(currentImage);
-        }
-        else {
-            qDebug() << "Failed to convert image to grayscale.";
-        }
+        future.result();
     }
 }
 
@@ -117,13 +99,8 @@ void MainWindow::applyGaussianBlur()
         int kernelSize = QInputDialog::getInt(this, tr("Gaussian Blur"), tr("Enter kernel size (odd number):"), 5, 1, 101, 2, &ok);
         if (ok) {
             auto future = imageProcessor->applyGaussianBlur(currentImage, kernelSize);
-            future.waitForFinished();
-            if (future.result()) {
-                displayImage(currentImage);
-            }
-            else {
-                qDebug() << "Failed to apply Gaussian blur.";
-            }
+            future.waitForFinished(); 
+            future.result();
         }
     }
 }
@@ -133,12 +110,7 @@ void MainWindow::detectEdges()
     if (!currentImage.empty()) {
         auto future = imageProcessor->detectEdges(currentImage);
         future.waitForFinished();
-        if (future.result()) {
-            displayImage(currentImage);
-        }
-        else {
-            qDebug() << "Failed to detect edgas.";
-        }
+        future.result();
     }
 }
 
@@ -150,22 +122,17 @@ void MainWindow::exitApplication()
 void MainWindow::redoAction()
 {
     if (imageProcessor->canRedo()) {
-        if (imageProcessor->redo()) {
-            currentImage = imageProcessor->getLastProcessedImage();
-            displayImage(currentImage);
-        }        
+        imageProcessor->redo();
     }
 }
 
 void MainWindow::undoAction()
 {
     if (imageProcessor->canUndo()) {
-        if (imageProcessor->undo()) {
-            currentImage = imageProcessor->getLastProcessedImage();
-            displayImage(currentImage);
-        }        
+        imageProcessor->undo();
     }
 }
+
 
 void MainWindow::displayImage(const cv::Mat& image)
 {
@@ -177,6 +144,7 @@ void MainWindow::displayImage(const cv::Mat& image)
     ui->label->setPixmap(QPixmap::fromImage(qImage));
     ui->label->adjustSize();
 }
+
 
 void MainWindow::connectActions()
 {

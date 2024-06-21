@@ -28,14 +28,14 @@ public:
     bool saveImage(const std::string& fileName, const cv::Mat& image);
     QFuture<bool> rotateImage(cv::Mat& image);
     QFuture<bool> zoomImage(cv::Mat& image, double scaleFactor);
-    QFuture<bool> convertToGrayscale(cv::Mat& image);
+    QFuture<bool> convertToGrayscaleAsync(cv::Mat& image);
     QFuture<bool> applyGaussianBlur(cv::Mat& image, int kernelSize);
     QFuture<bool> detectEdges(cv::Mat& image);
 
     bool canUndo() const;
     bool canRedo() const;
-    bool undo();
-    bool redo();
+    void undo();
+    void redo();
 
     const cv::Mat& getLastProcessedImage() const;
 
@@ -52,6 +52,8 @@ private:
 
     void pushToUndoStack(const cv::Mat& image);
     void pushToRedoStack(const cv::Mat& image);
+
+    cv::Mat converToGrayScale(const cv::Mat& image);
 };
 
 #endif // IMAGEPROCESSOR_H

@@ -52,6 +52,8 @@ QFuture<bool> ImageProcessor::rotateImage(cv::Mat& image) {
 
             emit imageProcessed(image);
 
+            return true;
+
         }
         catch (const cv::Exception& e) {
             qDebug() << "Exception occured while rotating image:"
@@ -103,7 +105,7 @@ QFuture<bool> ImageProcessor::zoomImage(cv::Mat& image, double scaleFactor)
         });
 }
 
-QFuture<bool> ImageProcessor::convertToGrayscale(cv::Mat& image)
+QFuture<bool> ImageProcessor::convertToGrayscaleAsync(cv::Mat& image)
 {
     return QtConcurrent::run([this, &image]() -> bool {
 
@@ -117,22 +119,10 @@ QFuture<bool> ImageProcessor::convertToGrayscale(cv::Mat& image)
                 return false;
             }
 
-            cv::Mat grayImage;
-
-            // BGR 이미지를 RGB 채널로 분리
-            std::vector<cv::Mat> channels;
-            cv::split(image, channels);
-
-            // RGB 채널을 그레이스케일로 변환
-            cv::Mat gray;
-            cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
-
-            // 그레이스케일 이미지를 RGB 형식으로 변환
-            cv::Mat merged;
-            cv::merge(std::vector<cv::Mat>{gray, gray, gray}, merged);
+            cv::Mat gray = converToGrayScale(image);
 
             // 원본 이미지에 그레이스케일 이미지 적용
-            image = merged.clone();
+            image = gray.clone();
             lastProcessedImage = image.clone();
 
             emit imageProcessed(image); // 이미지 처리가 완료되었음을 시그널로 알림
@@ -197,14 +187,21 @@ QFuture<bool> ImageProcessor::detectEdges(cv::Mat& image)
                 return false;
             }
 
-            cv::Mat grayImage;
-            cv::cvtColor(image, grayImage, cv::COLOR_BGR2GRAY);
+            //회색조이미지
+            cv::Mat gray = converToGrayScale(image);
 
-            cv::Mat edges;
-            cv::Canny(grayImage, edges, 50, 150);
+            cv::Mat edges;//엣지감지결과
+            //50:하위 임계값(threshold1)
+            //엣지후보로 고려되기 위한 최소 강도 
+            //임계값보다 낮은 강도의 엣지는 제거된다.
+            //150:상위 임계값(threshold2)
+            //강한 엣지로 간주되는 임계값
+            //두 임계값 사이의 강도를 가진 엣지는 연결되어
+            //하나의 엣지로 유지된다
+            cv::Canny(gray, edges, 50, 150);
 
             cv::Mat outputImage;
-            image.copyTo(outputImage);
+            gray.copyTo(outputImage);
             outputImage.setTo(cv::Scalar(0, 255, 0), edges); // Green edges
 
             image = outputImage.clone();
@@ -231,35 +228,47 @@ bool ImageProcessor::canRedo() const
 }
 
 //실행취소
-bool ImageProcessor::undo()
+void ImageProcessor::undo()
 {
-    if (!canUndo())
-        return false;
+    try {
 
-    cv::Mat imageToRestore = undoStack.top();
-    redoStack.push(lastProcessedImage);
-    lastProcessedImage = imageToRestore.clone();
-    undoStack.pop();
+        if (!canUndo())
+            throw std::runtime_error("Cannot redo: undo stack is empty");
 
-    emit imageProcessed(lastProcessedImage);
+        cv::Mat imageToRestore = undoStack.top();
+        redoStack.push(lastProcessedImage);
+        lastProcessedImage = imageToRestore.clone();
+        undoStack.pop();
 
-    return true;
+        emit imageProcessed(lastProcessedImage);
+
+    }
+    catch (const std::exception& e) {
+        qDebug() << "Exception occurred in ImageProcessor::undo(): "
+            << e.what();
+    }
 }
 
 //재실행
-bool ImageProcessor::redo()
+void ImageProcessor::redo()
 {
-    if (!canRedo())
-        return false;
+    try {
 
-    cv::Mat imageToRestore = redoStack.top();
-    undoStack.push(lastProcessedImage);
-    lastProcessedImage = imageToRestore.clone();
-    redoStack.pop();
+        if (!canRedo())
+            throw std::runtime_error("Cannot redo: redo stack is empty");
 
-    emit imageProcessed(lastProcessedImage);
+        cv::Mat imageToRestore = redoStack.top();
+        undoStack.push(lastProcessedImage);
+        lastProcessedImage = imageToRestore.clone();
+        redoStack.pop();
 
-    return true;
+        emit imageProcessed(lastProcessedImage);
+
+    }
+    catch (const std::exception& e) {
+        qDebug() << "Exception occurred in ImageProcessor::redo(): " 
+            << e.what();
+    }
 }
 
 const cv::Mat& ImageProcessor::getLastProcessedImage() const
@@ -275,4 +284,17 @@ void ImageProcessor::pushToUndoStack(const cv::Mat& image)
 void ImageProcessor::pushToRedoStack(const cv::Mat& image)
 {
     redoStack.push(image.clone());
+}
+
+cv::Mat ImageProcessor::converToGrayScale(const cv::Mat& image)
+{
+    // RGB 채널을 그레이스케일로 변환
+    cv::Mat gray;
+    cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
+
+    // 그레이스케일 이미지를 RGB 형식으로 변환
+    cv::Mat merged;
+    cv::merge(std::vector<cv::Mat>{gray, gray, gray}, merged);
+
+    return merged;
 }
