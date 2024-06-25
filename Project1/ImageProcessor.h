@@ -14,7 +14,8 @@
 //#include <ipp.h>
 //#include <ipp/ippi.h>
 //#include <ipp/ippcc.h>
-//#include <opencv2/cuda>
+//#include <opencv2/cuda
+#include <opencv2/cudaarithm.hpp>
 
 class ImageProcessor : public QObject
 {
@@ -30,12 +31,17 @@ public:
     QFuture<bool> zoomImage(cv::Mat& image, double scaleFactor);
     QFuture<bool> convertToGrayscaleAsync(cv::Mat& image);
     QFuture<bool> applyGaussianBlur(cv::Mat& image, int kernelSize);
-    QFuture<bool> detectEdges(cv::Mat& image);
+    QFuture<bool> cannyEdges(cv::Mat& image);
+    QFuture<bool> medianFilter(cv::Mat& image);
+    QFuture<bool> laplacianFilter(cv::Mat& image);
+    QFuture<bool> bilateralFilter(cv::Mat& image);
 
     bool canUndo() const;
     bool canRedo() const;
     void undo();
     void redo();
+    void cleanUndoStack();
+    void cleanRedoStack();
 
     const cv::Mat& getLastProcessedImage() const;
 
@@ -53,7 +59,7 @@ private:
     void pushToUndoStack(const cv::Mat& image);
     void pushToRedoStack(const cv::Mat& image);
 
-    cv::Mat converToGrayScale(const cv::Mat& image);
+    cv::Mat convertToGrayScale(const cv::Mat& image);
 };
 
 #endif // IMAGEPROCESSOR_H

@@ -48,8 +48,9 @@
     <addaction name="actionRotate"/>
     <addaction name="actionZoomIn"/>
     <addaction name="actionZoomOut"/>
-    <addaction name="actionUndo"/>
-    <addaction name="actionRedo"/>
+    <addaction name="actionUndo"/> <!-- Undo 앞에 추가 -->
+    <addaction name="actionRedo"/> <!-- Redo 앞에 추가 -->
+    <addaction name="actionFirst"/> <!-- 처음 추가 -->
    </widget>
    <widget class="QMenu" name="menuFilters">
     <property name="title">
@@ -57,7 +58,11 @@
     </property>
     <addaction name="actionGrayscale"/>
     <addaction name="actionGaussianBlur"/>
-    <addaction name="actionDetectEdges"/>
+    <addaction name="actionCannyEdges"/>
+    <addaction name="actionMedianFilter"/> <!-- Median Filter 추가 -->
+    <addaction name="actionSobelFilter"/> <!-- Sobel Filter 추가 -->
+    <addaction name="actionLaplacianFilter"/> <!-- Laplacian Filter 추가 -->
+    <addaction name="actionBilateralFilter"/> <!-- Bilateral Filter 추가 -->
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -84,7 +89,11 @@
    </attribute>
    <addaction name="actionGrayscale"/>
    <addaction name="actionGaussianBlur"/>
-   <addaction name="actionDetectEdges"/>
+   <addaction name="actionCannyEdges"/>
+   <addaction name="actionMedianFilter"/> <!-- Median Filter 추가 -->
+   <addaction name="actionSobelFilter"/> <!-- Sobel Filter 추가 -->
+   <addaction name="actionLaplacianFilter"/> <!-- Laplacian Filter 추가 -->
+   <addaction name="actionBilateralFilter"/> <!-- Bilateral Filter 추가 -->
   </widget>
   <widget class="QToolBar" name="mainToolBar">
    <attribute name="toolBarArea">
@@ -96,8 +105,9 @@
    <addaction name="actionRotate"/>
    <addaction name="actionZoomIn"/>
    <addaction name="actionZoomOut"/>
-   <addaction name="actionUndo"/>
-   <addaction name="actionRedo"/>
+   <addaction name="actionUndo"/> <!-- Undo 액션 추가 -->
+   <addaction name="actionRedo"/> <!-- Redo 액션 추가 -->
+   <addaction name="actionFirst"/> <!-- 처음 추가 -->
   </widget>
   <action name="actionOpen">
    <property name="text">
@@ -131,30 +141,61 @@
   </action>
   <action name="actionGrayscale">
    <property name="text">
-    <string>Convert to Grayscale</string>
+    <string>Grayscale</string>
    </property>
   </action>
   <action name="actionGaussianBlur">
    <property name="text">
-    <string>Apply Gaussian Blur</string>
+    <string>Gaussian</string>
    </property>
   </action>
-  <action name="actionDetectEdges">
+  <action name="actionCannyEdges">
    <property name="text">
-    <string>Detect Edges</string>
+    <string>Canny</string>
+   </property>
+  </action>
+  <action name="actionMedianFilter">
+   <property name="text">
+    <string>Median</string>
+   </property>
+  </action>
+  <action name="actionSobelFilter">
+   <property name="text">
+    <string>Sobel</string>
+   </property>
+  </action>
+  <action name="actionLaplacianFilter">
+   <property name="text">
+    <string>Laplacian</string>
+   </property>
+  </action>
+  <action name="actionBilateralFilter">
+   <property name="text">
+    <string>Bilateral</string>
    </property>
   </action>
   <action name="actionUndo">
    <property name="text">
     <string>Undo</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+Z</string> <!-- Undo 단축키 추가 -->
+   </property>
   </action>
   <action name="actionRedo">
    <property name="text">
     <string>Redo</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+Y</string> <!-- Redo 단축키 추가 -->
+   </property>
   </action>
- </widget>
+  <action name="actionFirst">
+   <property name="text">
+    <string>First</string>
+   </property>
+  </action>
+  </widget>
  <resources/>
  <connections/>
 </ui>

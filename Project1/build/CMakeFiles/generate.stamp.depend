@@ -19,6 +19,8 @@ C:/Program Files/CMake/share/cmake-3.29/Modules/Compiler/CMakeCommonCompilerMacr
 C:/Program Files/CMake/share/cmake-3.29/Modules/Compiler/MSVC-C.cmake
 C:/Program Files/CMake/share/cmake-3.29/Modules/Compiler/MSVC-CXX.cmake
 C:/Program Files/CMake/share/cmake-3.29/Modules/Compiler/MSVC.cmake
+C:/Program Files/CMake/share/cmake-3.29/Modules/FindCUDA.cmake
+C:/Program Files/CMake/share/cmake-3.29/Modules/FindCUDA/select_compute_arch.cmake
 C:/Program Files/CMake/share/cmake-3.29/Modules/FindPackageHandleStandardArgs.cmake
 C:/Program Files/CMake/share/cmake-3.29/Modules/FindPackageMessage.cmake
 C:/Program Files/CMake/share/cmake-3.29/Modules/FindThreads.cmake

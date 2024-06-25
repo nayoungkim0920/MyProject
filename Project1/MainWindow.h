@@ -32,22 +32,31 @@ private slots:
     void zoomOutImage();
     void convertToGrayscale();
     void applyGaussianBlur();
-    void detectEdges();
+    void cannyEdges();
+    void medianFilter();
+    void laplacianFilter();
+    void bilateralFilter();
     void exitApplication();
     void redoAction();
     void undoAction();
-    void displayImage(const cv::Mat& image);
+    void first();
+    void displayImage(const cv::Mat& image); 
 
 private:
     Ui::MainWindow* ui;
     cv::Mat currentImage;
     ImageProcessor* imageProcessor;
     double scaleFactor;
+    cv::Mat initialImage;
 
     
     void connectActions();
     void connectImageProcessor();
     void setInitialWindowGeometry();
+
+    template<typename Func, typename... Args>
+    inline void applyImageProcessing(Func func, Args&&... args);
 };
 
 #endif // MAINWINDOW_H
+

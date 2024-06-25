@@ -1,5 +1,5 @@
 /********************************************************************************
-** Form generated from reading UI file 'MainWindow.ui'
+** Form generated from reading UI file 'MainWIndow.ui'
 **
 ** Created by: Qt User Interface Compiler version 6.7.1
 **
@@ -34,9 +34,14 @@ public:
     QAction *actionZoomOut;
     QAction *actionGrayscale;
     QAction *actionGaussianBlur;
-    QAction *actionDetectEdges;
+    QAction *actionCannyEdges;
+    QAction *actionMedianFilter;
+    QAction *actionSobelFilter;
+    QAction *actionLaplacianFilter;
+    QAction *actionBilateralFilter;
     QAction *actionUndo;
     QAction *actionRedo;
+    QAction *actionFirst;
     QWidget *centralwidget;
     QVBoxLayout *verticalLayout;
     QLabel *label;
@@ -70,12 +75,22 @@ public:
         actionGrayscale->setObjectName("actionGrayscale");
         actionGaussianBlur = new QAction(MainWindow);
         actionGaussianBlur->setObjectName("actionGaussianBlur");
-        actionDetectEdges = new QAction(MainWindow);
-        actionDetectEdges->setObjectName("actionDetectEdges");
+        actionCannyEdges = new QAction(MainWindow);
+        actionCannyEdges->setObjectName("actionCannyEdges");
+        actionMedianFilter = new QAction(MainWindow);
+        actionMedianFilter->setObjectName("actionMedianFilter");
+        actionSobelFilter = new QAction(MainWindow);
+        actionSobelFilter->setObjectName("actionSobelFilter");
+        actionLaplacianFilter = new QAction(MainWindow);
+        actionLaplacianFilter->setObjectName("actionLaplacianFilter");
+        actionBilateralFilter = new QAction(MainWindow);
+        actionBilateralFilter->setObjectName("actionBilateralFilter");
         actionUndo = new QAction(MainWindow);
         actionUndo->setObjectName("actionUndo");
         actionRedo = new QAction(MainWindow);
         actionRedo->setObjectName("actionRedo");
+        actionFirst = new QAction(MainWindow);
+        actionFirst->setObjectName("actionFirst");
         centralwidget = new QWidget(MainWindow);
         centralwidget->setObjectName("centralwidget");
         verticalLayout = new QVBoxLayout(centralwidget);
@@ -121,20 +136,30 @@ public:
         menuEdit->addAction(actionZoomOut);
         menuEdit->addAction(actionUndo);
         menuEdit->addAction(actionRedo);
+        menuEdit->addAction(actionFirst);
         menuFilters->addAction(actionGrayscale);
         menuFilters->addAction(actionGaussianBlur);
-        menuFilters->addAction(actionDetectEdges);
+        menuFilters->addAction(actionCannyEdges);
+        menuFilters->addAction(actionMedianFilter);
+        menuFilters->addAction(actionSobelFilter);
+        menuFilters->addAction(actionLaplacianFilter);
+        menuFilters->addAction(actionBilateralFilter);
         fileToolBar->addAction(actionOpen);
         fileToolBar->addAction(actionSave);
         fileToolBar->addAction(actionExit);
         filtersToolBar->addAction(actionGrayscale);
         filtersToolBar->addAction(actionGaussianBlur);
-        filtersToolBar->addAction(actionDetectEdges);
+        filtersToolBar->addAction(actionCannyEdges);
+        filtersToolBar->addAction(actionMedianFilter);
+        filtersToolBar->addAction(actionSobelFilter);
+        filtersToolBar->addAction(actionLaplacianFilter);
+        filtersToolBar->addAction(actionBilateralFilter);
         mainToolBar->addAction(actionRotate);
         mainToolBar->addAction(actionZoomIn);
         mainToolBar->addAction(actionZoomOut);
         mainToolBar->addAction(actionUndo);
         mainToolBar->addAction(actionRedo);
+        mainToolBar->addAction(actionFirst);
 
         retranslateUi(MainWindow);
 
@@ -149,11 +174,22 @@ public:
         actionRotate->setText(QCoreApplication::translate("MainWindow", "Rotate", nullptr));
         actionZoomIn->setText(QCoreApplication::translate("MainWindow", "Zoom In", nullptr));
         actionZoomOut->setText(QCoreApplication::translate("MainWindow", "Zoom Out", nullptr));
-        actionGrayscale->setText(QCoreApplication::translate("MainWindow", "Convert to Grayscale", nullptr));
-        actionGaussianBlur->setText(QCoreApplication::translate("MainWindow", "Apply Gaussian Blur", nullptr));
-        actionDetectEdges->setText(QCoreApplication::translate("MainWindow", "Detect Edges", nullptr));
+        actionGrayscale->setText(QCoreApplication::translate("MainWindow", "Grayscale", nullptr));
+        actionGaussianBlur->setText(QCoreApplication::translate("MainWindow", "Gaussian", nullptr));
+        actionCannyEdges->setText(QCoreApplication::translate("MainWindow", "Canny", nullptr));
+        actionMedianFilter->setText(QCoreApplication::translate("MainWindow", "Median", nullptr));
+        actionSobelFilter->setText(QCoreApplication::translate("MainWindow", "Sobel", nullptr));
+        actionLaplacianFilter->setText(QCoreApplication::translate("MainWindow", "Laplacian", nullptr));
+        actionBilateralFilter->setText(QCoreApplication::translate("MainWindow", "Bilateral", nullptr));
         actionUndo->setText(QCoreApplication::translate("MainWindow", "Undo", nullptr));
+#if QT_CONFIG(shortcut)
+        actionUndo->setShortcut(QCoreApplication::translate("MainWindow", "Ctrl+Z", nullptr));
+#endif // QT_CONFIG(shortcut)
         actionRedo->setText(QCoreApplication::translate("MainWindow", "Redo", nullptr));
+#if QT_CONFIG(shortcut)
+        actionRedo->setShortcut(QCoreApplication::translate("MainWindow", "Ctrl+Y", nullptr));
+#endif // QT_CONFIG(shortcut)
+        actionFirst->setText(QCoreApplication::translate("MainWindow", "First", nullptr));
         label->setText(QCoreApplication::translate("MainWindow", "Image Display", nullptr));
         menuFile->setTitle(QCoreApplication::translate("MainWindow", "File", nullptr));
         menuEdit->setTitle(QCoreApplication::translate("MainWindow", "Edit", nullptr));

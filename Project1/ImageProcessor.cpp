@@ -32,11 +32,11 @@ QFuture<bool> ImageProcessor::rotateImage(cv::Mat& image) {
 
     return QtConcurrent::run([this, &image]()->bool {
 
-        QMutexLocker locker(&mutex);
-
-        pushToUndoStack(image);
+        QMutexLocker locker(&mutex);        
 
         try {
+
+            pushToUndoStack(image);
 
             if (image.empty()) {
                 qDebug() << "Input image is empty.";
@@ -69,11 +69,11 @@ QFuture<bool> ImageProcessor::zoomImage(cv::Mat& image, double scaleFactor)
 {
     return QtConcurrent::run([this, &image, scaleFactor]() -> bool {
         
-        QMutexLocker locker(&mutex);
-
-        pushToUndoStack(image);
+        QMutexLocker locker(&mutex);        
         
         try {
+
+            pushToUndoStack(image);
             
             if (image.empty()) {
                 qDebug() << "입력 이미지가 비어 있습니다.";
@@ -109,17 +109,18 @@ QFuture<bool> ImageProcessor::convertToGrayscaleAsync(cv::Mat& image)
 {
     return QtConcurrent::run([this, &image]() -> bool {
 
-        QMutexLocker locker(&mutex);
-
-        pushToUndoStack(image);
+        QMutexLocker locker(&mutex);        
 
         try {
+
+            pushToUndoStack(image);
+
             if (image.empty()) {
                 qDebug() << "Input image is empty.";
                 return false;
             }
 
-            cv::Mat gray = converToGrayScale(image);
+            cv::Mat gray = convertToGrayScale(image);
 
             // 원본 이미지에 그레이스케일 이미지 적용
             image = gray.clone();
@@ -139,11 +140,12 @@ QFuture<bool> ImageProcessor::applyGaussianBlur(cv::Mat& image, int kernelSize)
 {
     return QtConcurrent::run([this, &image, kernelSize]() -> bool {
         
-        QMutexLocker locker(&mutex);
-
-        pushToUndoStack(image);
+        QMutexLocker locker(&mutex);        
 
         try {
+
+            pushToUndoStack(image);
+
             if (image.empty()) {
                 qDebug() << "Input image is empty.";
                 return false;
@@ -173,22 +175,23 @@ QFuture<bool> ImageProcessor::applyGaussianBlur(cv::Mat& image, int kernelSize)
 }
 
 //Canny
-QFuture<bool> ImageProcessor::detectEdges(cv::Mat& image)
+QFuture<bool> ImageProcessor::cannyEdges(cv::Mat& image)
 {
     return QtConcurrent::run([this, &image]() -> bool {
 
-        QMutexLocker locker(&mutex);
-
-        pushToUndoStack(image);
+        QMutexLocker locker(&mutex);        
 
         try {
+
+            pushToUndoStack(image);
+
             if (image.empty()) {
                 qDebug() << "Input image is empty.";
                 return false;
             }
 
             //회색조이미지
-            cv::Mat gray = converToGrayScale(image);
+            cv::Mat gray = convertToGrayScale(image);
 
             cv::Mat edges;//엣지감지결과
             //50:하위 임계값(threshold1)
@@ -212,6 +215,104 @@ QFuture<bool> ImageProcessor::detectEdges(cv::Mat& image)
         }
         catch (const cv::Exception& e) {
             qDebug() << "Exception occurred while detecting edges:" << e.what();
+            return false;
+        }
+        });
+}
+
+QFuture<bool> ImageProcessor::medianFilter(cv::Mat& image)
+{
+    return QtConcurrent::run([this, &image]()->bool {
+
+        QMutexLocker locker(&mutex);        
+
+        try {
+
+            pushToUndoStack(image);
+
+            if (image.empty()) {
+                qDebug() << "median 필터를 적용할 이미지가 없습니다.";
+                return false;
+            }
+
+            cv::Mat medianedImage;
+            cv::medianBlur(image, medianedImage, 5);
+            image = medianedImage.clone();
+            lastProcessedImage = image.clone();
+
+            emit imageProcessed(image);
+
+            return true;
+        }
+        catch (const cv::Exception& e) {
+            qDebug() << "median 필터 적용 중 오류 발생: "
+                << e.what();
+            return false;
+        }
+    });
+}
+
+QFuture<bool> ImageProcessor::laplacianFilter(cv::Mat& image)
+{
+    return QtConcurrent::run([this, &image]()->bool {
+
+        QMutexLocker locker(&mutex);        
+
+        try {
+
+            pushToUndoStack(image);
+
+            if (image.empty()) {
+                qDebug() << "laplacian 필터를 적용할 이미지가 없습니다.";
+                return false;
+            }
+
+            cv::Mat filteredImage;
+            cv::Laplacian(image, filteredImage, CV_8U, 3);
+
+            image = filteredImage.clone();
+            lastProcessedImage = image.clone();
+
+            emit imageProcessed(image);
+
+            return true;
+        }
+        catch (const cv::Exception& e) {
+            qDebug() << "laplacian 필터 적용 중 오류 발생: "
+                << e.what();
+            return false;
+        }
+        });
+}
+
+QFuture<bool> ImageProcessor::bilateralFilter(cv::Mat& image)
+{
+    return QtConcurrent::run([this, &image]()->bool {
+
+        QMutexLocker locker(&mutex);        
+
+        try {
+
+            pushToUndoStack(image);
+
+            if (image.empty()) {
+                qDebug() << "bilateral 필터를 적용할 이미지가 없습니다.";
+                return false;
+            }
+
+            cv::Mat filteredImage;
+            cv::bilateralFilter(image, filteredImage, 9, 75, 75);
+
+            image = filteredImage.clone();
+            lastProcessedImage = image.clone();
+
+            emit imageProcessed(image);
+
+            return true;
+        }
+        catch (const cv::Exception& e) {
+            qDebug() << "bilateral 필터 적용 중 오류 발생: "
+                << e.what();
             return false;
         }
         });
@@ -271,6 +372,22 @@ void ImageProcessor::redo()
     }
 }
 
+void ImageProcessor::cleanUndoStack()
+{
+    QMutexLocker locker(&mutex);
+    while (!undoStack.empty()) {
+        undoStack.pop();
+    }
+}
+
+void ImageProcessor::cleanRedoStack()
+{
+    QMutexLocker locker(&mutex);
+    while (!redoStack.empty()) {
+        redoStack.pop();
+    }
+}
+
 const cv::Mat& ImageProcessor::getLastProcessedImage() const
 {
     return lastProcessedImage;
@@ -286,7 +403,7 @@ void ImageProcessor::pushToRedoStack(const cv::Mat& image)
     redoStack.push(image.clone());
 }
 
-cv::Mat ImageProcessor::converToGrayScale(const cv::Mat& image)
+cv::Mat ImageProcessor::convertToGrayScale(const cv::Mat& image)
 {
     // RGB 채널을 그레이스케일로 변환
     cv::Mat gray;

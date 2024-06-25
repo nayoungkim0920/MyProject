@@ -1,10 +1,12 @@
 cmake_minimum_required(VERSION 3.14)
 project(Project1)
 
-# Qt, OpenCV, CUDA 설정
+# Qt 및 OpenCV 설정
 set(CMAKE_PREFIX_PATH "C:/Qt/6.7.1/msvc2019_64" "C:/opencv/sources/build")
+
+# Qt 및 OpenCV 패키지 찾기
 find_package(Qt6 REQUIRED COMPONENTS Widgets Core Gui)
-find_package(OpenCV REQUIRED COMPONENTS core imgproc highgui aruco)
+find_package(OpenCV REQUIRED)
 
 # Intel oneAPI IPP 추가
 set(IPP_INCLUDE_DIR "C:/Program Files (x86)/Intel/oneAPI/ipp/2021.11/include")
@@ -13,15 +15,7 @@ set(IPP_LIB_DIR "C:/Program Files (x86)/Intel/oneAPI/ipp/2021.11/lib")
 # 추가 포함 디렉터리 설정
 include_directories(${IPP_INCLUDE_DIR})
 
-# CUDA 파일 설정
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -std=c++11)
-
 # 실행 파일 추가
-qt6_wrap_cpp(MOC_FILES
-    MainWindow.h
-    ImageProcessor.h
-)
-
 add_executable(Project1
     main.cpp
     MainWindow.cpp
@@ -29,7 +23,6 @@ add_executable(Project1
     MainWindow.ui
     ImageProcessor.cpp
     ImageProcessor.h
-    ${MOC_FILES}  # 이전에 생성한 MOC 파일
 )
 
 # Qt 및 OpenCV 라이브러리 링크
@@ -51,19 +44,6 @@ target_link_libraries(Project1
     "${IPP_LIB_DIR}/ipps.lib"
     "${IPP_LIB_DIR}/ippcvmt.lib"
 )
-
-# CUDA 링크 및 인클루드 설정
-target_include_directories(Project1 PRIVATE
-    ${CUDA_INCLUDE_DIRS}
-)
-
-# CUDA 링크 설정
-target_link_libraries(Project1
-    ${CUDA_LIBRARIES}
-)
-
-# CUDA 컴파일러 설정
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} --expt-relaxed-constexpr)
 
 # 실행 파일 출력 디렉토리 설정
 set_target_properties(Project1 PROPERTIES
@@ -108,7 +88,12 @@ add_custom_command(TARGET Project1 POST_BUILD
     COMMENT "Copying OpenCV Release DLLs to output directory"
 )
 
-# IPP 헤더 파일 포함
-target_include_directories(Project1 PRIVATE
-    ${IPP_INCLUDE_DIR}
+
+# MOC 파일 생성
+qt6_wrap_cpp(MOC_FILES
+    MainWindow.h
+    ImageProcessor.h
 )
+
+# 생성된 MOC 파일을 소스에 추가
+target_sources(Project1 PRIVATE ${MOC_FILES})

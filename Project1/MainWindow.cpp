@@ -29,6 +29,7 @@ void MainWindow::openFile()
         cv::Mat loadedImage;
         if (imageProcessor->openImage(fileName.toStdString(), loadedImage)) {
             currentImage = loadedImage.clone(); // Clone loaded image
+            initialImage = currentImage.clone();
             displayImage(currentImage);
         }
         else {
@@ -57,7 +58,10 @@ void MainWindow::rotateImage()
     if (!currentImage.empty()) {
         auto future = imageProcessor->rotateImage(currentImage);
         future.waitForFinished();
-        future.result();
+
+        if (!future.result()) {
+            qDebug() << "Failed to apply rotateImage.";
+        }
     }
 }
 
@@ -68,7 +72,10 @@ void MainWindow::zoomInImage()
         auto future = imageProcessor->zoomImage(currentImage,
             scaleFactor);
         future.waitForFinished();
-        future.result();
+
+        if (!future.result()) {
+            qDebug() << "Failed to apply zoomInImage.";
+        }
     }
 }
 
@@ -79,7 +86,10 @@ void MainWindow::zoomOutImage()
         auto future = imageProcessor->zoomImage(currentImage,
             scaleFactor);
         future.waitForFinished();
-        future.result();
+
+        if (!future.result()) {
+            qDebug() << "Failed to apply zoomOutImage.";
+        }
     }
 }
 
@@ -88,30 +98,44 @@ void MainWindow::convertToGrayscale()
     if (!currentImage.empty()) {
         auto future = imageProcessor->convertToGrayscaleAsync(currentImage);
         future.waitForFinished();
-        future.result();
+
+        if (!future.result()) {
+            qDebug() << "Failed to apply convertToGrayscale.";
+        }
     }
 }
 
 void MainWindow::applyGaussianBlur()
 {
-    if (!currentImage.empty()) {
-        bool ok;
-        int kernelSize = QInputDialog::getInt(this, tr("Gaussian Blur"), tr("Enter kernel size (odd number):"), 5, 1, 101, 2, &ok);
-        if (ok) {
-            auto future = imageProcessor->applyGaussianBlur(currentImage, kernelSize);
-            future.waitForFinished(); 
-            future.result();
-        }
+    bool ok;
+    int kernelSize = QInputDialog::getInt(this,
+        tr("Gaussian Blur"), 
+        tr("Enter kernel size (odd nubmber):"),
+        5, 1, 101, 2, &ok);
+
+    if (ok) {
+        applyImageProcessing(&ImageProcessor::applyGaussianBlur, currentImage, kernelSize);
     }
 }
 
-void MainWindow::detectEdges()
+void MainWindow::cannyEdges()
 {
-    if (!currentImage.empty()) {
-        auto future = imageProcessor->detectEdges(currentImage);
-        future.waitForFinished();
-        future.result();
-    }
+    applyImageProcessing(&ImageProcessor::cannyEdges, currentImage);
+}
+
+void MainWindow::medianFilter()
+{
+    applyImageProcessing(&ImageProcessor::medianFilter, currentImage);
+}
+
+void MainWindow::laplacianFilter()
+{
+    applyImageProcessing(&ImageProcessor::laplacianFilter, currentImage);
+}
+
+void MainWindow::bilateralFilter()
+{
+    applyImageProcessing(&ImageProcessor::bilateralFilter, currentImage);
 }
 
 void MainWindow::exitApplication()
@@ -133,16 +157,39 @@ void MainWindow::undoAction()
     }
 }
 
+void MainWindow::first()
+{
+    //초기 이미지로 되돌리기
+    if (!initialImage.empty()) {
+        currentImage = initialImage.clone();
+        displayImage(currentImage);
+        imageProcessor->cleanUndoStack();
+        imageProcessor->cleanRedoStack();
+    }
+    else {
+        QMessageBox::warning(this,
+            tr("Warning"),
+            tr("No initial Image available."));
+        return;
+    }
+}
 
+//OpenCV에서 가져온 이미지를 QImage로 변환하여 QLabel에 설정
+//QMetaObject::invokeMethod를 사용하여 이미지 변환 및 설정 작업을 
+//메인스레드에서 수행하도록 한다.
 void MainWindow::displayImage(const cv::Mat& image)
 {
-    QImage qImage(image.data,
-        image.cols,
-        image.rows,
-        static_cast<int>(image.step),
-        QImage::Format_BGR888);
-    ui->label->setPixmap(QPixmap::fromImage(qImage));
-    ui->label->adjustSize();
+    QMetaObject::invokeMethod(this, [this, image]() {
+
+        QImage qImage(image.data,
+            image.cols,
+            image.rows,
+            static_cast<int>(image.step),
+            QImage::Format_BGR888);
+        ui->label->setPixmap(QPixmap::fromImage(qImage));
+        ui->label->adjustSize();
+
+        });    
 }
 
 
@@ -160,8 +207,12 @@ void MainWindow::connectActions()
 
     connect(ui->actionGrayscale, &QAction::triggered, this, &MainWindow::convertToGrayscale);
     connect(ui->actionGaussianBlur, &QAction::triggered, this, &MainWindow::applyGaussianBlur);
-    connect(ui->actionDetectEdges, &QAction::triggered, this, &MainWindow::detectEdges);
+    connect(ui->actionCannyEdges, &QAction::triggered, this, &MainWindow::cannyEdges);
+    connect(ui->actionMedianFilter, &QAction::triggered, this, &MainWindow::medianFilter);
+    connect(ui->actionLaplacianFilter, &QAction::triggered, this, &MainWindow::laplacianFilter);
+    connect(ui->actionBilateralFilter, &QAction::triggered, this, &MainWindow::bilateralFilter);
 
+    connect(ui->actionFirst, &QAction::triggered, this, &MainWindow::first);
     
 }
 
@@ -178,4 +229,19 @@ void MainWindow::setInitialWindowGeometry()
     const int initialX = 100;
     const int initialY = 100;
     this->setGeometry(initialX, initialY, initialWidth, initialHeight);
+}
+
+template<typename Func, typename ...Args>
+inline void MainWindow::applyImageProcessing(Func func, Args&& ...args)
+{
+    if (!currentImage.empty()) {
+        auto future = (imageProcessor->*func)(std::forward<Args>(args)...);
+        future.waitForFinished();
+        if (!future.result()) {
+            qDebug() << "Failed to apply" << Q_FUNC_INFO;
+        }
+    }
+    else {
+        qDebug() << "No image to process.";
+    }
 }
