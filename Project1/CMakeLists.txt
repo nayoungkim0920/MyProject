@@ -2,19 +2,22 @@ cmake_minimum_required(VERSION 3.14)
 project(Project1)
 
 # Qt, OpenCV, CUDA 설정
-set(CMAKE_PREFIX_PATH "C:/Qt/6.7.1/msvc2019_64" "C:/opencv/sources/build")
+set(CMAKE_PREFIX_PATH "C:/Qt/6.7.1/msvc2019_64" "C:/opencv/build")
 find_package(Qt6 REQUIRED COMPONENTS Widgets Core Gui)
-find_package(OpenCV REQUIRED COMPONENTS core imgproc highgui aruco)
+find_package(OpenCV REQUIRED COMPONENTS core imgproc highgui cudaarithm cudafilters cudawarping cudacodec cudafeatures2d cudaimgproc)
 
-# Intel oneAPI IPP 추가
-set(IPP_INCLUDE_DIR "C:/Program Files (x86)/Intel/oneAPI/ipp/2021.11/include")
-set(IPP_LIB_DIR "C:/Program Files (x86)/Intel/oneAPI/ipp/2021.11/lib")
+# CUDA 및 cuDNN 경로 설정
+set(CUDA_TOOLKIT_ROOT_DIR "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.1")
+set(CUDNN_ROOT_DIR "C:/Program Files/NVIDIA/CUDNN/v9.1")
 
 # 추가 포함 디렉터리 설정
-include_directories(${IPP_INCLUDE_DIR})
+include_directories(
+    ${CUDA_INCLUDE_DIRS}
+    ${CUDNN_INCLUDE_DIRS}
+)
 
 # CUDA 파일 설정
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -std=c++11)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -std=c++11 --expt-relaxed-constexpr)
 
 # 실행 파일 추가
 qt6_wrap_cpp(MOC_FILES
@@ -40,30 +43,14 @@ target_link_libraries(Project1
     ${OpenCV_LIBS}
 )
 
-# Intel oneAPI IPP 라이브러리 링크
-target_link_libraries(Project1
-    "${IPP_LIB_DIR}/ippimt.lib"
-    "${IPP_LIB_DIR}/ippvmmt.lib"
-    "${IPP_LIB_DIR}/ippsmt.lib"
-    "${IPP_LIB_DIR}/ippcoremt.lib"
-    "${IPP_LIB_DIR}/ippcore.lib"
-    "${IPP_LIB_DIR}/ippi.lib"
-    "${IPP_LIB_DIR}/ipps.lib"
-    "${IPP_LIB_DIR}/ippcvmt.lib"
-)
-
-# CUDA 링크 및 인클루드 설정
-target_include_directories(Project1 PRIVATE
-    ${CUDA_INCLUDE_DIRS}
-)
-
-# CUDA 링크 설정
+# CUDA 및 cuDNN 라이브러리 링크
 target_link_libraries(Project1
     ${CUDA_LIBRARIES}
+    ${CUDNN_LIBRARIES}
+    ${CUDA_cudart_LIBRARY}
+    ${CUDA_cublas_LIBRARY}
+    ${CUDA_curand_LIBRARY}
 )
-
-# CUDA 컴파일러 설정
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} --expt-relaxed-constexpr)
 
 # 실행 파일 출력 디렉토리 설정
 set_target_properties(Project1 PROPERTIES
@@ -75,36 +62,48 @@ set_target_properties(Project1 PROPERTIES
 # 디버그 빌드에서의 OpenCV opencv_world DLL 복사
 add_custom_command(TARGET Project1 POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/opencv/build/x64/vc16/bin/opencv_world490d.dll" "$<TARGET_FILE_DIR:Project1>"
+    "C:/opencv/build/x64/vc16/bin/opencv_world4100d.dll" "$<TARGET_FILE_DIR:Project1>"
     COMMENT "Copying OpenCV Debug opencv_world DLL to output directory"
 )
 
 # 릴리스 빌드에서의 OpenCV opencv_world DLL 복사
 add_custom_command(TARGET Project1 POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/opencv/build/x64/vc16/bin/opencv_world490.dll" "$<TARGET_FILE_DIR:Project1>"
+    "C:/opencv/build/x64/vc16/bin/opencv_world4100.dll" "$<TARGET_FILE_DIR:Project1>"
     COMMENT "Copying OpenCV Release opencv_world DLL to output directory"
 )
 
 # 디버그 빌드에서의 OpenCV DLL 복사
 add_custom_command(TARGET Project1 POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/opencv/sources/build/bin/Debug/opencv_imgcodecs490d.dll" "$<TARGET_FILE_DIR:Project1>"
+    "C:/opencv/build/bin/Debug/opencv_cudaarithm4100d.dll" "$<TARGET_FILE_DIR:Project1>"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/opencv/sources/build/bin/Debug/opencv_core490d.dll" "$<TARGET_FILE_DIR:Project1>"
+    "C:/opencv/build/bin/Debug/opencv_cudaimgproc4100d.dll" "$<TARGET_FILE_DIR:Project1>"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/opencv/sources/build/bin/Debug/opencv_imgproc490d.dll" "$<TARGET_FILE_DIR:Project1>"
+    "C:/opencv/build/bin/Debug/opencv_cudafilters4100d.dll" "$<TARGET_FILE_DIR:Project1>"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "C:/opencv/build/bin/Debug/opencv_imgcodecs4100d.dll" "$<TARGET_FILE_DIR:Project1>"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "C:/opencv/build/bin/Debug/opencv_core4100d.dll" "$<TARGET_FILE_DIR:Project1>"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "C:/opencv/build/bin/Debug/opencv_imgproc4100d.dll" "$<TARGET_FILE_DIR:Project1>"
     COMMENT "Copying OpenCV Debug DLLs to output directory"
 )
 
 # 릴리스 빌드에서의 OpenCV DLL 복사
 add_custom_command(TARGET Project1 POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/opencv/sources/build/bin/Release/opencv_imgcodecs490.dll" "$<TARGET_FILE_DIR:Project1>"
+    "C:/opencv/build/bin/Release/opencv_cudaarithm4100.dll" "$<TARGET_FILE_DIR:Project1>"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/opencv/sources/build/bin/Release/opencv_core490.dll" "$<TARGET_FILE_DIR:Project1>"
+    "C:/opencv/build/bin/Release/opencv_cudaimgproc4100.dll" "$<TARGET_FILE_DIR:Project1>"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/opencv/sources/build/bin/Release/opencv_imgproc490.dll" "$<TARGET_FILE_DIR:Project1>"
+    "C:/opencv/build/bin/Release/opencv_cudafilters4100.dll" "$<TARGET_FILE_DIR:Project1>"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "C:/opencv/build/bin/Release/opencv_imgcodecs4100.dll" "$<TARGET_FILE_DIR:Project1>"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "C:/opencv/build/bin/Release/opencv_core4100.dll" "$<TARGET_FILE_DIR:Project1>"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "C:/opencv/build/bin/Release/opencv_imgproc4100.dll" "$<TARGET_FILE_DIR:Project1>"
     COMMENT "Copying OpenCV Release DLLs to output directory"
 )
 

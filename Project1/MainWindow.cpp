@@ -96,6 +96,9 @@ void MainWindow::zoomOutImage()
 void MainWindow::convertToGrayscale()
 {
     if (!currentImage.empty()) {
+        qDebug() << "convertToGrayscale() currentImage type : " << currentImage.type();
+        qDebug() << "convertToGrayscale() currentImage channels : " << currentImage.channels();
+
         auto future = imageProcessor->convertToGrayscaleAsync(currentImage);
         future.waitForFinished();
 
@@ -174,22 +177,38 @@ void MainWindow::first()
     }
 }
 
-//OpenCV에서 가져온 이미지를 QImage로 변환하여 QLabel에 설정
-//QMetaObject::invokeMethod를 사용하여 이미지 변환 및 설정 작업을 
-//메인스레드에서 수행하도록 한다.
 void MainWindow::displayImage(const cv::Mat& image)
 {
     QMetaObject::invokeMethod(this, [this, image]() {
 
-        QImage qImage(image.data,
-            image.cols,
-            image.rows,
-            static_cast<int>(image.step),
-            QImage::Format_BGR888);
-        ui->label->setPixmap(QPixmap::fromImage(qImage));
-        ui->label->adjustSize();
+        qDebug() << "displayImage() channels : " << image.channels();
 
-        });    
+        currentImage = image;
+
+        // 이미지 타입이 그레이스케일(CV_8UC1)인지 확인합니다.
+        if (image.type() == CV_8UC1) {
+            qDebug() << "displayImage() type : graysclae CV_8UC1 Format_Grayscale8";
+            QImage qImage(image.data,
+                image.cols,
+                image.rows,
+                static_cast<int>(image.step),
+                QImage::Format_Grayscale8);
+            ui->label->setPixmap(QPixmap::fromImage(qImage));
+            ui->label->adjustSize();
+        }
+        else {
+            qDebug() << "displayImage() type : Format_BGR888";
+            QImage qImage(image.data,
+                image.cols,
+                image.rows,
+                static_cast<int>(image.step),
+                QImage::Format_BGR888);
+            ui->label->setPixmap(QPixmap::fromImage(qImage));
+            ui->label->adjustSize();
+        }
+
+        });  
+
 }
 
 

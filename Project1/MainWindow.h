@@ -48,7 +48,7 @@ private:
     ImageProcessor* imageProcessor;
     double scaleFactor;
     cv::Mat initialImage;
-
+    cv::Mat previousImage;
     
     void connectActions();
     void connectImageProcessor();

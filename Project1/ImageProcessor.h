@@ -11,11 +11,14 @@
 #include <opencv2/core.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
 //#include <ipp.h>
 //#include <ipp/ippi.h>
 //#include <ipp/ippcc.h>
-//#include <opencv2/cuda
+#include <opencv2/core/cuda.hpp>
+#include <opencv2/cudaimgproc.hpp>
 #include <opencv2/cudaarithm.hpp>
+#include <opencv2/cudafilters.hpp>
 
 class ImageProcessor : public QObject
 {
@@ -59,7 +62,7 @@ private:
     void pushToUndoStack(const cv::Mat& image);
     void pushToRedoStack(const cv::Mat& image);
 
-    cv::Mat convertToGrayScale(const cv::Mat& image);
+    bool convertToGrayscaleCUDA(cv::Mat& image);
 };
 
 #endif // IMAGEPROCESSOR_H
