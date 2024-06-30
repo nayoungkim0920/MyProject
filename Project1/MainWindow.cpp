@@ -181,15 +181,29 @@ void MainWindow::displayImage(const cv::Mat& image)
 {
     QMetaObject::invokeMethod(this, [this, image]() {
 
-        QImage qImage(image.data,
-            image.cols,
-            image.rows,
-            static_cast<int>(image.step),
-            QImage::Format_BGR888);
-        ui->label->setPixmap(QPixmap::fromImage(qImage));
-        ui->label->adjustSize();
+        // 이미지 타입이 그레이스케일(CV_8UC1)인지 확인합니다.
+        if (image.type() == CV_8UC1) {
+            QImage qImage(image.data,
+                image.cols,
+                image.rows,
+                static_cast<int>(image.step),
+                QImage::Format_Grayscale8);
+            ui->label->setPixmap(QPixmap::fromImage(qImage));
+            ui->label->adjustSize();
+        }
+        else {
+            QImage qImage(image.data,
+                image.cols,
+                image.rows,
+                static_cast<int>(image.step),
+                QImage::Format_BGR888);
+            ui->label->setPixmap(QPixmap::fromImage(qImage));
+            ui->label->adjustSize();
+        }
 
-        });    
+        });  
+
+    
 }
 
 
