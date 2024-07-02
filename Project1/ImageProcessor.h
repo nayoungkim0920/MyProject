@@ -51,9 +51,9 @@ public:
 signals: //이벤트 발생을 알림
     void imageProcessed(const cv::Mat& processedImage);
 
-//slots: //이벤트를 처리하는 함수 지칭
+    //slots: //이벤트를 처리하는 함수 지칭
 
-private: 
+private:
     cv::Mat lastProcessedImage;
     QMutex mutex;
     std::stack<cv::Mat> undoStack;
@@ -61,11 +61,8 @@ private:
 
     void pushToUndoStack(const cv::Mat& image);
     void pushToRedoStack(const cv::Mat& image);
-<<<<<<< HEAD
 
     bool convertToGrayscaleCUDA(cv::Mat& image);
-=======
->>>>>>> 1411ff1ca5f8ad193b2e19cf1fb730e230fbea1e
 };
 
 #endif // IMAGEPROCESSOR_H

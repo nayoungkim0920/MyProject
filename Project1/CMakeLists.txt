@@ -58,7 +58,6 @@ set_target_properties(Project1 PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/Release"
 )
 
-# DLL 복사
 # 디버그 빌드에서의 OpenCV opencv_world DLL 복사
 add_custom_command(TARGET Project1 POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -111,3 +110,14 @@ add_custom_command(TARGET Project1 POST_BUILD
 target_include_directories(Project1 PRIVATE
     ${IPP_INCLUDE_DIR}
 )
+
+# 파일 인코딩 설정 추가
+# Visual Studio의 기본 인코딩을 UTF-8로 설정
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# 한글 주석 예시
+# 아래와 같은 주석을 사용하여 코드의 의도를 설명할 수 있습니다.
+# 이 주석은 한글이 포함된 주석입니다. GitHub에 업로드할 때 인코딩 문제가 발생하지 않도록 합니다.
+

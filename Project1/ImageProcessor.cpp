@@ -32,7 +32,7 @@ QFuture<bool> ImageProcessor::rotateImage(cv::Mat& image) {
 
     return QtConcurrent::run([this, &image]()->bool {
 
-        QMutexLocker locker(&mutex);        
+        QMutexLocker locker(&mutex);
 
         try {
 
@@ -60,21 +60,21 @@ QFuture<bool> ImageProcessor::rotateImage(cv::Mat& image) {
                 << e.what();
             return false;
         }
-        
-    });
+
+        });
 
 }
 
 QFuture<bool> ImageProcessor::zoomImage(cv::Mat& image, double scaleFactor)
 {
     return QtConcurrent::run([this, &image, scaleFactor]() -> bool {
-        
-        QMutexLocker locker(&mutex);        
-        
+
+        QMutexLocker locker(&mutex);
+
         try {
 
             pushToUndoStack(image);
-            
+
             if (image.empty()) {
                 qDebug() << "입력 이미지가 비어 있습니다.";
                 return false;
@@ -83,14 +83,14 @@ QFuture<bool> ImageProcessor::zoomImage(cv::Mat& image, double scaleFactor)
             if (scaleFactor <= 0) {
                 qDebug() << "잘못된 확대/축소 배율입니다.";
                 return false;
-            }            
+            }
 
             int newWidth = static_cast<int>(image.cols * scaleFactor);
             int newHeight = static_cast<int>(image.rows * scaleFactor);
 
             cv::Mat zoomedImage;
             cv::resize(image, zoomedImage, cv::Size(newWidth, newHeight), 0, 0, cv::INTER_LINEAR);
-            
+
             image = zoomedImage.clone(); // 이미지를 복사하여 업데이트
             lastProcessedImage = image.clone();
 
@@ -121,29 +121,16 @@ QDebug operator<<(QDebug dbg, const cv::Mat& mat) {
 QFuture<bool> ImageProcessor::convertToGrayscaleAsync(cv::Mat& image)
 {
     return QtConcurrent::run([this, &image]() -> bool {
-<<<<<<< HEAD
         QMutexLocker locker(&mutex);
 
         try {
 
-=======
-
-        QMutexLocker locker(&mutex);
-
-        try {
->>>>>>> 1411ff1ca5f8ad193b2e19cf1fb730e230fbea1e
             if (image.empty()) {
                 qDebug() << "Input image is empty.";
                 return false;
             }
-            
-            if (image.channels() == 1) {
-                qDebug() << "Input image is already a grayscale image.";
-                return true; // 이미 그레이스케일이므로 처리하지 않음
-            }
 
             if (image.channels() != 3) {
-<<<<<<< HEAD
                 pushToUndoStack(image);
                 qDebug() << "Input image is not a 3-channel BGR image.";
                 return false;
@@ -154,7 +141,7 @@ QFuture<bool> ImageProcessor::convertToGrayscaleAsync(cv::Mat& image)
                 qDebug() << "Input image is already a grayscale image.";
                 return false; // 이미 그레이스케일이므로 처리하지 않음
             }
-            
+
             pushToUndoStack(image);
 
             if (!convertToGrayscaleCUDA(image)) {
@@ -163,50 +150,6 @@ QFuture<bool> ImageProcessor::convertToGrayscaleAsync(cv::Mat& image)
 
             emit imageProcessed(image); // 변환된 이미지 신호 전송
 
-=======
-                qDebug() << "Input image is not a 3-channel BGR image.";
-                return false;
-            }
-
-            qDebug() << "Original image size:" << image.size() << "type:" << image.type();
-
-            pushToUndoStack(image);
-
-            // CUDA 장치 설정
-            cv::cuda::setDevice(0);
-            qDebug() << "CUDA device set.";
-
-            // 입력 이미지를 CUDA GpuMat으로 업로드
-            cv::cuda::GpuMat d_input;
-            d_input.upload(image);
-            qDebug() << "Image uploaded to CUDA. Size:" << d_input.size() << "type:" << d_input.type();
-
-            // CUDA를 사용하여 그레이스케일로 변환
-            cv::cuda::GpuMat d_output;
-            cv::cuda::cvtColor(d_input, d_output, cv::COLOR_BGR2GRAY);
-            qDebug() << "Image converted to grayscale on CUDA. Size:" << d_output.size() << "type:" << d_output.type();
-
-            // CUDA에서 호스트로 이미지 다운로드
-            cv::Mat output;
-            d_output.download(output);
-            qDebug() << "Image downloaded from CUDA. Size:" << output.size() << "type:" << output.type();
-
-            if (output.empty()) {
-                qDebug() << "Output image is empty after CUDA processing.";
-                return false;
-            }
-
-            if (output.type() != CV_8UC1) {
-                qDebug() << "Output image type is not CV_8UC1, something went wrong.";
-                return false;
-            }
-
-            // 원본 이미지에 그레이스케일 이미지 적용
-            image = output.clone();
-            lastProcessedImage = image.clone();
-
-            emit imageProcessed(image);
->>>>>>> 1411ff1ca5f8ad193b2e19cf1fb730e230fbea1e
             return true;
         }
         catch (const cv::Exception& e) {
@@ -218,7 +161,7 @@ QFuture<bool> ImageProcessor::convertToGrayscaleAsync(cv::Mat& image)
 
 bool ImageProcessor::convertToGrayscaleCUDA(cv::Mat& image)
 {
-    try {                
+    try {
 
         // CUDA 장치 설정
         cv::cuda::setDevice(0);
@@ -255,8 +198,8 @@ bool ImageProcessor::convertToGrayscaleCUDA(cv::Mat& image)
 QFuture<bool> ImageProcessor::applyGaussianBlur(cv::Mat& image, int kernelSize)
 {
     return QtConcurrent::run([this, &image, kernelSize]() -> bool {
-        
-        QMutexLocker locker(&mutex);        
+
+        QMutexLocker locker(&mutex);
 
         try {
 
@@ -316,7 +259,7 @@ QFuture<bool> ImageProcessor::applyGaussianBlur(cv::Mat& image, int kernelSize)
                 << e.what();
             return false;
         }
-    });
+        });
 }
 
 //Canny
@@ -326,10 +269,7 @@ QFuture<bool> ImageProcessor::cannyEdges(cv::Mat& image)
         QMutexLocker locker(&mutex);
 
         try {
-<<<<<<< HEAD
 
-=======
->>>>>>> 1411ff1ca5f8ad193b2e19cf1fb730e230fbea1e
             if (image.empty()) {
                 qDebug() << "Input image is empty.";
                 return false;
@@ -337,7 +277,6 @@ QFuture<bool> ImageProcessor::cannyEdges(cv::Mat& image)
 
             pushToUndoStack(image);
 
-<<<<<<< HEAD
             //그레이스케일이 아닌경우
             if (image.channels() != 1)
             {
@@ -350,30 +289,12 @@ QFuture<bool> ImageProcessor::cannyEdges(cv::Mat& image)
             cv::cuda::GpuMat d_input(image);
             cv::cuda::GpuMat d_cannyEdges;
             cv::Ptr<cv::cuda::CannyEdgeDetector> cannyDetector = cv::cuda::createCannyEdgeDetector(50, 150);
-=======
-            cv::cuda::GpuMat d_input;
-            if (image.channels() == 1) {
-                // 이미 그레이스케일인 경우
-                d_input.upload(image);
-            }
-            else {
-                // BGR 이미지인 경우 그레이스케일로 변환 후 업로드
-                cv::Mat grayImage;
-                cv::cvtColor(image, grayImage, cv::COLOR_BGR2GRAY);
-                d_input.upload(grayImage);
-            }
-
-            // 캐니 엣지 감지기 생성 및 적용
-            cv::Ptr<cv::cuda::CannyEdgeDetector> cannyDetector = cv::cuda::createCannyEdgeDetector(50, 150);
-            cv::cuda::GpuMat d_cannyEdges;
->>>>>>> 1411ff1ca5f8ad193b2e19cf1fb730e230fbea1e
             cannyDetector->detect(d_input, d_cannyEdges);
 
             // 결과를 CPU 메모리로 복사
             cv::Mat edges;
             d_cannyEdges.download(edges);
 
-<<<<<<< HEAD
             // 출력 이미지에 초록색 엣지 표시
             cv::Mat outputImage = cv::Mat::zeros(image.size(), CV_8UC3); // 3-channel BGR image
             cv::Mat mask(edges.size(), CV_8UC1, cv::Scalar(0)); // Mask for green edges
@@ -382,11 +303,6 @@ QFuture<bool> ImageProcessor::cannyEdges(cv::Mat& image)
             cv::split(outputImage, channels);
             channels[1] = mask; // Green channel is set by mask
             cv::merge(channels, 3, outputImage); // Merge channels to get green edges
-=======
-            // 출력 이미지에 엣지 표시 (예시)
-            cv::Mat outputImage = image.clone();
-            outputImage.setTo(cv::Scalar(0, 255, 0), edges); // Green edges
->>>>>>> 1411ff1ca5f8ad193b2e19cf1fb730e230fbea1e
 
             image = outputImage.clone();
             lastProcessedImage = image.clone();
@@ -396,13 +312,6 @@ QFuture<bool> ImageProcessor::cannyEdges(cv::Mat& image)
 
             emit imageProcessed(image);
 
-<<<<<<< HEAD
-=======
-            // GPU 메모리 해제
-            d_input.release();
-            d_cannyEdges.release();
-
->>>>>>> 1411ff1ca5f8ad193b2e19cf1fb730e230fbea1e
             return true;
         }
         catch (const cv::Exception& e) {
@@ -412,14 +321,11 @@ QFuture<bool> ImageProcessor::cannyEdges(cv::Mat& image)
         });
 }
 
-
-
-
 QFuture<bool> ImageProcessor::medianFilter(cv::Mat& image)
 {
     return QtConcurrent::run([this, &image]()->bool {
 
-        QMutexLocker locker(&mutex);        
+        QMutexLocker locker(&mutex);
 
         try {
 
@@ -469,14 +375,14 @@ QFuture<bool> ImageProcessor::medianFilter(cv::Mat& image)
                 << e.what();
             return false;
         }
-    });
+        });
 }
 
 QFuture<bool> ImageProcessor::laplacianFilter(cv::Mat& image)
 {
     return QtConcurrent::run([this, &image]()->bool {
 
-        QMutexLocker locker(&mutex);        
+        QMutexLocker locker(&mutex);
 
         try {
 
@@ -509,7 +415,7 @@ QFuture<bool> ImageProcessor::bilateralFilter(cv::Mat& image)
 {
     return QtConcurrent::run([this, &image]()->bool {
 
-        QMutexLocker locker(&mutex);        
+        QMutexLocker locker(&mutex);
 
         try {
 
@@ -563,7 +469,7 @@ void ImageProcessor::undo()
         // Retrieve the image to restore from the undo stack and assign it to lastProcessedImage
         cv::Mat imageToRestore = undoStack.top();
         lastProcessedImage = imageToRestore.clone();
-        
+
         // Remove the image from the undo stack
         undoStack.pop();
 
@@ -595,7 +501,7 @@ void ImageProcessor::redo()
 
     }
     catch (const std::exception& e) {
-        qDebug() << "Exception occurred in ImageProcessor::redo(): " 
+        qDebug() << "Exception occurred in ImageProcessor::redo(): "
             << e.what();
     }
 }
@@ -629,10 +535,4 @@ void ImageProcessor::pushToUndoStack(const cv::Mat& image)
 void ImageProcessor::pushToRedoStack(const cv::Mat& image)
 {
     redoStack.push(image.clone());
-<<<<<<< HEAD
 }
-
-
-=======
-}
->>>>>>> 1411ff1ca5f8ad193b2e19cf1fb730e230fbea1e

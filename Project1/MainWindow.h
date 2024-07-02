@@ -40,7 +40,7 @@ private slots:
     void redoAction();
     void undoAction();
     void first();
-    void displayImage(const cv::Mat& image); 
+    void displayImage(const cv::Mat& image);
 
 private:
     Ui::MainWindow* ui;
@@ -49,7 +49,7 @@ private:
     double scaleFactor;
     cv::Mat initialImage;
     cv::Mat previousImage;
-    
+
     void connectActions();
     void connectImageProcessor();
     void setInitialWindowGeometry();
@@ -59,4 +59,3 @@ private:
 };
 
 #endif // MAINWINDOW_H
-
