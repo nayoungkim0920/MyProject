@@ -31,7 +31,8 @@ public:
     bool openImage(const std::string& fileName, cv::Mat& image);
     bool saveImage(const std::string& fileName, const cv::Mat& image);
     QFuture<bool> rotateImage(cv::Mat& image);
-    QFuture<bool> zoomImage(cv::Mat& image, double scaleFactor);
+    QFuture<bool> zoominImage(cv::Mat& image, double scaleFactor);
+    QFuture<bool> zoomoutImage(cv::Mat& image, double scaleFactor);
     QFuture<bool> convertToGrayscaleAsync(cv::Mat& image);
     QFuture<bool> applyGaussianBlur(cv::Mat& image, int kernelSize);
     QFuture<bool> cannyEdges(cv::Mat& image);

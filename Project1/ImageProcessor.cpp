@@ -34,14 +34,14 @@ QFuture<bool> ImageProcessor::rotateImage(cv::Mat& image) {
 
         QMutexLocker locker(&mutex);
 
-        try {
-
-            pushToUndoStack(image);
+        try {            
 
             if (image.empty()) {
                 qDebug() << "Input image is empty.";
                 return false;
             }
+
+            pushToUndoStack(image);
 
             //이미지 회전
             cv::Mat rotatedImage;
@@ -65,25 +65,25 @@ QFuture<bool> ImageProcessor::rotateImage(cv::Mat& image) {
 
 }
 
-QFuture<bool> ImageProcessor::zoomImage(cv::Mat& image, double scaleFactor)
+QFuture<bool> ImageProcessor::zoomoutImage(cv::Mat& image, double scaleFactor)
 {
     return QtConcurrent::run([this, &image, scaleFactor]() -> bool {
 
         QMutexLocker locker(&mutex);
 
-        try {
-
-            pushToUndoStack(image);
+        try {            
 
             if (image.empty()) {
-                qDebug() << "입력 이미지가 비어 있습니다.";
+                qDebug() << "Input image is empty.";
                 return false;
             }
 
             if (scaleFactor <= 0) {
-                qDebug() << "잘못된 확대/축소 배율입니다.";
+                qDebug() << "잘못된 축소 배율입니다.";
                 return false;
             }
+
+            pushToUndoStack(image);
 
             int newWidth = static_cast<int>(image.cols * scaleFactor);
             int newHeight = static_cast<int>(image.rows * scaleFactor);
@@ -99,7 +99,47 @@ QFuture<bool> ImageProcessor::zoomImage(cv::Mat& image, double scaleFactor)
             return true;
         }
         catch (const cv::Exception& e) {
-            qDebug() << "이미지 확대/축소 중 예외가 발생했습니다:" << e.what();
+            qDebug() << "이미지 축소 중 예외가 발생했습니다:" << e.what();
+            return false;
+        }
+        });
+}
+
+QFuture<bool> ImageProcessor::zoominImage(cv::Mat& image, double scaleFactor)
+{
+    return QtConcurrent::run([this, &image, scaleFactor]() -> bool {
+
+        QMutexLocker locker(&mutex);
+
+        try {
+
+            if (image.empty()) {
+                qDebug() << "Input image is empty.";
+                return false;
+            }
+
+            if (scaleFactor <= 0) {
+                qDebug() << "잘못된 확대 배율입니다.";
+                return false;
+            }
+
+            pushToUndoStack(image);
+
+            int newWidth = static_cast<int>(image.cols * scaleFactor);
+            int newHeight = static_cast<int>(image.rows * scaleFactor);
+
+            cv::Mat zoomedImage;
+            cv::resize(image, zoomedImage, cv::Size(newWidth, newHeight), 0, 0, cv::INTER_LINEAR);
+
+            image = zoomedImage.clone(); // 이미지를 복사하여 업데이트
+            lastProcessedImage = image.clone();
+
+            emit imageProcessed(image); // 이미지 처리 완료 시그널 발생
+
+            return true;
+        }
+        catch (const cv::Exception& e) {
+            qDebug() << "이미지 확대 중 예외가 발생했습니다:" << e.what();
             return false;
         }
         });

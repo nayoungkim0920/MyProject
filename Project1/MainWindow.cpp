@@ -55,57 +55,22 @@ void MainWindow::saveFile()
 
 void MainWindow::rotateImage()
 {
-    if (!currentImage.empty()) {
-        auto future = imageProcessor->rotateImage(currentImage);
-        future.waitForFinished();
-
-        if (!future.result()) {
-            qDebug() << "Failed to apply rotateImage.";
-        }
-    }
+    applyImageProcessing(&ImageProcessor::rotateImage, currentImage);
 }
 
 void MainWindow::zoomInImage()
 {
-    if (!currentImage.empty()) {
-        scaleFactor = 1.25;
-        auto future = imageProcessor->zoomImage(currentImage,
-            scaleFactor);
-        future.waitForFinished();
-
-        if (!future.result()) {
-            qDebug() << "Failed to apply zoomInImage.";
-        }
-    }
+    applyImageProcessing(&ImageProcessor::zoominImage, currentImage, scaleFactor=1.25);
 }
 
 void MainWindow::zoomOutImage()
 {
-    if (!currentImage.empty()) {
-        scaleFactor = 0.8;
-        auto future = imageProcessor->zoomImage(currentImage,
-            scaleFactor);
-        future.waitForFinished();
-
-        if (!future.result()) {
-            qDebug() << "Failed to apply zoomOutImage.";
-        }
-    }
+    applyImageProcessing(&ImageProcessor::zoomoutImage, currentImage, scaleFactor = 0.8);
 }
 
 void MainWindow::convertToGrayscale()
 {
-    if (!currentImage.empty()) {
-        qDebug() << "convertToGrayscale() currentImage type : " << currentImage.type();
-        qDebug() << "convertToGrayscale() currentImage channels : " << currentImage.channels();
-
-        auto future = imageProcessor->convertToGrayscaleAsync(currentImage);
-        future.waitForFinished();
-
-        if (!future.result()) {
-            qDebug() << "Failed to apply convertToGrayscale.";
-        }
-    }
+    applyImageProcessing(&ImageProcessor::convertToGrayscaleAsync, currentImage);
 }
 
 void MainWindow::applyGaussianBlur()
