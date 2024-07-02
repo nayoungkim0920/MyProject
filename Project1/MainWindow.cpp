@@ -181,6 +181,7 @@ void MainWindow::displayImage(const cv::Mat& image)
 {
     QMetaObject::invokeMethod(this, [this, image]() {
 
+<<<<<<< HEAD
         qDebug() << "displayImage() channels : " << image.channels();
 
         currentImage = image;
@@ -188,6 +189,10 @@ void MainWindow::displayImage(const cv::Mat& image)
         // 이미지 타입이 그레이스케일(CV_8UC1)인지 확인합니다.
         if (image.type() == CV_8UC1) {
             qDebug() << "displayImage() type : graysclae CV_8UC1 Format_Grayscale8";
+=======
+        // 이미지 타입이 그레이스케일(CV_8UC1)인지 확인합니다.
+        if (image.type() == CV_8UC1) {
+>>>>>>> 1411ff1ca5f8ad193b2e19cf1fb730e230fbea1e
             QImage qImage(image.data,
                 image.cols,
                 image.rows,
@@ -197,7 +202,10 @@ void MainWindow::displayImage(const cv::Mat& image)
             ui->label->adjustSize();
         }
         else {
+<<<<<<< HEAD
             qDebug() << "displayImage() type : Format_BGR888";
+=======
+>>>>>>> 1411ff1ca5f8ad193b2e19cf1fb730e230fbea1e
             QImage qImage(image.data,
                 image.cols,
                 image.rows,
@@ -206,9 +214,16 @@ void MainWindow::displayImage(const cv::Mat& image)
             ui->label->setPixmap(QPixmap::fromImage(qImage));
             ui->label->adjustSize();
         }
+<<<<<<< HEAD
 
         });  
 
+=======
+
+        });  
+
+    
+>>>>>>> 1411ff1ca5f8ad193b2e19cf1fb730e230fbea1e
 }
 
 

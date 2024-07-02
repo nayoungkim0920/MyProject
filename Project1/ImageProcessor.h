@@ -61,8 +61,11 @@ private:
 
     void pushToUndoStack(const cv::Mat& image);
     void pushToRedoStack(const cv::Mat& image);
+<<<<<<< HEAD
 
     bool convertToGrayscaleCUDA(cv::Mat& image);
+=======
+>>>>>>> 1411ff1ca5f8ad193b2e19cf1fb730e230fbea1e
 };
 
 #endif // IMAGEPROCESSOR_H
