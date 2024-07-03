@@ -11,6 +11,9 @@ MainWindow::MainWindow(QWidget* parent)
 
     connectActions();
 
+    //처음로딩 후 필터처리가 너무 느려 추가함
+    imageProcessor->initializeCUDA();
+
     connectImageProcessor();
 
     setInitialWindowGeometry();
@@ -176,6 +179,17 @@ void MainWindow::displayImage(const cv::Mat& image)
 
 }
 
+void MainWindow::handleImageProcessed(const cv::Mat& processedImage, double processingTimeMs)
+{
+    // 이미지 출력
+    displayImage(processedImage);
+
+    // 상태 표시줄에 처리 시간 출력
+    statusBar()->showMessage(
+        QString("Image processed in %1 ms").arg(processingTimeMs));
+
+}
+
 
 void MainWindow::connectActions()
 {
@@ -203,7 +217,7 @@ void MainWindow::connectActions()
 void MainWindow::connectImageProcessor()
 {
     // Connect ImageProcessor's signal to displayImage slot
-    connect(imageProcessor, &ImageProcessor::imageProcessed, this, &MainWindow::displayImage);
+    connect(imageProcessor, &ImageProcessor::imageProcessed, this, &MainWindow::handleImageProcessed);
 }
 
 void MainWindow::setInitialWindowGeometry()

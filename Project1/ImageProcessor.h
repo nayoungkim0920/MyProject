@@ -5,6 +5,7 @@
 #include <stack>
 #include <QObject>
 #include <QDebug>
+#include <chrono>
 #include <QMutex>
 #include <QMutexLocker>
 #include <QtConcurrent/QtConcurrent>
@@ -46,13 +47,14 @@ public:
     void redo();
     void cleanUndoStack();
     void cleanRedoStack();
+    void initializeCUDA();
 
     const cv::Mat& getLastProcessedImage() const;
 
 signals: //이벤트 발생을 알림
-    void imageProcessed(const cv::Mat& processedImage);
+    void imageProcessed(const cv::Mat& processedImage, double processingTimeMs);
 
-    //slots: //이벤트를 처리하는 함수 지칭
+//slots: //이벤트를 처리하는 함수 지칭
 
 private:
     cv::Mat lastProcessedImage;
@@ -64,6 +66,8 @@ private:
     void pushToRedoStack(const cv::Mat& image);
 
     bool convertToGrayscaleCUDA(cv::Mat& image);
+
+    double getCurrentTimeMs();
 };
 
 #endif // IMAGEPROCESSOR_H

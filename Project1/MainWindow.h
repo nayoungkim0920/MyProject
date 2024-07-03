@@ -41,6 +41,7 @@ private slots:
     void undoAction();
     void first();
     void displayImage(const cv::Mat& image);
+    void handleImageProcessed(const cv::Mat& processedImage, double processingTimeMs);
 
 private:
     Ui::MainWindow* ui;

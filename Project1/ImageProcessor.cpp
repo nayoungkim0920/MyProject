@@ -43,14 +43,21 @@ QFuture<bool> ImageProcessor::rotateImage(cv::Mat& image) {
 
             pushToUndoStack(image);
 
+            // 처리시간계산 시작
+            double startTime = getCurrentTimeMs();
+
             //이미지 회전
             cv::Mat rotatedImage;
             cv::rotate(image, rotatedImage, cv::ROTATE_90_CLOCKWISE);
 
+            // 처리시간계산 종료
+            double endTime = getCurrentTimeMs();
+            double processingTime = endTime - startTime;
+
             image = rotatedImage.clone();
             lastProcessedImage = image.clone();
 
-            emit imageProcessed(image);
+            emit imageProcessed(image, processingTime);
 
             return true;
 
@@ -85,16 +92,23 @@ QFuture<bool> ImageProcessor::zoomoutImage(cv::Mat& image, double scaleFactor)
 
             pushToUndoStack(image);
 
+            // 처리시간계산 시작
+            double startTime = getCurrentTimeMs();
+
             int newWidth = static_cast<int>(image.cols * scaleFactor);
             int newHeight = static_cast<int>(image.rows * scaleFactor);
 
             cv::Mat zoomedImage;
             cv::resize(image, zoomedImage, cv::Size(newWidth, newHeight), 0, 0, cv::INTER_LINEAR);
 
+            // 처리시간계산 종료
+            double endTime = getCurrentTimeMs();
+            double processingTime = endTime - startTime;
+
             image = zoomedImage.clone(); // 이미지를 복사하여 업데이트
             lastProcessedImage = image.clone();
 
-            emit imageProcessed(image); // 이미지 처리 완료 시그널 발생
+            emit imageProcessed(image, processingTime); // 이미지 처리 완료 시그널 발생
 
             return true;
         }
@@ -125,16 +139,23 @@ QFuture<bool> ImageProcessor::zoominImage(cv::Mat& image, double scaleFactor)
 
             pushToUndoStack(image);
 
+            // 처리시간계산 시작
+            double startTime = getCurrentTimeMs();
+
             int newWidth = static_cast<int>(image.cols * scaleFactor);
             int newHeight = static_cast<int>(image.rows * scaleFactor);
 
             cv::Mat zoomedImage;
             cv::resize(image, zoomedImage, cv::Size(newWidth, newHeight), 0, 0, cv::INTER_LINEAR);
 
+            // 처리시간계산 종료
+            double endTime = getCurrentTimeMs();
+            double processingTime = endTime - startTime;
+
             image = zoomedImage.clone(); // 이미지를 복사하여 업데이트
             lastProcessedImage = image.clone();
 
-            emit imageProcessed(image); // 이미지 처리 완료 시그널 발생
+            emit imageProcessed(image, processingTime); // 이미지 처리 완료 시그널 발생
 
             return true;
         }
@@ -184,11 +205,18 @@ QFuture<bool> ImageProcessor::convertToGrayscaleAsync(cv::Mat& image)
 
             pushToUndoStack(image);
 
+            // 처리시간계산 시작
+            double startTime = getCurrentTimeMs();
+
             if (!convertToGrayscaleCUDA(image)) {
                 return false;
             }
 
-            emit imageProcessed(image); // 변환된 이미지 신호 전송
+            // 처리시간계산 종료
+            double endTime = getCurrentTimeMs();
+            double processingTime = endTime - startTime;
+
+            emit imageProcessed(image, processingTime); // 변환된 이미지 신호 전송
 
             return true;
         }
@@ -235,6 +263,12 @@ bool ImageProcessor::convertToGrayscaleCUDA(cv::Mat& image)
     }
 }
 
+double ImageProcessor::getCurrentTimeMs()
+{
+    return std::chrono::duration_cast<std::chrono::milliseconds>
+        (std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
 QFuture<bool> ImageProcessor::applyGaussianBlur(cv::Mat& image, int kernelSize)
 {
     return QtConcurrent::run([this, &image, kernelSize]() -> bool {
@@ -254,6 +288,9 @@ QFuture<bool> ImageProcessor::applyGaussianBlur(cv::Mat& image, int kernelSize)
             }
 
             pushToUndoStack(image);
+
+            // 처리시간계산 시작
+            double startTime = getCurrentTimeMs();
 
             // Upload image to GPU
             cv::cuda::GpuMat gpuImage;
@@ -275,10 +312,14 @@ QFuture<bool> ImageProcessor::applyGaussianBlur(cv::Mat& image, int kernelSize)
             cv::Mat blurredImage;
             blurredGpuImage.download(blurredImage);
 
+            // 처리시간계산 종료
+            double endTime = getCurrentTimeMs();
+            double processingTime = endTime - startTime;            
+
             image = blurredImage.clone();
             lastProcessedImage = image.clone();
 
-            emit imageProcessed(image);
+            emit imageProcessed(image, processingTime);
 
             return true;
 
@@ -317,6 +358,9 @@ QFuture<bool> ImageProcessor::cannyEdges(cv::Mat& image)
 
             pushToUndoStack(image);
 
+            // 처리시간계산 시작
+            double startTime = getCurrentTimeMs();
+
             //그레이스케일이 아닌경우
             if (image.channels() != 1)
             {
@@ -344,13 +388,17 @@ QFuture<bool> ImageProcessor::cannyEdges(cv::Mat& image)
             channels[1] = mask; // Green channel is set by mask
             cv::merge(channels, 3, outputImage); // Merge channels to get green edges
 
+            // 처리시간계산 종료
+            double endTime = getCurrentTimeMs();
+            double processingTime = endTime - startTime;
+
             image = outputImage.clone();
             lastProcessedImage = image.clone();
 
             // GPU 메모리 해제
             d_cannyEdges.release();
 
-            emit imageProcessed(image);
+            emit imageProcessed(image, processingTime);
 
             return true;
         }
@@ -369,12 +417,15 @@ QFuture<bool> ImageProcessor::medianFilter(cv::Mat& image)
 
         try {
 
-            pushToUndoStack(image);
-
             if (image.empty()) {
                 qDebug() << "median 필터를 적용할 이미지가 없습니다.";
                 return false;
             }
+
+            pushToUndoStack(image);
+
+            // 처리시간계산 시작
+            double startTime = getCurrentTimeMs();
 
             // Upload image to GPU
             cv::cuda::GpuMat gpuImage;
@@ -392,10 +443,14 @@ QFuture<bool> ImageProcessor::medianFilter(cv::Mat& image)
             cv::Mat medianedImage;
             medianedGpuImage.download(medianedImage);
 
+            // 처리시간계산 종료
+            double endTime = getCurrentTimeMs();
+            double processingTime = endTime - startTime;
+
             image = medianedImage.clone();
             lastProcessedImage = image.clone();
 
-            emit imageProcessed(image);
+            emit imageProcessed(image, processingTime);
 
             return true;
 
@@ -424,22 +479,29 @@ QFuture<bool> ImageProcessor::laplacianFilter(cv::Mat& image)
 
         QMutexLocker locker(&mutex);
 
-        try {
-
-            pushToUndoStack(image);
+        try {            
 
             if (image.empty()) {
                 qDebug() << "laplacian 필터를 적용할 이미지가 없습니다.";
                 return false;
             }
 
+            pushToUndoStack(image);
+
+            // 처리시간계산 시작
+            double startTime = getCurrentTimeMs();
+
             cv::Mat filteredImage;
             cv::Laplacian(image, filteredImage, CV_8U, 3);
+
+            // 처리시간계산 종료
+            double endTime = getCurrentTimeMs();
+            double processingTime = endTime - startTime;
 
             image = filteredImage.clone();
             lastProcessedImage = image.clone();
 
-            emit imageProcessed(image);
+            emit imageProcessed(image, processingTime);
 
             return true;
         }
@@ -457,22 +519,29 @@ QFuture<bool> ImageProcessor::bilateralFilter(cv::Mat& image)
 
         QMutexLocker locker(&mutex);
 
-        try {
-
-            pushToUndoStack(image);
+        try {               
 
             if (image.empty()) {
                 qDebug() << "bilateral 필터를 적용할 이미지가 없습니다.";
                 return false;
             }
 
+            pushToUndoStack(image);
+
+            // 처리시간계산 시작
+            double startTime = getCurrentTimeMs();
+
             cv::Mat filteredImage;
             cv::bilateralFilter(image, filteredImage, 9, 75, 75);
+
+            // 처리시간계산 종료
+            double endTime = getCurrentTimeMs();
+            double processingTime = endTime - startTime;
 
             image = filteredImage.clone();
             lastProcessedImage = image.clone();
 
-            emit imageProcessed(image);
+            emit imageProcessed(image, processingTime);
 
             return true;
         }
@@ -503,6 +572,9 @@ void ImageProcessor::undo()
             throw std::runtime_error("Cannot undo: Undo stack is empty");
         }
 
+        // 처리시간계산 시작
+        double startTime = getCurrentTimeMs();
+
         // Push the current image to the redo stack
         redoStack.push(lastProcessedImage);
 
@@ -513,8 +585,12 @@ void ImageProcessor::undo()
         // Remove the image from the undo stack
         undoStack.pop();
 
+        // 처리시간계산 종료
+        double endTime = getCurrentTimeMs();
+        double processingTime = endTime - startTime;
+
         // Emit signal indicating image processing is complete
-        emit imageProcessed(lastProcessedImage);
+        emit imageProcessed(lastProcessedImage, processingTime);
     }
     catch (const std::exception& e) {
         qDebug() << "Exception occurred in ImageProcessor::undo(): " << e.what();
@@ -532,12 +608,19 @@ void ImageProcessor::redo()
         if (!canRedo())
             throw std::runtime_error("Cannot redo: redo stack is empty");
 
+        // 처리시간계산 시작
+        double startTime = getCurrentTimeMs();
+
         cv::Mat imageToRestore = redoStack.top();
         undoStack.push(lastProcessedImage);
         lastProcessedImage = imageToRestore.clone();
         redoStack.pop();
 
-        emit imageProcessed(lastProcessedImage);
+        // 처리시간계산 종료
+        double endTime = getCurrentTimeMs();
+        double processingTime = endTime - startTime;
+
+        emit imageProcessed(lastProcessedImage, processingTime);
 
     }
     catch (const std::exception& e) {
@@ -560,6 +643,14 @@ void ImageProcessor::cleanRedoStack()
     while (!redoStack.empty()) {
         redoStack.pop();
     }
+}
+
+void ImageProcessor::initializeCUDA()
+{
+    // 임의의 작은 작업을 수행하여 CUDA 초기화를 유도
+    cv::cuda::GpuMat temp;
+    temp.upload(cv::Mat::zeros(1, 1, CV_8UC1));
+    cv::cuda::cvtColor(temp, temp, cv::COLOR_GRAY2BGR);
 }
 
 const cv::Mat& ImageProcessor::getLastProcessedImage() const

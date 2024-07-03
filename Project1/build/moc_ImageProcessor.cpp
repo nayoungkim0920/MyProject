@@ -39,7 +39,8 @@ constexpr auto qt_meta_stringdata_CLASSImageProcessorENDCLASS = QtMocHelpers::st
     "imageProcessed",
     "",
     "cv::Mat",
-    "processedImage"
+    "processedImage",
+    "processingTimeMs"
 );
 #else  // !QT_MOC_HAS_STRINGDATA
 #error "qtmochelpers.h not found or too old."
@@ -60,10 +61,10 @@ Q_CONSTINIT static const uint qt_meta_data_CLASSImageProcessorENDCLASS[] = {
        1,       // signalCount
 
  // signals: name, argc, parameters, tag, flags, initial metatype offsets
-       1,    1,   20,    2, 0x06,    1 /* Public */,
+       1,    2,   20,    2, 0x06,    1 /* Public */,
 
  // signals: parameters
-    QMetaType::Void, 0x80000000 | 3,    4,
+    QMetaType::Void, 0x80000000 | 3, QMetaType::Double,    4,    5,
 
        0        // eod
 };
@@ -79,7 +80,8 @@ Q_CONSTINIT const QMetaObject ImageProcessor::staticMetaObject = { {
         QtPrivate::TypeAndForceComplete<ImageProcessor, std::true_type>,
         // method 'imageProcessed'
         QtPrivate::TypeAndForceComplete<void, std::false_type>,
-        QtPrivate::TypeAndForceComplete<const cv::Mat &, std::false_type>
+        QtPrivate::TypeAndForceComplete<const cv::Mat &, std::false_type>,
+        QtPrivate::TypeAndForceComplete<double, std::false_type>
     >,
     nullptr
 } };
@@ -90,13 +92,13 @@ void ImageProcessor::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _
         auto *_t = static_cast<ImageProcessor *>(_o);
         (void)_t;
         switch (_id) {
-        case 0: _t->imageProcessed((*reinterpret_cast< std::add_pointer_t<cv::Mat>>(_a[1]))); break;
+        case 0: _t->imageProcessed((*reinterpret_cast< std::add_pointer_t<cv::Mat>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[2]))); break;
         default: ;
         }
     } else if (_c == QMetaObject::IndexOfMethod) {
         int *result = reinterpret_cast<int *>(_a[0]);
         {
-            using _t = void (ImageProcessor::*)(const cv::Mat & );
+            using _t = void (ImageProcessor::*)(const cv::Mat & , double );
             if (_t _q_method = &ImageProcessor::imageProcessed; *reinterpret_cast<_t *>(_a[1]) == _q_method) {
                 *result = 0;
                 return;
@@ -136,9 +138,9 @@ int ImageProcessor::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 }
 
 // SIGNAL 0
-void ImageProcessor::imageProcessed(const cv::Mat & _t1)
+void ImageProcessor::imageProcessed(const cv::Mat & _t1, double _t2)
 {
-    void *_a[] = { nullptr, const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t1))) };
+    void *_a[] = { nullptr, const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t1))), const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t2))) };
     QMetaObject::activate(this, &staticMetaObject, 0, _a);
 }
 QT_WARNING_POP
