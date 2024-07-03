@@ -30,18 +30,19 @@ private slots:
     void rotateImage();
     void zoomInImage();
     void zoomOutImage();
-    void convertToGrayscale();
-    void applyGaussianBlur();
+    void grayScale();
+    void gaussianBlur();
     void cannyEdges();
     void medianFilter();
     void laplacianFilter();
     void bilateralFilter();
+    void sobelFilter();
     void exitApplication();
     void redoAction();
     void undoAction();
     void first();
     void displayImage(const cv::Mat& image);
-    void handleImageProcessed(const cv::Mat& processedImage, double processingTimeMs);
+    void handleImageProcessed(const cv::Mat& processedImage, double processingTimeMs, QString processName);
 
 private:
     Ui::MainWindow* ui;
@@ -55,8 +56,8 @@ private:
     void connectImageProcessor();
     void setInitialWindowGeometry();
 
-    template<typename Func, typename... Args>
-    inline void applyImageProcessing(Func func, Args&&... args);
+    //template<typename Func, typename... Args>
+    //inline void applyImageProcessing(Func func, Args&&... args);
 };
 
 #endif // MAINWINDOW_H

@@ -34,12 +34,13 @@ public:
     QFuture<bool> rotateImage(cv::Mat& image);
     QFuture<bool> zoominImage(cv::Mat& image, double scaleFactor);
     QFuture<bool> zoomoutImage(cv::Mat& image, double scaleFactor);
-    QFuture<bool> convertToGrayscaleAsync(cv::Mat& image);
-    QFuture<bool> applyGaussianBlur(cv::Mat& image, int kernelSize);
+    QFuture<bool> grayScale(cv::Mat& image);
+    QFuture<bool> gaussianBlur(cv::Mat& image, int kernelSize);
     QFuture<bool> cannyEdges(cv::Mat& image);
     QFuture<bool> medianFilter(cv::Mat& image);
     QFuture<bool> laplacianFilter(cv::Mat& image);
     QFuture<bool> bilateralFilter(cv::Mat& image);
+    QFuture<bool> sobelFilter(cv::Mat& image);
 
     bool canUndo() const;
     bool canRedo() const;
@@ -52,7 +53,7 @@ public:
     const cv::Mat& getLastProcessedImage() const;
 
 signals: //이벤트 발생을 알림
-    void imageProcessed(const cv::Mat& processedImage, double processingTimeMs);
+    void imageProcessed(const cv::Mat& processedImage, double processingTimeMs, QString processName);
 
 //slots: //이벤트를 처리하는 함수 지칭
 
@@ -65,7 +66,7 @@ private:
     void pushToUndoStack(const cv::Mat& image);
     void pushToRedoStack(const cv::Mat& image);
 
-    bool convertToGrayscaleCUDA(cv::Mat& image);
+    bool grayScaleCUDA(cv::Mat& image);
 
     double getCurrentTimeMs();
 };

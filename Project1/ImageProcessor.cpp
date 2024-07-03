@@ -30,7 +30,10 @@ bool ImageProcessor::saveImage(const std::string& fileName, const cv::Mat& image
 
 QFuture<bool> ImageProcessor::rotateImage(cv::Mat& image) {
 
-    return QtConcurrent::run([this, &image]()->bool {
+    //함수 이름을 문자열로 저장
+    const char* functionName = __func__;
+
+    return QtConcurrent::run([this, &image, functionName]()->bool {
 
         QMutexLocker locker(&mutex);
 
@@ -57,7 +60,7 @@ QFuture<bool> ImageProcessor::rotateImage(cv::Mat& image) {
             image = rotatedImage.clone();
             lastProcessedImage = image.clone();
 
-            emit imageProcessed(image, processingTime);
+            emit imageProcessed(image, processingTime, functionName);
 
             return true;
 
@@ -74,7 +77,10 @@ QFuture<bool> ImageProcessor::rotateImage(cv::Mat& image) {
 
 QFuture<bool> ImageProcessor::zoomoutImage(cv::Mat& image, double scaleFactor)
 {
-    return QtConcurrent::run([this, &image, scaleFactor]() -> bool {
+    //함수 이름을 문자열로 저장
+    const char* functionName = __func__;
+
+    return QtConcurrent::run([this, &image, scaleFactor, functionName]() -> bool {
 
         QMutexLocker locker(&mutex);
 
@@ -108,7 +114,7 @@ QFuture<bool> ImageProcessor::zoomoutImage(cv::Mat& image, double scaleFactor)
             image = zoomedImage.clone(); // 이미지를 복사하여 업데이트
             lastProcessedImage = image.clone();
 
-            emit imageProcessed(image, processingTime); // 이미지 처리 완료 시그널 발생
+            emit imageProcessed(image, processingTime, functionName); // 이미지 처리 완료 시그널 발생
 
             return true;
         }
@@ -121,7 +127,10 @@ QFuture<bool> ImageProcessor::zoomoutImage(cv::Mat& image, double scaleFactor)
 
 QFuture<bool> ImageProcessor::zoominImage(cv::Mat& image, double scaleFactor)
 {
-    return QtConcurrent::run([this, &image, scaleFactor]() -> bool {
+    //함수 이름을 문자열로 저장
+    const char* functionName = __func__;
+
+    return QtConcurrent::run([this, &image, scaleFactor, functionName]() -> bool {
 
         QMutexLocker locker(&mutex);
 
@@ -155,7 +164,7 @@ QFuture<bool> ImageProcessor::zoominImage(cv::Mat& image, double scaleFactor)
             image = zoomedImage.clone(); // 이미지를 복사하여 업데이트
             lastProcessedImage = image.clone();
 
-            emit imageProcessed(image, processingTime); // 이미지 처리 완료 시그널 발생
+            emit imageProcessed(image, processingTime, functionName); // 이미지 처리 완료 시그널 발생
 
             return true;
         }
@@ -179,9 +188,12 @@ QDebug operator<<(QDebug dbg, const cv::Mat& mat) {
     return dbg.space();
 }
 
-QFuture<bool> ImageProcessor::convertToGrayscaleAsync(cv::Mat& image)
-{
-    return QtConcurrent::run([this, &image]() -> bool {
+QFuture<bool> ImageProcessor::grayScale(cv::Mat& image)
+{   
+    //함수 이름을 문자열로 저장
+    const char* functionName = __func__;
+
+    return QtConcurrent::run([this, &image, functionName]() -> bool {
         QMutexLocker locker(&mutex);
 
         try {
@@ -208,7 +220,7 @@ QFuture<bool> ImageProcessor::convertToGrayscaleAsync(cv::Mat& image)
             // 처리시간계산 시작
             double startTime = getCurrentTimeMs();
 
-            if (!convertToGrayscaleCUDA(image)) {
+            if (!grayScaleCUDA(image)) {
                 return false;
             }
 
@@ -216,7 +228,7 @@ QFuture<bool> ImageProcessor::convertToGrayscaleAsync(cv::Mat& image)
             double endTime = getCurrentTimeMs();
             double processingTime = endTime - startTime;
 
-            emit imageProcessed(image, processingTime); // 변환된 이미지 신호 전송
+            emit imageProcessed(image, processingTime, functionName); // 변환된 이미지 신호 전송
 
             return true;
         }
@@ -227,7 +239,7 @@ QFuture<bool> ImageProcessor::convertToGrayscaleAsync(cv::Mat& image)
         });
 }
 
-bool ImageProcessor::convertToGrayscaleCUDA(cv::Mat& image)
+bool ImageProcessor::grayScaleCUDA(cv::Mat& image)
 {
     try {
 
@@ -269,9 +281,12 @@ double ImageProcessor::getCurrentTimeMs()
         (std::chrono::steady_clock::now().time_since_epoch()).count();
 }
 
-QFuture<bool> ImageProcessor::applyGaussianBlur(cv::Mat& image, int kernelSize)
+QFuture<bool> ImageProcessor::gaussianBlur(cv::Mat& image, int kernelSize)
 {
-    return QtConcurrent::run([this, &image, kernelSize]() -> bool {
+    //함수 이름을 문자열로 저장
+    const char* functionName = __func__;
+
+    return QtConcurrent::run([this, &image, kernelSize, functionName]() -> bool {
 
         QMutexLocker locker(&mutex);
 
@@ -319,7 +334,7 @@ QFuture<bool> ImageProcessor::applyGaussianBlur(cv::Mat& image, int kernelSize)
             image = blurredImage.clone();
             lastProcessedImage = image.clone();
 
-            emit imageProcessed(image, processingTime);
+            emit imageProcessed(image, processingTime, functionName);
 
             return true;
 
@@ -346,7 +361,10 @@ QFuture<bool> ImageProcessor::applyGaussianBlur(cv::Mat& image, int kernelSize)
 //Canny
 QFuture<bool> ImageProcessor::cannyEdges(cv::Mat& image)
 {
-    return QtConcurrent::run([this, &image]() -> bool {
+    //함수 이름을 문자열로 저장
+    const char* functionName = __func__;
+
+    return QtConcurrent::run([this, &image, functionName]() -> bool {
         QMutexLocker locker(&mutex);
 
         try {
@@ -364,7 +382,7 @@ QFuture<bool> ImageProcessor::cannyEdges(cv::Mat& image)
             //그레이스케일이 아닌경우
             if (image.channels() != 1)
             {
-                if (!convertToGrayscaleCUDA(image)) {
+                if (!grayScaleCUDA(image)) {
                     return false;
                 }
             }
@@ -398,7 +416,7 @@ QFuture<bool> ImageProcessor::cannyEdges(cv::Mat& image)
             // GPU 메모리 해제
             d_cannyEdges.release();
 
-            emit imageProcessed(image, processingTime);
+            emit imageProcessed(image, processingTime, functionName);
 
             return true;
         }
@@ -411,7 +429,11 @@ QFuture<bool> ImageProcessor::cannyEdges(cv::Mat& image)
 
 QFuture<bool> ImageProcessor::medianFilter(cv::Mat& image)
 {
-    return QtConcurrent::run([this, &image]()->bool {
+
+    //함수 이름을 문자열로 저장
+    const char* functionName = __func__;
+
+    return QtConcurrent::run([this, &image, functionName]()->bool {
 
         QMutexLocker locker(&mutex);
 
@@ -450,7 +472,7 @@ QFuture<bool> ImageProcessor::medianFilter(cv::Mat& image)
             image = medianedImage.clone();
             lastProcessedImage = image.clone();
 
-            emit imageProcessed(image, processingTime);
+            emit imageProcessed(image, processingTime, functionName);
 
             return true;
 
@@ -475,7 +497,10 @@ QFuture<bool> ImageProcessor::medianFilter(cv::Mat& image)
 
 QFuture<bool> ImageProcessor::laplacianFilter(cv::Mat& image)
 {
-    return QtConcurrent::run([this, &image]()->bool {
+    //함수 이름을 문자열로 저장
+    const char* functionName = __func__;
+
+    return QtConcurrent::run([this, &image, functionName]()->bool {
 
         QMutexLocker locker(&mutex);
 
@@ -501,7 +526,7 @@ QFuture<bool> ImageProcessor::laplacianFilter(cv::Mat& image)
             image = filteredImage.clone();
             lastProcessedImage = image.clone();
 
-            emit imageProcessed(image, processingTime);
+            emit imageProcessed(image, processingTime, functionName);
 
             return true;
         }
@@ -515,7 +540,10 @@ QFuture<bool> ImageProcessor::laplacianFilter(cv::Mat& image)
 
 QFuture<bool> ImageProcessor::bilateralFilter(cv::Mat& image)
 {
-    return QtConcurrent::run([this, &image]()->bool {
+    //함수 이름을 문자열로 저장
+    const char* functionName = __func__;
+
+    return QtConcurrent::run([this, &image, functionName]()->bool {
 
         QMutexLocker locker(&mutex);
 
@@ -541,7 +569,7 @@ QFuture<bool> ImageProcessor::bilateralFilter(cv::Mat& image)
             image = filteredImage.clone();
             lastProcessedImage = image.clone();
 
-            emit imageProcessed(image, processingTime);
+            emit imageProcessed(image, processingTime, functionName);
 
             return true;
         }
@@ -550,6 +578,55 @@ QFuture<bool> ImageProcessor::bilateralFilter(cv::Mat& image)
                 << e.what();
             return false;
         }
+        });
+}
+
+QFuture<bool> ImageProcessor::sobelFilter(cv::Mat& image)
+{
+    //함수 이름을 문자열로 저장
+    const char* functionName = __func__;
+
+    return QtConcurrent::run([this, &image, functionName]()->bool {
+        if (cv::cuda::getCudaEnabledDeviceCount() <= 0) {
+            qDebug() << "No CUDA-enabled device found. Falling back to CPU implementation.";
+            return false;
+        }
+
+        pushToUndoStack(image);
+
+        // 처리시간계산 시작
+        double startTime = getCurrentTimeMs();
+
+        cv::cuda::GpuMat gpuImage, gpuGray, gpuSobelX, gpuSobelY;
+        gpuImage.upload(image);
+        cv::cuda::cvtColor(gpuImage, gpuGray, cv::COLOR_BGR2GRAY);
+
+        cv::Ptr<cv::cuda::Filter> sobelX =
+            cv::cuda::createSobelFilter(gpuGray.type(), CV_16S, 1, 0);
+        cv::Ptr<cv::cuda::Filter> sobelY =
+            cv::cuda::createSobelFilter(gpuGray.type(), CV_16S, 0, 1);
+
+        sobelX->apply(gpuGray, gpuSobelX);
+        sobelY->apply(gpuGray, gpuSobelY);
+
+        cv::cuda::GpuMat sobelX_8U, sobelY_8U;
+        gpuSobelX.convertTo(sobelX_8U, CV_8U);
+        gpuSobelY.convertTo(sobelY_8U, CV_8U);
+
+        cv::cuda::addWeighted(sobelX_8U, 0.5, sobelY_8U, 0.5 ,0, gpuGray);
+
+        cv::Mat sobeledImage;
+        gpuGray.download(sobeledImage);
+
+        // 처리시간계산 종료
+        double endTime = getCurrentTimeMs();
+        double processingTime = endTime - startTime;
+
+        image = sobeledImage.clone();
+        lastProcessedImage = image.clone();
+
+        emit imageProcessed(image, processingTime, functionName);
+
         });
 }
 
@@ -567,6 +644,9 @@ bool ImageProcessor::canRedo() const
 // Undo operation
 void ImageProcessor::undo()
 {
+    //함수 이름을 문자열로 저장
+    const char* functionName = __func__;
+
     try {
         if (!canUndo()) {
             throw std::runtime_error("Cannot undo: Undo stack is empty");
@@ -590,7 +670,7 @@ void ImageProcessor::undo()
         double processingTime = endTime - startTime;
 
         // Emit signal indicating image processing is complete
-        emit imageProcessed(lastProcessedImage, processingTime);
+        emit imageProcessed(lastProcessedImage, processingTime, functionName);
     }
     catch (const std::exception& e) {
         qDebug() << "Exception occurred in ImageProcessor::undo(): " << e.what();
@@ -603,6 +683,9 @@ void ImageProcessor::undo()
 //재실행
 void ImageProcessor::redo()
 {
+    //함수 이름을 문자열로 저장
+    const char* functionName = __func__;
+
     try {
 
         if (!canRedo())
@@ -620,7 +703,7 @@ void ImageProcessor::redo()
         double endTime = getCurrentTimeMs();
         double processingTime = endTime - startTime;
 
-        emit imageProcessed(lastProcessedImage, processingTime);
+        emit imageProcessed(lastProcessedImage, processingTime, functionName);
 
     }
     catch (const std::exception& e) {

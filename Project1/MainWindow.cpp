@@ -58,25 +58,45 @@ void MainWindow::saveFile()
 
 void MainWindow::rotateImage()
 {
-    applyImageProcessing(&ImageProcessor::rotateImage, currentImage);
+    QtConcurrent::run([this]() {
+        if (!currentImage.empty()) {
+            imageProcessor->rotateImage(currentImage);
+        }
+    });
+    //applyImageProcessing(&ImageProcessor::rotateImage, currentImage);
 }
 
 void MainWindow::zoomInImage()
 {
-    applyImageProcessing(&ImageProcessor::zoominImage, currentImage, scaleFactor=1.25);
+    QtConcurrent::run([this]() {
+        if (!currentImage.empty()) {
+            imageProcessor->zoominImage(currentImage, scaleFactor = 1.25);
+        }
+    });
+    //applyImageProcessing(&ImageProcessor::zoominImage, currentImage, scaleFactor=1.25);
 }
 
 void MainWindow::zoomOutImage()
 {
-    applyImageProcessing(&ImageProcessor::zoomoutImage, currentImage, scaleFactor = 0.8);
+    QtConcurrent::run([this]() {
+        if (!currentImage.empty()) {
+            imageProcessor->zoomoutImage(currentImage, scaleFactor = 0.8);
+        }
+        });
+    //applyImageProcessing(&ImageProcessor::zoomoutImage, currentImage, scaleFactor = 0.8);
 }
 
-void MainWindow::convertToGrayscale()
+void MainWindow::grayScale()
 {
-    applyImageProcessing(&ImageProcessor::convertToGrayscaleAsync, currentImage);
+    QtConcurrent::run([this]() {
+        if (!currentImage.empty()) {
+            imageProcessor->grayScale(currentImage);
+        }
+        });
+    //applyImageProcessing(&ImageProcessor::grayScale, currentImage);
 }
 
-void MainWindow::applyGaussianBlur()
+void MainWindow::gaussianBlur()
 {
     bool ok;
     int kernelSize = QInputDialog::getInt(this,
@@ -85,28 +105,63 @@ void MainWindow::applyGaussianBlur()
         5, 1, 101, 2, &ok);
 
     if (ok) {
-        applyImageProcessing(&ImageProcessor::applyGaussianBlur, currentImage, kernelSize);
+        QtConcurrent::run([this, kernelSize]() {
+            if (!currentImage.empty()) {
+                imageProcessor->gaussianBlur(currentImage, kernelSize);
+            }
+            });
+        //applyImageProcessing(&ImageProcessor::gaussianBlur, currentImage, kernelSize);
     }
 }
 
 void MainWindow::cannyEdges()
 {
-    applyImageProcessing(&ImageProcessor::cannyEdges, currentImage);
+    QtConcurrent::run([this]() {
+        if (!currentImage.empty()) {
+            imageProcessor->cannyEdges(currentImage);
+        }
+        });
+    //applyImageProcessing(&ImageProcessor::cannyEdges, currentImage);
 }
 
 void MainWindow::medianFilter()
 {
-    applyImageProcessing(&ImageProcessor::medianFilter, currentImage);
+    QtConcurrent::run([this]() {
+        if (!currentImage.empty()) {
+            imageProcessor->medianFilter(currentImage);
+        }
+        });
+    //applyImageProcessing(&ImageProcessor::medianFilter, currentImage);
 }
 
 void MainWindow::laplacianFilter()
 {
-    applyImageProcessing(&ImageProcessor::laplacianFilter, currentImage);
+    QtConcurrent::run([this]() {
+        if (!currentImage.empty()) {
+            imageProcessor->laplacianFilter(currentImage);
+        }
+        });
+    //applyImageProcessing(&ImageProcessor::laplacianFilter, currentImage);
 }
 
 void MainWindow::bilateralFilter()
 {
-    applyImageProcessing(&ImageProcessor::bilateralFilter, currentImage);
+    QtConcurrent::run([this]() {
+        if (!currentImage.empty()) {
+            imageProcessor->bilateralFilter(currentImage);
+        }
+        });
+    //applyImageProcessing(&ImageProcessor::bilateralFilter, currentImage);
+}
+
+void MainWindow::sobelFilter()
+{
+    QtConcurrent::run([this]() {
+        if (!currentImage.empty()) {
+            imageProcessor->sobelFilter(currentImage);
+        }
+        });
+    //applyImageProcessing(&ImageProcessor::)
 }
 
 void MainWindow::exitApplication()
@@ -179,14 +234,14 @@ void MainWindow::displayImage(const cv::Mat& image)
 
 }
 
-void MainWindow::handleImageProcessed(const cv::Mat& processedImage, double processingTimeMs)
+void MainWindow::handleImageProcessed(const cv::Mat& processedImage, double processingTimeMs, QString processName)
 {
     // 이미지 출력
     displayImage(processedImage);
 
     // 상태 표시줄에 처리 시간 출력
     statusBar()->showMessage(
-        QString("Image processed in %1 ms").arg(processingTimeMs));
+        QString("%1 processed in %2 ms").arg(processName).arg(processingTimeMs));
 
 }
 
@@ -203,12 +258,13 @@ void MainWindow::connectActions()
     connect(ui->actionRedo, &QAction::triggered, this, &MainWindow::redoAction);
     connect(ui->actionUndo, &QAction::triggered, this, &MainWindow::undoAction);
 
-    connect(ui->actionGrayscale, &QAction::triggered, this, &MainWindow::convertToGrayscale);
-    connect(ui->actionGaussianBlur, &QAction::triggered, this, &MainWindow::applyGaussianBlur);
+    connect(ui->actionGrayscale, &QAction::triggered, this, &MainWindow::grayScale);
+    connect(ui->actionGaussianBlur, &QAction::triggered, this, &MainWindow::gaussianBlur);
     connect(ui->actionCannyEdges, &QAction::triggered, this, &MainWindow::cannyEdges);
     connect(ui->actionMedianFilter, &QAction::triggered, this, &MainWindow::medianFilter);
     connect(ui->actionLaplacianFilter, &QAction::triggered, this, &MainWindow::laplacianFilter);
     connect(ui->actionBilateralFilter, &QAction::triggered, this, &MainWindow::bilateralFilter);
+    connect(ui->actionSobelFilter, &QAction::triggered, this, &MainWindow::sobelFilter);
 
     connect(ui->actionFirst, &QAction::triggered, this, &MainWindow::first);
 
@@ -229,17 +285,17 @@ void MainWindow::setInitialWindowGeometry()
     this->setGeometry(initialX, initialY, initialWidth, initialHeight);
 }
 
-template<typename Func, typename ...Args>
-inline void MainWindow::applyImageProcessing(Func func, Args&& ...args)
-{
-    if (!currentImage.empty()) {
-        auto future = (imageProcessor->*func)(std::forward<Args>(args)...);
-        future.waitForFinished();
-        if (!future.result()) {
-            qDebug() << "Failed to apply" << Q_FUNC_INFO;
-        }
-    }
-    else {
-        qDebug() << "No image to process.";
-    }
-}
+//template<typename Func, typename ...Args>
+//inline void MainWindow::applyImageProcessing(Func func, Args&& ...args)
+//{
+//    if (!currentImage.empty()) {
+//        auto future = (imageProcessor->*func)(std::forward<Args>(args)...);
+//        future.waitForFinished();
+//        if (!future.result()) {
+//            qDebug() << "Failed to apply" << Q_FUNC_INFO;
+//        }
+//    }
+//    else {
+//        qDebug() << "No image to process.";
+//    }
+//}
