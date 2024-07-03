@@ -20,6 +20,7 @@
 #include <opencv2/cudaimgproc.hpp>
 #include <opencv2/cudaarithm.hpp>
 #include <opencv2/cudafilters.hpp>
+#include "imageProcessing.cuh"
 
 class ImageProcessor : public QObject
 {
@@ -54,7 +55,6 @@ public:
 
 signals: //이벤트 발생을 알림
     void imageProcessed(const cv::Mat& processedImage, double processingTimeMs, QString processName);
-
 //slots: //이벤트를 처리하는 함수 지칭
 
 private:

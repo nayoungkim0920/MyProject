@@ -1,3 +1,4 @@
+C:/myLab/Project1/Project1/build/CMakeFiles/CudaFunctions.dir
 C:/myLab/Project1/Project1/build/CMakeFiles/Project1.dir
 C:/myLab/Project1/Project1/build/CMakeFiles/ALL_BUILD.dir
 C:/myLab/Project1/Project1/build/CMakeFiles/ZERO_CHECK.dir

@@ -14,17 +14,24 @@ set(CUDNN_ROOT_DIR "C:/Program Files/NVIDIA/CUDNN/v9.1")
 include_directories(
     ${CUDA_INCLUDE_DIRS}
     ${CUDNN_INCLUDE_DIRS}
+    ${OpenCV_INCLUDE_DIRS}  # OpenCV의 헤더 파일 경로 추가
 )
 
 # CUDA 파일 설정
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -std=c++11 --expt-relaxed-constexpr)
 
-# 실행 파일 추가
+# Qt 래핑 파일 생성
 qt6_wrap_cpp(MOC_FILES
     MainWindow.h
     ImageProcessor.h
 )
 
+# CUDA 파일 컴파일
+cuda_add_library(CudaFunctions 
+    imageProcessing.cu
+)
+
+# 실행 파일 추가
 add_executable(Project1
     main.cpp
     MainWindow.cpp
@@ -41,6 +48,7 @@ target_link_libraries(Project1
     Qt6::Core
     Qt6::Gui
     ${OpenCV_LIBS}
+    CudaFunctions  # CUDA 라이브러리 추가
 )
 
 # CUDA 및 cuDNN 라이브러리 링크
@@ -106,6 +114,7 @@ add_custom_command(TARGET Project1 POST_BUILD
     COMMENT "Copying OpenCV Release DLLs to output directory"
 )
 
+
 # IPP 헤더 파일 포함
 target_include_directories(Project1 PRIVATE
     ${IPP_INCLUDE_DIR}
@@ -113,11 +122,22 @@ target_include_directories(Project1 PRIVATE
 
 # 파일 인코딩 설정 추가
 # Visual Studio의 기본 인코딩을 UTF-8로 설정
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 
-# 한글 주석 예시
-# 아래와 같은 주석을 사용하여 코드의 의도를 설명할 수 있습니다.
-# 이 주석은 한글이 포함된 주석입니다. GitHub에 업로드할 때 인코딩 문제가 발생하지 않도록 합니다.
+if (MSVC)
+    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Project1)
 
+    # Debug 빌드
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MDd")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MDd")
+
+    # Release 빌드
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD")
+    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MD")
+
+    # 반복자 디버그 레벨 설정
+    add_compile_definitions(
+        $<$<CONFIG:Debug>:_ITERATOR_DEBUG_LEVEL=2>
+        $<$<CONFIG:Release>:_ITERATOR_DEBUG_LEVEL=0>
+    )
+endif()

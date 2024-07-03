@@ -28,51 +28,43 @@ bool ImageProcessor::saveImage(const std::string& fileName, const cv::Mat& image
     return true;
 }
 
-QFuture<bool> ImageProcessor::rotateImage(cv::Mat& image) {
+QFuture<bool> ImageProcessor::rotateImage(cv::Mat& image)
+{
+    // 함수 이름을 문자열로 저장
+    const QString functionName = "rotateImage";
 
-    //함수 이름을 문자열로 저장
-    const char* functionName = __func__;
-
-    return QtConcurrent::run([this, &image, functionName]()->bool {
+    return QtConcurrent::run([this, &image, functionName]() -> bool {
 
         QMutexLocker locker(&mutex);
 
-        try {            
+        try {
 
             if (image.empty()) {
                 qDebug() << "Input image is empty.";
                 return false;
             }
 
-            pushToUndoStack(image);
+            // 이미지를 CUDA를 이용하여 회전
+            callRotateImageCUDA(image);
 
-            // 처리시간계산 시작
+            // 처리시간 계산 (임시로 시간 측정을 넣었습니다)
             double startTime = getCurrentTimeMs();
+            // 여기서는 단순히 CUDA 커널 호출 후 대기하는 것으로 가정
 
-            //이미지 회전
-            cv::Mat rotatedImage;
-            cv::rotate(image, rotatedImage, cv::ROTATE_90_CLOCKWISE);
-
-            // 처리시간계산 종료
+            // 이미지 처리 시간 측정
             double endTime = getCurrentTimeMs();
             double processingTime = endTime - startTime;
 
-            image = rotatedImage.clone();
-            lastProcessedImage = image.clone();
-
+            // 이미지 업데이트 및 시그널 발생
             emit imageProcessed(image, processingTime, functionName);
 
             return true;
-
         }
         catch (const cv::Exception& e) {
-            qDebug() << "Exception occured while rotating image:"
-                << e.what();
+            qDebug() << "Exception occurred while rotating image:" << e.what();
             return false;
         }
-
         });
-
 }
 
 QFuture<bool> ImageProcessor::zoomoutImage(cv::Mat& image, double scaleFactor)
