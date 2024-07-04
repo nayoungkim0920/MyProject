@@ -716,8 +716,6 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="C:\myLab\Project1\Project1\main.cpp" />
     <ClCompile Include="C:\myLab\Project1\Project1\MainWindow.cpp" />
     <ClInclude Include="C:\myLab\Project1\Project1\MainWindow.h" />
-    <None Include="..\imageProcessing.cu" />
-    <None Include="..\imageProcessing.cuh" />
     <None Include="C:\myLab\Project1\Project1\MainWindow.ui">
     </None>
     <ClCompile Include="C:\myLab\Project1\Project1\ImageProcessor.cpp" />
@@ -736,9 +734,6 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Project>{96BA739F-F730-345E-BCEA-01196FDF5623}</Project>
       <Name>CudaFunctions</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Object Include="..\imageProcessing.o" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

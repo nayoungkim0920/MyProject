@@ -20,6 +20,7 @@
 #include <opencv2/cudaimgproc.hpp>
 #include <opencv2/cudaarithm.hpp>
 #include <opencv2/cudafilters.hpp>
+#include <opencv2/cudawarping.hpp>
 #include "imageProcessing.cuh"
 
 class ImageProcessor : public QObject

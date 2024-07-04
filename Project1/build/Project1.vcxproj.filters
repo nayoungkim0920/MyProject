@@ -36,12 +36,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="C:\myLab\Project1\Project1\MainWindow.ui" />
-    <None Include="..\imageProcessing.cu">
-      <Filter>cuda</Filter>
-    </None>
-    <None Include="..\imageProcessing.cuh">
-      <Filter>cuda</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="CMake Rules">
@@ -53,13 +47,5 @@
     <Filter Include="Source Files">
       <UniqueIdentifier>{BAF2E2DF-EBB6-3F65-997A-E03F830C20A8}</UniqueIdentifier>
     </Filter>
-    <Filter Include="cuda">
-      <UniqueIdentifier>{c1b91a6b-0b9d-4fa1-b039-577f100fe222}</UniqueIdentifier>
-    </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <Object Include="..\imageProcessing.o">
-      <Filter>cuda</Filter>
-    </Object>
   </ItemGroup>
 </Project>

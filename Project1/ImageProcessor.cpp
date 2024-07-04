@@ -31,7 +31,7 @@ bool ImageProcessor::saveImage(const std::string& fileName, const cv::Mat& image
 QFuture<bool> ImageProcessor::rotateImage(cv::Mat& image)
 {
     // 함수 이름을 문자열로 저장
-    const QString functionName = "rotateImage";
+    const char* functionName = __func__;
 
     return QtConcurrent::run([this, &image, functionName]() -> bool {
 
@@ -44,12 +44,37 @@ QFuture<bool> ImageProcessor::rotateImage(cv::Mat& image)
                 return false;
             }
 
-            // 이미지를 CUDA를 이용하여 회전
-            callRotateImageCUDA(image);
+            pushToUndoStack(image);
 
             // 처리시간 계산 (임시로 시간 측정을 넣었습니다)
             double startTime = getCurrentTimeMs();
-            // 여기서는 단순히 CUDA 커널 호출 후 대기하는 것으로 가정
+
+            // 이미지를 CUDA를 이용하여 회전
+            // imageProcessing.cuh/imagProessing.cu            
+            //callRotateImageCUDA(image);
+
+            // CUDA 내장함수로  구현
+            // #include <opencv2/cudawarping.hpp>
+            double angle = 90.0; // 회전할 각도 (예: 90도)
+
+            // 이미지를 GPU 메모리에 업로드
+            cv::cuda::GpuMat gpuImage;
+            gpuImage.upload(image);
+
+            // 회전 중심을 이미지의 중앙으로 설정
+            cv::Point2f center(gpuImage.cols / 2.0f, gpuImage.rows / 2.0f);
+
+            // 회전 매트릭스 계산
+            cv::Mat rotationMatrix = cv::getRotationMatrix2D(center, angle, 1.0);
+
+            // GPU에서 회전 수행
+            cv::cuda::GpuMat gpuRotatedImage;
+            cv::cuda::warpAffine(gpuImage, gpuRotatedImage, rotationMatrix, gpuImage.size());
+
+            // 결과 이미지를 CPU 메모리로 다운로드
+            gpuRotatedImage.download(image);
+
+            // 이미지 처리 끝
 
             // 이미지 처리 시간 측정
             double endTime = getCurrentTimeMs();
