@@ -67,7 +67,7 @@ private:
     void pushToUndoStack(const cv::Mat& image);
     void pushToRedoStack(const cv::Mat& image);
 
-    bool grayScaleCUDA(cv::Mat& image);
+    //bool grayScaleCUDA(cv::Mat& image);
 
     double getCurrentTimeMs();
 };

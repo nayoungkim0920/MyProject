@@ -1,4 +1,5 @@
 -IC:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.1/include
+-I/include
 -IC:/opencv/build
 -IC:/opencv/sources/include
 -IC:/opencv_contrib/modules/cudev/include

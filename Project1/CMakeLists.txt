@@ -1,24 +1,21 @@
 cmake_minimum_required(VERSION 3.14)
-project(Project1)
+project(Project1 LANGUAGES CXX CUDA)
 
 # Qt, OpenCV, CUDA 설정
 set(CMAKE_PREFIX_PATH "C:/Qt/6.7.1/msvc2019_64" "C:/opencv/build")
 find_package(Qt6 REQUIRED COMPONENTS Widgets Core Gui)
 find_package(OpenCV REQUIRED COMPONENTS core imgproc highgui cudaarithm cudafilters cudawarping cudacodec cudafeatures2d cudaimgproc)
-
-# CUDA 및 cuDNN 경로 설정
-set(CUDA_TOOLKIT_ROOT_DIR "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.1")
-set(CUDNN_ROOT_DIR "C:/Program Files/NVIDIA/CUDNN/v9.1")
+find_package(CUDA REQUIRED)
 
 # 추가 포함 디렉터리 설정
 include_directories(
-    ${CUDA_INCLUDE_DIRS}
-    ${CUDNN_INCLUDE_DIRS}
-    ${OpenCV_INCLUDE_DIRS}  # OpenCV의 헤더 파일 경로 추가
+    ${CUDA_TOOLKIT_ROOT_DIR}/include
+    ${CUDNN_ROOT_DIR}/include
+    ${OpenCV_INCLUDE_DIRS}
 )
 
 # CUDA 파일 설정
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -std=c++11 --expt-relaxed-constexpr)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -std=c++14 --expt-relaxed-constexpr -gencode arch=compute_86,code=sm_86)
 
 # Qt 래핑 파일 생성
 qt6_wrap_cpp(MOC_FILES
@@ -26,8 +23,8 @@ qt6_wrap_cpp(MOC_FILES
     ImageProcessor.h
 )
 
-# CUDA 파일 컴파일
-cuda_add_library(CudaFunctions 
+# CUDA 파일 컴파일 및 라이브러리 생성
+cuda_add_library(image_processing
     imageProcessing.cu
 )
 
@@ -39,20 +36,16 @@ add_executable(Project1
     MainWindow.ui
     ImageProcessor.cpp
     ImageProcessor.h
-    ${MOC_FILES}  # 이전에 생성한 MOC 파일
+    ${MOC_FILES}
 )
 
-# Qt 및 OpenCV 라이브러리 링크
+# 라이브러리 링크
 target_link_libraries(Project1
     Qt6::Widgets
     Qt6::Core
     Qt6::Gui
     ${OpenCV_LIBS}
-    CudaFunctions  # CUDA 라이브러리 추가
-)
-
-# CUDA 및 cuDNN 라이브러리 링크
-target_link_libraries(Project1
+    image_processing
     ${CUDA_LIBRARIES}
     ${CUDNN_LIBRARIES}
     ${CUDA_cudart_LIBRARY}
@@ -114,14 +107,12 @@ add_custom_command(TARGET Project1 POST_BUILD
     COMMENT "Copying OpenCV Release DLLs to output directory"
 )
 
-
 # IPP 헤더 파일 포함
 target_include_directories(Project1 PRIVATE
     ${IPP_INCLUDE_DIR}
 )
 
 # 파일 인코딩 설정 추가
-# Visual Studio의 기본 인코딩을 UTF-8로 설정
 add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 
 if (MSVC)

@@ -46,39 +46,41 @@ QFuture<bool> ImageProcessor::rotateImage(cv::Mat& image)
 
             pushToUndoStack(image);
 
-            // 처리시간 계산 (임시로 시간 측정을 넣었습니다)
+            // 처리시간 계산
             double startTime = getCurrentTimeMs();
 
             // 이미지를 CUDA를 이용하여 회전
             // imageProcessing.cuh/imagProessing.cu            
-            //callRotateImageCUDA(image);
+            callRotateImageCUDA(image);
 
             // CUDA 내장함수로  구현
             // #include <opencv2/cudawarping.hpp>
-            double angle = 90.0; // 회전할 각도 (예: 90도)
+            //double angle = 90.0; // 회전할 각도 (예: 90도)
 
             // 이미지를 GPU 메모리에 업로드
-            cv::cuda::GpuMat gpuImage;
-            gpuImage.upload(image);
+            //cv::cuda::GpuMat gpuImage;
+            //gpuImage.upload(image);
 
             // 회전 중심을 이미지의 중앙으로 설정
-            cv::Point2f center(gpuImage.cols / 2.0f, gpuImage.rows / 2.0f);
+            //cv::Point2f center(gpuImage.cols / 2.0f, gpuImage.rows / 2.0f);
 
             // 회전 매트릭스 계산
-            cv::Mat rotationMatrix = cv::getRotationMatrix2D(center, angle, 1.0);
+            //cv::Mat rotationMatrix = cv::getRotationMatrix2D(center, angle, 1.0);
 
             // GPU에서 회전 수행
-            cv::cuda::GpuMat gpuRotatedImage;
-            cv::cuda::warpAffine(gpuImage, gpuRotatedImage, rotationMatrix, gpuImage.size());
+            //cv::cuda::GpuMat gpuRotatedImage;
+            //cv::cuda::warpAffine(gpuImage, gpuRotatedImage, rotationMatrix, gpuImage.size());
 
             // 결과 이미지를 CPU 메모리로 다운로드
-            gpuRotatedImage.download(image);
+            //gpuRotatedImage.download(image);
 
             // 이미지 처리 끝
 
             // 이미지 처리 시간 측정
             double endTime = getCurrentTimeMs();
             double processingTime = endTime - startTime;
+
+            lastProcessedImage = image.clone();
 
             // 이미지 업데이트 및 시그널 발생
             emit imageProcessed(image, processingTime, functionName);
@@ -101,7 +103,7 @@ QFuture<bool> ImageProcessor::zoomoutImage(cv::Mat& image, double scaleFactor)
 
         QMutexLocker locker(&mutex);
 
-        try {            
+        try {
 
             if (image.empty()) {
                 qDebug() << "Input image is empty.";
@@ -121,14 +123,27 @@ QFuture<bool> ImageProcessor::zoomoutImage(cv::Mat& image, double scaleFactor)
             int newWidth = static_cast<int>(image.cols * scaleFactor);
             int newHeight = static_cast<int>(image.rows * scaleFactor);
 
-            cv::Mat zoomedImage;
-            cv::resize(image, zoomedImage, cv::Size(newWidth, newHeight), 0, 0, cv::INTER_LINEAR);
+            //openCV
+            //cv::Mat zoomedImage;
+            //cv::resize(image, zoomedImage, cv::Size(newWidth, newHeight), 0, 0, cv::INTER_LINEAR);
+
+            //cuda내장함수
+            //cv::cuda::GpuMat d_image, zoomedImage;
+            //d_image.upload(image);
+
+            //cv::cuda::resize(d_image, zoomedImage,
+            //    cv::Size(newWidth, newHeight),
+            //    0, 0, cv::INTER_LINEAR);
+
+            //CUDA Kernel
+            callResizeImageCUDA(image, newWidth, newHeight);
 
             // 처리시간계산 종료
             double endTime = getCurrentTimeMs();
             double processingTime = endTime - startTime;
 
-            image = zoomedImage.clone(); // 이미지를 복사하여 업데이트
+            //zoomedImage.download(image); //cuda내장함수
+            //image = zoomedImage.clone(); //openCV
             lastProcessedImage = image.clone();
 
             emit imageProcessed(image, processingTime, functionName); // 이미지 처리 완료 시그널 발생
@@ -171,14 +186,17 @@ QFuture<bool> ImageProcessor::zoominImage(cv::Mat& image, double scaleFactor)
             int newWidth = static_cast<int>(image.cols * scaleFactor);
             int newHeight = static_cast<int>(image.rows * scaleFactor);
 
-            cv::Mat zoomedImage;
-            cv::resize(image, zoomedImage, cv::Size(newWidth, newHeight), 0, 0, cv::INTER_LINEAR);
+            //cv::Mat zoomedImage;
+            //cv::resize(image, zoomedImage, cv::Size(newWidth, newHeight), 0, 0, cv::INTER_LINEAR);
+
+            //CUDA kernel
+            callResizeImageCUDA(image, newWidth, newHeight);
 
             // 처리시간계산 종료
             double endTime = getCurrentTimeMs();
             double processingTime = endTime - startTime;
 
-            image = zoomedImage.clone(); // 이미지를 복사하여 업데이트
+            //image = zoomedImage.clone(); // 이미지를 복사하여 업데이트
             lastProcessedImage = image.clone();
 
             emit imageProcessed(image, processingTime, functionName); // 이미지 처리 완료 시그널 발생
@@ -206,7 +224,7 @@ QDebug operator<<(QDebug dbg, const cv::Mat& mat) {
 }
 
 QFuture<bool> ImageProcessor::grayScale(cv::Mat& image)
-{   
+{
     //함수 이름을 문자열로 저장
     const char* functionName = __func__;
 
@@ -237,9 +255,12 @@ QFuture<bool> ImageProcessor::grayScale(cv::Mat& image)
             // 처리시간계산 시작
             double startTime = getCurrentTimeMs();
 
-            if (!grayScaleCUDA(image)) {
-                return false;
-            }
+            //if (!grayScaleCUDA(image)) {
+            //    return false;
+            //}
+
+            //CUDA Kernel
+            callGrayScaleImageCUDA(image);
 
             // 처리시간계산 종료
             double endTime = getCurrentTimeMs();
@@ -256,7 +277,7 @@ QFuture<bool> ImageProcessor::grayScale(cv::Mat& image)
         });
 }
 
-bool ImageProcessor::grayScaleCUDA(cv::Mat& image)
+/*bool ImageProcessor::grayScaleCUDA(cv::Mat& image)
 {
     try {
 
@@ -290,7 +311,7 @@ bool ImageProcessor::grayScaleCUDA(cv::Mat& image)
         qDebug() << "Exception occurred while converting to grayscale using CUDA:" << e.what();
         return false;
     }
-}
+}*/
 
 double ImageProcessor::getCurrentTimeMs()
 {
@@ -325,30 +346,33 @@ QFuture<bool> ImageProcessor::gaussianBlur(cv::Mat& image, int kernelSize)
             double startTime = getCurrentTimeMs();
 
             // Upload image to GPU
-            cv::cuda::GpuMat gpuImage;
-            gpuImage.upload(image);
+            //cv::cuda::GpuMat gpuImage;
+            //gpuImage.upload(image);
 
             // Create Gaussian filter
-            cv::Ptr<cv::cuda::Filter> gaussianFilter =
-                cv::cuda::createGaussianFilter(
-                    gpuImage.type(),
-                    gpuImage.type(),
-                    cv::Size(kernelSize, kernelSize),
-                    0);
+            //cv::Ptr<cv::cuda::Filter> gaussianFilter =
+            //    cv::cuda::createGaussianFilter(
+            //        gpuImage.type(),
+            //        gpuImage.type(),
+            //        cv::Size(kernelSize, kernelSize),
+            //        0);
 
             // Apply Gaussian blur on GPU
-            cv::cuda::GpuMat blurredGpuImage;
-            gaussianFilter->apply(gpuImage, blurredGpuImage);
+            //cv::cuda::GpuMat blurredGpuImage;
+            //gaussianFilter->apply(gpuImage, blurredGpuImage);
 
             // Download the result back to CPU
-            cv::Mat blurredImage;
-            blurredGpuImage.download(blurredImage);
+            //cv::Mat blurredImage;
+            //blurredGpuImage.download(blurredImage);
+
+            //CUDA Kernel
+            callGaussianBlur(image, kernelSize);
 
             // 처리시간계산 종료
             double endTime = getCurrentTimeMs();
-            double processingTime = endTime - startTime;            
+            double processingTime = endTime - startTime;
 
-            image = blurredImage.clone();
+            //image = blurredImage.clone();
             lastProcessedImage = image.clone();
 
             emit imageProcessed(image, processingTime, functionName);
@@ -399,39 +423,45 @@ QFuture<bool> ImageProcessor::cannyEdges(cv::Mat& image)
             //그레이스케일이 아닌경우
             if (image.channels() != 1)
             {
-                if (!grayScaleCUDA(image)) {
-                    return false;
-                }
+                //if (!grayScaleCUDA(image)) {
+                //    return false;
+                //}
+
+                //CUDA Kernel
+                callGrayScaleImageCUDA(image);
             }
 
             // GPU에서 캐니 엣지 감지기 생성
-            cv::cuda::GpuMat d_input(image);
-            cv::cuda::GpuMat d_cannyEdges;
-            cv::Ptr<cv::cuda::CannyEdgeDetector> cannyDetector = cv::cuda::createCannyEdgeDetector(50, 150);
-            cannyDetector->detect(d_input, d_cannyEdges);
+            //cv::cuda::GpuMat d_input(image);
+            //cv::cuda::GpuMat d_cannyEdges;
+            //cv::Ptr<cv::cuda::CannyEdgeDetector> cannyDetector = cv::cuda::createCannyEdgeDetector(50, 150);
+            //cannyDetector->detect(d_input, d_cannyEdges);
 
             // 결과를 CPU 메모리로 복사
-            cv::Mat edges;
-            d_cannyEdges.download(edges);
+            //cv::Mat edges;
+            //d_cannyEdges.download(edges);
 
             // 출력 이미지에 초록색 엣지 표시
-            cv::Mat outputImage = cv::Mat::zeros(image.size(), CV_8UC3); // 3-channel BGR image
-            cv::Mat mask(edges.size(), CV_8UC1, cv::Scalar(0)); // Mask for green edges
-            mask.setTo(cv::Scalar(255), edges); // Set pixels to 255 (white) where edges are detected
-            cv::Mat channels[3];
-            cv::split(outputImage, channels);
-            channels[1] = mask; // Green channel is set by mask
-            cv::merge(channels, 3, outputImage); // Merge channels to get green edges
+            //cv::Mat outputImage = cv::Mat::zeros(image.size(), CV_8UC3); // 3-channel BGR image
+            //cv::Mat mask(edges.size(), CV_8UC1, cv::Scalar(0)); // Mask for green edges
+            //mask.setTo(cv::Scalar(255), edges); // Set pixels to 255 (white) where edges are detected
+            //cv::Mat channels[3];
+            //cv::split(outputImage, channels);
+            //channels[1] = mask; // Green channel is set by mask
+            //cv::merge(channels, 3, outputImage); // Merge channels to get green edges
+
+            //CUDA Kernel
+            callCannyEdgesCUDA(image);
 
             // 처리시간계산 종료
             double endTime = getCurrentTimeMs();
             double processingTime = endTime - startTime;
 
-            image = outputImage.clone();
+            //image = outputImage.clone();
             lastProcessedImage = image.clone();
 
             // GPU 메모리 해제
-            d_cannyEdges.release();
+            //d_cannyEdges.release();
 
             emit imageProcessed(image, processingTime, functionName);
 
@@ -467,26 +497,29 @@ QFuture<bool> ImageProcessor::medianFilter(cv::Mat& image)
             double startTime = getCurrentTimeMs();
 
             // Upload image to GPU
-            cv::cuda::GpuMat gpuImage;
-            gpuImage.upload(image);
+            //cv::cuda::GpuMat gpuImage;
+            //gpuImage.upload(image);
 
             // Create median filter
-            cv::Ptr<cv::cuda::Filter> medianFilter =
-                cv::cuda::createMedianFilter(gpuImage.type(), 5);
+            //cv::Ptr<cv::cuda::Filter> medianFilter =
+            //    cv::cuda::createMedianFilter(gpuImage.type(), 5);
 
             // Apply median filter on GPU
-            cv::cuda::GpuMat medianedGpuImage;
-            medianFilter->apply(gpuImage, medianedGpuImage);
+            //cv::cuda::GpuMat medianedGpuImage;
+            //medianFilter->apply(gpuImage, medianedGpuImage);
 
             // Download the result back to CPU
-            cv::Mat medianedImage;
-            medianedGpuImage.download(medianedImage);
+            //cv::Mat medianedImage;
+            //medianedGpuImage.download(medianedImage);
+
+            //CUDA Kernel
+            callMedianFilterCUDA(image);
 
             // 처리시간계산 종료
             double endTime = getCurrentTimeMs();
             double processingTime = endTime - startTime;
 
-            image = medianedImage.clone();
+            //image = medianedImage.clone();
             lastProcessedImage = image.clone();
 
             emit imageProcessed(image, processingTime, functionName);
@@ -521,7 +554,7 @@ QFuture<bool> ImageProcessor::laplacianFilter(cv::Mat& image)
 
         QMutexLocker locker(&mutex);
 
-        try {            
+        try {
 
             if (image.empty()) {
                 qDebug() << "laplacian 필터를 적용할 이미지가 없습니다.";
@@ -564,7 +597,7 @@ QFuture<bool> ImageProcessor::bilateralFilter(cv::Mat& image)
 
         QMutexLocker locker(&mutex);
 
-        try {               
+        try {
 
             if (image.empty()) {
                 qDebug() << "bilateral 필터를 적용할 이미지가 없습니다.";
@@ -598,6 +631,7 @@ QFuture<bool> ImageProcessor::bilateralFilter(cv::Mat& image)
         });
 }
 
+//OpenCV(4.10.0) Error: Assertion failed (src.channels() == 3) in anonymous-namespace'::BGR_to_GRAY, file C:\opencv_contrib\modules\cudaimgproc\src\color.cpp, line 496
 QFuture<bool> ImageProcessor::sobelFilter(cv::Mat& image)
 {
     //함수 이름을 문자열로 저장
@@ -630,7 +664,7 @@ QFuture<bool> ImageProcessor::sobelFilter(cv::Mat& image)
         gpuSobelX.convertTo(sobelX_8U, CV_8U);
         gpuSobelY.convertTo(sobelY_8U, CV_8U);
 
-        cv::cuda::addWeighted(sobelX_8U, 0.5, sobelY_8U, 0.5 ,0, gpuGray);
+        cv::cuda::addWeighted(sobelX_8U, 0.5, sobelY_8U, 0.5, 0, gpuGray);
 
         cv::Mat sobeledImage;
         gpuGray.download(sobeledImage);
