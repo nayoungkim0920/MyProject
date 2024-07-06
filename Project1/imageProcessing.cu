@@ -9,6 +9,10 @@ __device__ void rotatePixel(int x, int y, int cols, int rows, int channels, cons
     }
 }
 
+__device__ float gaussian(float x, float sigma) {
+    return expf(-(x * x) / (2 * sigma * sigma));
+}
+
 __global__ void rotateImageKernel(const unsigned char* input, unsigned char* output, int cols, int rows, int channels) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -157,8 +161,113 @@ __global__ void medianFilterKernel(const unsigned char* input, unsigned char* ou
     }
 }
 
+__global__ void laplacianFilterKernel(const unsigned char* input, unsigned char* output,
+    int cols, int rows, size_t pitch, int channels) {
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-extern "C" void callRotateImageCUDA(cv::Mat & inputImage) {
+    if (x < cols && y < rows) {
+        // Laplacian 필터 계산
+        int sum = 0;
+        sum += input[y * pitch + x * channels]; // 현재 픽셀
+
+        if (x > 0)
+            sum += input[y * pitch + (x - 1) * channels]; // 왼쪽 픽셀
+
+        if (x < cols - 1)
+            sum += input[y * pitch + (x + 1) * channels]; // 오른쪽 픽셀
+
+        if (y > 0)
+            sum += input[(y - 1) * pitch + x * channels]; // 위쪽 픽셀
+
+        if (y < rows - 1)
+            sum += input[(y + 1) * pitch + x * channels]; // 아래쪽 픽셀
+
+        output[y * pitch + x * channels] = static_cast<unsigned char>(sum / 5); // Laplacian 필터 결과
+    }
+}
+
+__global__ void bilateralKernel(const unsigned char* input, unsigned char* output, int width, int height, int kernelSize, int channels, float sigmaColor, float sigmaSpace) {
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (x >= width || y >= height) return;
+
+    int half = kernelSize / 2;
+    float colorCoeff = -0.5f / (sigmaColor * sigmaColor);
+    float spaceCoeff = -0.5f / (sigmaSpace * sigmaSpace);
+
+    for (int c = 0; c < channels; ++c) {
+        float sum = 0;
+        float norm = 0;
+
+        for (int i = -half; i <= half; ++i) {
+            for (int j = -half; j <= half; ++j) {
+                int neighborX = min(max(x + j, 0), width - 1);
+                int neighborY = min(max(y + i, 0), height - 1);
+
+                int idx = (y * width + x) * channels + c;
+                int nIdx = (neighborY * width + neighborX) * channels + c;
+
+                float spaceDist = (i * i + j * j) * spaceCoeff;
+                float colorDist = (input[idx] - input[nIdx]) * (input[idx] - input[nIdx]) * colorCoeff;
+
+                float weight = expf(spaceDist + colorDist);
+                sum += weight * input[nIdx];
+                norm += weight;
+            }
+        }
+        output[(y * width + x) * channels + c] = min(max(int(sum / norm), 0), 255);
+    }
+}
+
+__global__ void sobelFilterKernel(const unsigned char* input, unsigned char* output,
+    int cols, int rows, int channels) {
+    // 스레드가 처리할 이미지의 픽셀 위치 계산
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (x < cols && y < rows) {
+        // 수직 및 수평 방향의 소벨 마스크 정의
+        const int sobelX[3][3] = { {-1, 0, 1},
+                                   {-2, 0, 2},
+                                   {-1, 0, 1} };
+
+        const int sobelY[3][3] = { {-1, -2, -1},
+                                   {0, 0, 0},
+                                   {1, 2, 1} };
+
+        float gradX = 0.0f;
+        float gradY = 0.0f;
+
+        // 각 채널에 대해 소벨 필터 계산
+        for (int c = 0; c < channels; ++c) {
+            for (int i = -1; i <= 1; ++i) {
+                for (int j = -1; j <= 1; ++j) {
+                    int offsetX = x + j;
+                    int offsetY = y + i;
+
+                    if (offsetX >= 0 && offsetX < cols && offsetY >= 0 && offsetY < rows) {
+                        int pixelIndex = (offsetY * cols + offsetX) * channels + c;
+                        gradX += sobelX[i + 1][j + 1] * input[pixelIndex];
+                        gradY += sobelY[i + 1][j + 1] * input[pixelIndex];
+                    }
+                }
+            }
+        }
+
+        // 그래디언트 크기 계산 (마그니튜드)
+        float magnitude = sqrtf(gradX * gradX + gradY * gradY);
+
+        // 최종 그래디언트 값 (0-255 범위로 클리핑)
+        for (int c = 0; c < channels; ++c) {
+            output[(y * cols + x) * channels + c] = static_cast<unsigned char>(min(magnitude, 255.0f));
+        }
+    }
+}
+
+
+void callRotateImageCUDA(cv::Mat & inputImage) {
     int cols = inputImage.cols;
     int rows = inputImage.rows;
     int channels = inputImage.channels();
@@ -214,7 +323,7 @@ extern "C" void callRotateImageCUDA(cv::Mat & inputImage) {
     cudaFree(d_outputImage);
 }
 
-extern "C" void callResizeImageCUDA(cv::Mat & inputImage, int newWidth, int newHeight) {
+void callResizeImageCUDA(cv::Mat & inputImage, int newWidth, int newHeight) {
     int oldWidth = inputImage.cols;
     int oldHeight = inputImage.rows;
     int channels = inputImage.channels();
@@ -274,7 +383,7 @@ extern "C" void callResizeImageCUDA(cv::Mat & inputImage, int newWidth, int newH
     cudaFree(d_outputImage);
 }
 
-extern "C" void callGrayScaleImageCUDA(cv::Mat & inputImage) {
+void callGrayScaleImageCUDA(cv::Mat & inputImage) {
     int cols = inputImage.cols;
     int rows = inputImage.rows;
     int channels = inputImage.channels();
@@ -339,7 +448,7 @@ extern "C" void callGrayScaleImageCUDA(cv::Mat & inputImage) {
     cudaFree(d_outputImage);
 }
 
-void callCannyEdgesCUDA(cv::Mat& inputImage) {
+void callCannyEdgesCUDA(cv::Mat & inputImage) {
     int cols = inputImage.cols;
     int rows = inputImage.rows;
     int channels = inputImage.channels();
@@ -411,7 +520,7 @@ void callCannyEdgesCUDA(cv::Mat& inputImage) {
     cudaFree(d_outputImage);
 }
 
-extern "C" void callGaussianBlur(cv::Mat & inputImage, int kernelSize) {
+void callGaussianBlurCUDA(cv::Mat & inputImage, int kernelSize) {
     int cols = inputImage.cols;
     int rows = inputImage.rows;
     int channels = inputImage.channels();
@@ -467,7 +576,7 @@ extern "C" void callGaussianBlur(cv::Mat & inputImage, int kernelSize) {
     cudaFree(d_outputImage);
 }
 
-extern "C" void callMedianFilterCUDA(cv::Mat & inputImage)
+void callMedianFilterCUDA(cv::Mat & inputImage)
 {
     // 이미지의 너비, 높이, 채널 수 확인
     int cols = inputImage.cols;
@@ -544,4 +653,85 @@ extern "C" void callMedianFilterCUDA(cv::Mat & inputImage)
     // 메모리 해제
     cudaFree(d_inputImage);
     cudaFree(d_outputImage);
+}
+
+void callLaplacianFilterCUDA(cv::Mat& inputImage) {
+    int width = inputImage.cols;
+    int height = inputImage.rows;
+    int channels = inputImage.channels();
+
+    unsigned char* d_input;
+    unsigned char* d_output;
+    size_t pitch;
+
+    cudaMallocPitch(&d_input, &pitch, width * channels * sizeof(unsigned char), height);
+    cudaMallocPitch(&d_output, &pitch, width * channels * sizeof(unsigned char), height);
+
+    cudaMemcpy2D(d_input, pitch, inputImage.ptr(), width * channels * sizeof(unsigned char), width * channels * sizeof(unsigned char), height, cudaMemcpyHostToDevice);
+
+    dim3 blockSize(16, 16);
+    dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
+
+    laplacianFilterKernel << <gridSize, blockSize >> > (d_input, d_output, width, height, pitch, channels);
+
+    cudaMemcpy2D(inputImage.ptr(), width * channels * sizeof(unsigned char), d_output, pitch, width * channels * sizeof(unsigned char), height, cudaMemcpyDeviceToHost);
+
+    cudaFree(d_input);
+    cudaFree(d_output);
+}
+
+void callBilateralFilterCUDA(cv::Mat& inputImage, int kernelSize, float sigmaColor, float sigmaSpace) {
+    int width = inputImage.cols;
+    int height = inputImage.rows;
+    int channels = inputImage.channels();
+
+    cv::Mat outputImage(height, width, inputImage.type());
+
+    unsigned char* d_input;
+    unsigned char* d_output;
+    size_t pitch;
+
+    cudaMallocPitch(&d_input, &pitch, width * channels * sizeof(unsigned char), height);
+    cudaMallocPitch(&d_output, &pitch, width * channels * sizeof(unsigned char), height);
+
+    cudaMemcpy2D(d_input, pitch, inputImage.ptr(), width * channels * sizeof(unsigned char), width * channels * sizeof(unsigned char), height, cudaMemcpyHostToDevice);
+
+    dim3 blockSize(16, 16);
+    dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
+
+    bilateralKernel << <gridSize, blockSize >> > (d_input, d_output, width, height, kernelSize, channels, sigmaColor, sigmaSpace);
+
+    cudaMemcpy2D(inputImage.ptr(), width * channels * sizeof(unsigned char), d_output, pitch, width * channels * sizeof(unsigned char), height, cudaMemcpyDeviceToHost);
+
+    cudaFree(d_input);
+    cudaFree(d_output);
+}
+
+void callSobelFilterCUDA(cv::Mat& inputImage) {
+    // 입력 이미지의 너비, 높이, 채널 수
+    int width = inputImage.cols;
+    int height = inputImage.rows;
+    int channels = inputImage.channels();
+
+    // CUDA 메모리 할당 및 복사
+    unsigned char* d_input, * d_output;
+    size_t pitch;
+    cudaMallocPitch(&d_input, &pitch, width * channels * sizeof(unsigned char), height);
+    cudaMallocPitch(&d_output, &pitch, width * channels * sizeof(unsigned char), height);
+
+    cudaMemcpy2D(d_input, pitch, inputImage.ptr(), width * channels * sizeof(unsigned char), width * channels * sizeof(unsigned char), height, cudaMemcpyHostToDevice);
+
+    // CUDA 블록 및 그리드 설정
+    dim3 blockSize(16, 16);
+    dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
+
+    // CUDA 커널 호출
+    sobelFilterKernel << <gridSize, blockSize >> > (d_input, d_output, width, height, channels);
+
+    // CUDA에서 처리된 결과를 호스트로 복사
+    cudaMemcpy2D(inputImage.ptr(), width * channels * sizeof(unsigned char), d_output, pitch, width * channels * sizeof(unsigned char), height, cudaMemcpyDeviceToHost);
+
+    // 메모리 해제
+    cudaFree(d_input);
+    cudaFree(d_output);
 }

@@ -366,7 +366,7 @@ QFuture<bool> ImageProcessor::gaussianBlur(cv::Mat& image, int kernelSize)
             //blurredGpuImage.download(blurredImage);
 
             //CUDA Kernel
-            callGaussianBlur(image, kernelSize);
+            callGaussianBlurCUDA(image, kernelSize);
 
             // 처리시간계산 종료
             double endTime = getCurrentTimeMs();
@@ -566,14 +566,17 @@ QFuture<bool> ImageProcessor::laplacianFilter(cv::Mat& image)
             // 처리시간계산 시작
             double startTime = getCurrentTimeMs();
 
-            cv::Mat filteredImage;
-            cv::Laplacian(image, filteredImage, CV_8U, 3);
+            //cv::Mat filteredImage;
+            //cv::Laplacian(image, filteredImage, CV_8U, 3);
+
+            //CUDA Kernel
+            callLaplacianFilterCUDA(image);
 
             // 처리시간계산 종료
             double endTime = getCurrentTimeMs();
             double processingTime = endTime - startTime;
 
-            image = filteredImage.clone();
+            //image = filteredImage.clone();
             lastProcessedImage = image.clone();
 
             emit imageProcessed(image, processingTime, functionName);
@@ -609,14 +612,17 @@ QFuture<bool> ImageProcessor::bilateralFilter(cv::Mat& image)
             // 처리시간계산 시작
             double startTime = getCurrentTimeMs();
 
-            cv::Mat filteredImage;
-            cv::bilateralFilter(image, filteredImage, 9, 75, 75);
+            //CUDA Kernel
+            callBilateralFilterCUDA(image, 9, 75, 75);
+
+            //cv::Mat filteredImage;
+            //cv::bilateralFilter(image, filteredImage, 9, 75, 75);
 
             // 처리시간계산 종료
             double endTime = getCurrentTimeMs();
             double processingTime = endTime - startTime;
 
-            image = filteredImage.clone();
+            //image = filteredImage.clone();
             lastProcessedImage = image.clone();
 
             emit imageProcessed(image, processingTime, functionName);
@@ -631,10 +637,9 @@ QFuture<bool> ImageProcessor::bilateralFilter(cv::Mat& image)
         });
 }
 
-//OpenCV(4.10.0) Error: Assertion failed (src.channels() == 3) in anonymous-namespace'::BGR_to_GRAY, file C:\opencv_contrib\modules\cudaimgproc\src\color.cpp, line 496
 QFuture<bool> ImageProcessor::sobelFilter(cv::Mat& image)
 {
-    //함수 이름을 문자열로 저장
+    // 함수 이름을 문자열로 저장
     const char* functionName = __func__;
 
     return QtConcurrent::run([this, &image, functionName]()->bool {
@@ -648,38 +653,50 @@ QFuture<bool> ImageProcessor::sobelFilter(cv::Mat& image)
         // 처리시간계산 시작
         double startTime = getCurrentTimeMs();
 
-        cv::cuda::GpuMat gpuImage, gpuGray, gpuSobelX, gpuSobelY;
-        gpuImage.upload(image);
-        cv::cuda::cvtColor(gpuImage, gpuGray, cv::COLOR_BGR2GRAY);
+        //cv::cuda::GpuMat gpuImage, gpuGray, gpuSobelX, gpuSobelY;
 
-        cv::Ptr<cv::cuda::Filter> sobelX =
-            cv::cuda::createSobelFilter(gpuGray.type(), CV_16S, 1, 0);
-        cv::Ptr<cv::cuda::Filter> sobelY =
-            cv::cuda::createSobelFilter(gpuGray.type(), CV_16S, 0, 1);
+        // 입력 이미지가 BGR 색상 포맷이 아닌 경우, BGR2GRAY 변환 수행
+        //if (image.channels() != 3) {
+        //    qDebug() << "Input image is not in BGR format. Converting to BGR...";
+        //    cv::cvtColor(image, image, cv::COLOR_GRAY2BGR); // 예시로 GRAY2BGR 사용. 실제로는 적절한 변환 사용
+        //}
 
-        sobelX->apply(gpuGray, gpuSobelX);
-        sobelY->apply(gpuGray, gpuSobelY);
+        //gpuImage.upload(image);
+        //cv::cuda::cvtColor(gpuImage, gpuGray, cv::COLOR_BGR2GRAY);
 
-        cv::cuda::GpuMat sobelX_8U, sobelY_8U;
-        gpuSobelX.convertTo(sobelX_8U, CV_8U);
-        gpuSobelY.convertTo(sobelY_8U, CV_8U);
+        //cv::Ptr<cv::cuda::Filter> sobelX =
+        //    cv::cuda::createSobelFilter(gpuGray.type(), CV_16S, 1, 0);
+        //cv::Ptr<cv::cuda::Filter> sobelY =
+        //    cv::cuda::createSobelFilter(gpuGray.type(), CV_16S, 0, 1);
 
-        cv::cuda::addWeighted(sobelX_8U, 0.5, sobelY_8U, 0.5, 0, gpuGray);
+        //sobelX->apply(gpuGray, gpuSobelX);
+        //sobelY->apply(gpuGray, gpuSobelY);
 
-        cv::Mat sobeledImage;
-        gpuGray.download(sobeledImage);
+        //cv::cuda::GpuMat sobelX_8U, sobelY_8U;
+        //gpuSobelX.convertTo(sobelX_8U, CV_8U);
+        //gpuSobelY.convertTo(sobelY_8U, CV_8U);
+
+        //cv::cuda::addWeighted(sobelX_8U, 0.5, sobelY_8U, 0.5, 0, gpuGray);
+
+        //cv::Mat sobeledImage;
+        //gpuGray.download(sobeledImage);
+
+        //CUDA Kernel
+        callSobelFilterCUDA(image);
 
         // 처리시간계산 종료
         double endTime = getCurrentTimeMs();
         double processingTime = endTime - startTime;
 
-        image = sobeledImage.clone();
+        //image = sobeledImage.clone();
         lastProcessedImage = image.clone();
 
         emit imageProcessed(image, processingTime, functionName);
 
+        return true;
         });
 }
+
 
 bool ImageProcessor::canUndo() const
 {
