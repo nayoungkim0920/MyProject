@@ -13,9 +13,9 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
-//#include <ipp.h>
-//#include <ipp/ippi.h>
-//#include <ipp/ippcc.h>
+#include <ipp.h>
+#include <ipp/ippcc.h>
+#include <ipp/ipps.h>
 #include <opencv2/core/cuda.hpp>
 #include <opencv2/cudaimgproc.hpp>
 #include <opencv2/cudaarithm.hpp>
@@ -80,6 +80,9 @@ private:
 
     //bool grayScaleCUDA(cv::Mat& image);
     ProcessingResult grayScaleOpenCV(cv::Mat& image);
+    ProcessingResult grayScaleIPP(cv::Mat& image);
+    ProcessingResult grayScaleCUDA(cv::Mat& image);
+    ProcessingResult grayScaleCUDAKernel(cv::Mat& image);
 
     double getCurrentTimeMs();
 };

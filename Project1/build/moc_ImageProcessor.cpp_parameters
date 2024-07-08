@@ -1,5 +1,5 @@
+-IC:/Program Files (x86)/Intel/oneAPI/ipp/2021.11/include
 -IC:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.1/include
--I/include
 -IC:/opencv/build
 -IC:/opencv/sources/include
 -IC:/opencv_contrib/modules/cudev/include
@@ -67,6 +67,7 @@
 -IC:/opencv_contrib/modules/stereo/include
 -IC:/opencv_contrib/modules/superres/include
 -IC:/opencv_contrib/modules/videostab/include
+-IC:/Program Files (x86)/Intel/oneAPI/ipp/2021.11/include
 -DWIN32
 --compiler-flavor=msvc
 -o

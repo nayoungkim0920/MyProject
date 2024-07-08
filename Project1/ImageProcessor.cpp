@@ -258,17 +258,17 @@ QFuture<bool> ImageProcessor::grayScale(cv::Mat& image)
             opencvImage1 = image.clone();
             results.append(grayScaleOpenCV(opencvImage1));
 
-            cv::Mat opencvImage2;
-            opencvImage2 = image.clone();
-            results.append(grayScaleOpenCV(opencvImage2));
+            cv::Mat ippImage;
+            ippImage = image.clone();
+            results.append(grayScaleIPP(ippImage));
 
-            cv::Mat opencvImage3;
-            opencvImage3 = image.clone();
-            results.append(grayScaleOpenCV(opencvImage3));
+            cv::Mat cudaImage;
+            cudaImage = image.clone();
+            results.append(grayScaleCUDA(cudaImage));
 
-            cv::Mat opencvImage4;
-            opencvImage4 = image.clone();
-            results.append(grayScaleOpenCV(opencvImage4));
+            cv::Mat cudakernelImage;
+            cudakernelImage = image.clone();
+            results.append(grayScaleCUDAKernel(cudakernelImage));
 
             // 처리시간계산 시작
             //double startTime = getCurrentTimeMs();
@@ -372,10 +372,120 @@ ImageProcessor::ProcessingResult ImageProcessor::grayScaleOpenCV(cv::Mat& image)
     cv::Mat grayImage;
     cv::cvtColor(image, grayImage, cv::COLOR_BGR2GRAY);
 
+    // 원본 이미지를 그레이스케일 이미지로 업데이트
+    //image = grayImage.clone(); // 변환된 그레이스케일 이미지로 업데이트
+    //lastProcessedImage = image.clone(); // 마지막 처리된 이미지 업데이트
+
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result.processedImage = grayImage.clone();
+    result.processingTime = elapsedTimeMs;
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::grayScaleIPP(cv::Mat& image)
+{
+    ProcessingResult result;
+    result.functionName = "grayScale";
+    result.processName = "IPP";
+
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    // IPP 사용을 위한 입력 및 출력 배열 설정
+    IppiSize roiSize = { image.cols, image.rows };
+    int srcStep = image.step;
+    int dstStep = image.cols;
+    Ipp8u* srcData = image.data;
+    Ipp8u* dstData = ippsMalloc_8u(image.rows * image.cols);
+
+    // IPP 그레이스케일 변환 (고정된 계수 사용)
+    IppStatus status = ippiRGBToGray_8u_C3C1R(srcData, srcStep, dstData, dstStep, roiSize);
+
+    if (status != ippStsNoErr) {
+        std::cerr << "IPP 오류: " << status << std::endl;
+        ippsFree(dstData); // 메모리 해제
+        return result; // 오류 발생 시 처리 중단
+    }
+
+    // 결과를 OpenCV Mat으로 변환
+    cv::Mat grayImage(image.rows, image.cols, CV_8UC1, dstData);
+
+    // 원본 이미지를 그레이스케일 이미지로 업데이트
+    //image = grayImage.clone(); // 변환된 그레이스케일 이미지로 업데이트
+    //lastProcessedImage = image.clone(); // 마지막 처리된 이미지 업데이트
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result.processedImage = grayImage.clone();
+    result.processingTime = elapsedTimeMs;
+
+    ippsFree(dstData); // 메모리 해제
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::grayScaleCUDA(cv::Mat& image)
+{
+    ProcessingResult result;
+    result.functionName = "grayScale";
+    result.processName = "CUDA";
+
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    // CUDA 장치 설정
+    //cv::cuda::setDevice(0);
+
+    // 입력 이미지를 CUDA GpuMat으로 업로드
+    cv::cuda::GpuMat d_input;
+    d_input.upload(image);
+
+    // CUDA를 사용하여 그레이스케일로 변환
+    cv::cuda::GpuMat d_output;
+    cv::cuda::cvtColor(d_input, d_output, cv::COLOR_BGR2GRAY);
+
+    // CUDA에서 호스트로 이미지 다운로드
+    cv::Mat grayImage;
+    d_output.download(grayImage);
+
+    if (grayImage.empty() || grayImage.type() != CV_8UC1) {
+        qDebug() << "Output image is empty or not in expected format after CUDA processing.";
+        return result;
+    }
+
+    // 원본 이미지를 그레이스케일 이미지로 업데이트
+    //image = grayImage.clone(); // 변환된 그레이스케일 이미지로 업데이트
+    //lastProcessedImage = image.clone(); // 마지막 처리된 이미지 업데이트
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result.processedImage = grayImage.clone();
+    result.processingTime = elapsedTimeMs;
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::grayScaleCUDAKernel(cv::Mat& image)
+{
+    ProcessingResult result;
+    result.functionName = "grayScale";
+    result.processName = "CUDAKernel";
+
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    callGrayScaleImageCUDA(image);
+
+    // 원본 이미지를 그레이스케일 이미지로 업데이트
+    //image = grayImage.clone(); // 변환된 그레이스케일 이미지로 업데이트
+    //lastProcessedImage = image.clone(); // 마지막 처리된 이미지 업데이트
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result.processedImage = image.clone();
     result.processingTime = elapsedTimeMs;
 
     return result;

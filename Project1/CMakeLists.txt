@@ -7,11 +7,16 @@ find_package(Qt6 REQUIRED COMPONENTS Widgets Core Gui)
 find_package(OpenCV REQUIRED COMPONENTS core imgproc highgui cudaarithm cudafilters cudawarping cudacodec cudafeatures2d cudaimgproc)
 find_package(CUDA REQUIRED)
 
+# IPP 설정
+set(IPP_ROOT "C:/Program Files (x86)/Intel/oneAPI/ipp/2021.11")  # IPP 라이브러리 설치 경로
+include_directories("${IPP_ROOT}/include")
+link_directories("${IPP_ROOT}/lib")  # IPP 라이브러리 lib 경로
+
 # 추가 포함 디렉터리 설정
 include_directories(
-    ${CUDA_TOOLKIT_ROOT_DIR}/include
-    ${CUDNN_ROOT_DIR}/include
+    ${CUDA_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
+    ${IPP_ROOT}/include
 )
 
 # CUDA 파일 설정
@@ -26,6 +31,14 @@ qt6_wrap_cpp(MOC_FILES
 # CUDA 파일 컴파일 및 라이브러리 생성
 cuda_add_library(image_processing
     imageProcessing.cu
+)
+
+# IPP 라이브러리 링크
+target_link_libraries(image_processing
+    ippcc.lib
+    ippcore.lib
+    ippvm.lib
+    ipps.lib
 )
 
 # 실행 파일 추가
@@ -48,9 +61,6 @@ target_link_libraries(Project1
     image_processing
     ${CUDA_LIBRARIES}
     ${CUDNN_LIBRARIES}
-    ${CUDA_cudart_LIBRARY}
-    ${CUDA_cublas_LIBRARY}
-    ${CUDA_curand_LIBRARY}
 )
 
 # 실행 파일 출력 디렉토리 설정
@@ -105,11 +115,6 @@ add_custom_command(TARGET Project1 POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
     "C:/opencv/build/bin/Release/opencv_imgproc4100.dll" "$<TARGET_FILE_DIR:Project1>"
     COMMENT "Copying OpenCV Release DLLs to output directory"
-)
-
-# IPP 헤더 파일 포함
-target_include_directories(Project1 PRIVATE
-    ${IPP_INCLUDE_DIR}
 )
 
 # 파일 인코딩 설정 추가
