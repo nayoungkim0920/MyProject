@@ -83,7 +83,7 @@ QFuture<bool> ImageProcessor::rotateImage(cv::Mat& image)
             lastProcessedImage = image.clone();
 
             // 이미지 업데이트 및 시그널 발생
-            emit imageProcessed(image, processingTime, functionName);
+            //emit imageProcessed(image, processingTime, functionName);
 
             return true;
         }
@@ -146,7 +146,7 @@ QFuture<bool> ImageProcessor::zoomoutImage(cv::Mat& image, double scaleFactor)
             //image = zoomedImage.clone(); //openCV
             lastProcessedImage = image.clone();
 
-            emit imageProcessed(image, processingTime, functionName); // 이미지 처리 완료 시그널 발생
+            //emit imageProcessed(image, processingTime, functionName); // 이미지 처리 완료 시그널 발생
 
             return true;
         }
@@ -199,7 +199,7 @@ QFuture<bool> ImageProcessor::zoominImage(cv::Mat& image, double scaleFactor)
             //image = zoomedImage.clone(); // 이미지를 복사하여 업데이트
             lastProcessedImage = image.clone();
 
-            emit imageProcessed(image, processingTime, functionName); // 이미지 처리 완료 시그널 발생
+            //emit imageProcessed(image, processingTime, functionName); // 이미지 처리 완료 시그널 발생
 
             return true;
         }
@@ -252,21 +252,69 @@ QFuture<bool> ImageProcessor::grayScale(cv::Mat& image)
 
             pushToUndoStack(image);
 
-            // 처리시간계산 시작
-            double startTime = getCurrentTimeMs();
+            QVector<ProcessingResult> results;
 
-            //if (!grayScaleCUDA(image)) {
+            cv::Mat opencvImage1;
+            opencvImage1 = image.clone();
+            results.append(grayScaleOpenCV(opencvImage1));
+
+            cv::Mat opencvImage2;
+            opencvImage2 = image.clone();
+            results.append(grayScaleOpenCV(opencvImage2));
+
+            cv::Mat opencvImage3;
+            opencvImage3 = image.clone();
+            results.append(grayScaleOpenCV(opencvImage3));
+
+            cv::Mat opencvImage4;
+            opencvImage4 = image.clone();
+            results.append(grayScaleOpenCV(opencvImage4));
+
+            // 처리시간계산 시작
+            //double startTime = getCurrentTimeMs();
+
+            //1. openCV
+            //cv::Mat grayImage;
+            //cv::cvtColor(image, grayImage, cv::COLOR_BGR2GRAY);
+            //image = grayImage.clone();
+            //lastProcessedImage = image.clone();
+
+            //2. IPP
+
+            //3. cuda
+            //cv::cuda::setDevice(0);
+
+            // 입력 이미지를 CUDA GpuMat으로 업로드
+            //cv::cuda::GpuMat d_input;
+            //d_input.upload(image);
+
+            // CUDA를 사용하여 그레이스케일로 변환
+            //cv::cuda::GpuMat d_output;
+            //cv::cuda::cvtColor(d_input, d_output, cv::COLOR_BGR2GRAY);
+
+            // CUDA에서 호스트로 이미지 다운로드
+            //cv::Mat output;
+            //d_output.download(output);
+
+            //if (output.empty() || output.type() != CV_8UC1) {
+            //    qDebug() << "Output image is empty or not in expected format after CUDA processing.";
             //    return false;
             //}
 
-            //CUDA Kernel
-            callGrayScaleImageCUDA(image);
+            // 원본 이미지를 그레이스케일 이미지로 업데이트
+            //image = output.clone(); // 변환된 그레이스케일 이미지로 업데이트
+            //lastProcessedImage = image.clone(); // 마지막 처리된 이미지 업데이트
+
+            //4. CUDA Kernel
+            //callGrayScaleImageCUDA(image);
 
             // 처리시간계산 종료
-            double endTime = getCurrentTimeMs();
-            double processingTime = endTime - startTime;
+            //double endTime = getCurrentTimeMs();
+            //double processingTime = endTime - startTime;
 
-            emit imageProcessed(image, processingTime, functionName); // 변환된 이미지 신호 전송
+            //emit imageProcessed(image, processingTime, functionName); // 변환된 이미지 신호 전송
+
+            emit imageProcessed(results);
 
             return true;
         }
@@ -312,6 +360,26 @@ QFuture<bool> ImageProcessor::grayScale(cv::Mat& image)
         return false;
     }
 }*/
+
+ImageProcessor::ProcessingResult ImageProcessor::grayScaleOpenCV(cv::Mat& image)
+{
+    ProcessingResult result;
+    result.functionName = "grayScale";
+    result.processName = "OpenCV";
+
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    cv::Mat grayImage;
+    cv::cvtColor(image, grayImage, cv::COLOR_BGR2GRAY);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result.processedImage = grayImage.clone();
+    result.processingTime = elapsedTimeMs;
+
+    return result;
+}
 
 double ImageProcessor::getCurrentTimeMs()
 {
@@ -375,7 +443,7 @@ QFuture<bool> ImageProcessor::gaussianBlur(cv::Mat& image, int kernelSize)
             //image = blurredImage.clone();
             lastProcessedImage = image.clone();
 
-            emit imageProcessed(image, processingTime, functionName);
+            //emit imageProcessed(image, processingTime, functionName);
 
             return true;
 
@@ -463,7 +531,7 @@ QFuture<bool> ImageProcessor::cannyEdges(cv::Mat& image)
             // GPU 메모리 해제
             //d_cannyEdges.release();
 
-            emit imageProcessed(image, processingTime, functionName);
+            //emit imageProcessed(image, processingTime, functionName);
 
             return true;
         }
@@ -522,7 +590,7 @@ QFuture<bool> ImageProcessor::medianFilter(cv::Mat& image)
             //image = medianedImage.clone();
             lastProcessedImage = image.clone();
 
-            emit imageProcessed(image, processingTime, functionName);
+            //emit imageProcessed(image, processingTime, functionName);
 
             return true;
 
@@ -579,7 +647,7 @@ QFuture<bool> ImageProcessor::laplacianFilter(cv::Mat& image)
             //image = filteredImage.clone();
             lastProcessedImage = image.clone();
 
-            emit imageProcessed(image, processingTime, functionName);
+            //emit imageProcessed(image, processingTime, functionName);
 
             return true;
         }
@@ -625,7 +693,7 @@ QFuture<bool> ImageProcessor::bilateralFilter(cv::Mat& image)
             //image = filteredImage.clone();
             lastProcessedImage = image.clone();
 
-            emit imageProcessed(image, processingTime, functionName);
+            //emit imageProcessed(image, processingTime, functionName);
 
             return true;
         }
@@ -691,7 +759,7 @@ QFuture<bool> ImageProcessor::sobelFilter(cv::Mat& image)
         //image = sobeledImage.clone();
         lastProcessedImage = image.clone();
 
-        emit imageProcessed(image, processingTime, functionName);
+        //emit imageProcessed(image, processingTime, functionName);
 
         return true;
         });
@@ -738,7 +806,7 @@ void ImageProcessor::undo()
         double processingTime = endTime - startTime;
 
         // Emit signal indicating image processing is complete
-        emit imageProcessed(lastProcessedImage, processingTime, functionName);
+        //emit imageProcessed(lastProcessedImage, processingTime, functionName);
     }
     catch (const std::exception& e) {
         qDebug() << "Exception occurred in ImageProcessor::undo(): " << e.what();
@@ -771,7 +839,7 @@ void ImageProcessor::redo()
         double endTime = getCurrentTimeMs();
         double processingTime = endTime - startTime;
 
-        emit imageProcessed(lastProcessedImage, processingTime, functionName);
+        //emit imageProcessed(lastProcessedImage, processingTime, functionName);
 
     }
     catch (const std::exception& e) {

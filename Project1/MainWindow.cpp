@@ -9,6 +9,11 @@ MainWindow::MainWindow(QWidget* parent)
 {
     ui->setupUi(this);
 
+    ui->label_opencv_title->setText(QString("OpenCV"));
+    ui->label_ipp_title->setText(QString("IPP"));
+    ui->label_cuda_title->setText(QString("CUDA"));
+    ui->label_cudakernel_title->setText(QString("CUDA Kernel"));
+
     connectActions();
 
     //처음로딩 후 필터처리가 너무 느려 추가함
@@ -33,7 +38,11 @@ void MainWindow::openFile()
         if (imageProcessor->openImage(fileName.toStdString(), loadedImage)) {
             currentImage = loadedImage.clone(); // Clone loaded image
             initialImage = currentImage.clone();
-            displayImage(currentImage);
+
+            displayImage(currentImage, ui->label_opencv);
+            displayImage(currentImage, ui->label_ipp);
+            displayImage(currentImage, ui->label_cuda);
+            displayImage(currentImage, ui->label_cudakernel);
         }
         else {
             QMessageBox::critical(this, tr("Error"), tr("Failed to open image file"));
@@ -188,7 +197,12 @@ void MainWindow::first()
     //초기 이미지로 되돌리기
     if (!initialImage.empty()) {
         currentImage = initialImage.clone();
-        displayImage(currentImage);
+
+        displayImage(currentImage, ui->label_opencv);
+        displayImage(currentImage, ui->label_ipp);
+        displayImage(currentImage, ui->label_cuda);
+        displayImage(currentImage, ui->label_cudakernel);
+
         imageProcessor->cleanUndoStack();
         imageProcessor->cleanRedoStack();
     }
@@ -200,48 +214,83 @@ void MainWindow::first()
     }
 }
 
-void MainWindow::displayImage(const cv::Mat& image)
+void MainWindow::displayImage(cv::Mat image, QLabel* label)
 {
-    QMetaObject::invokeMethod(this, [this, image]() {
-
-        qDebug() << "displayImage() channels : " << image.channels();
+    QMetaObject::invokeMethod(this, [this, image, label]() {
+        qDebug() << "displayImage() channels: " << image.channels();
 
         currentImage = image;
 
-        // 이미지 타입이 그레이스케일(CV_8UC1)인지 확인합니다.
+        // 이미지 타입에 따라 QImage를 생성합니다.
+        QImage qImage;
         if (image.type() == CV_8UC1) {
-            qDebug() << "displayImage() type : graysclae CV_8UC1 Format_Grayscale8";
-            QImage qImage(image.data,
+            qDebug() << "displayImage() type: grayscale CV_8UC1 Format_Grayscale8";
+            qImage = QImage(image.data,
                 image.cols,
                 image.rows,
                 static_cast<int>(image.step),
                 QImage::Format_Grayscale8);
-            ui->label->setPixmap(QPixmap::fromImage(qImage));
-            ui->label->adjustSize();
         }
-        else {
-            qDebug() << "displayImage() type : Format_BGR888";
-            QImage qImage(image.data,
+        else if (image.type() == CV_8UC3) {
+            qDebug() << "displayImage() type: BGR CV_8UC3 Format_RGB888";
+            qImage = QImage(image.data,
                 image.cols,
                 image.rows,
                 static_cast<int>(image.step),
-                QImage::Format_BGR888);
-            ui->label->setPixmap(QPixmap::fromImage(qImage));
-            ui->label->adjustSize();
+                QImage::Format_RGB888).rgbSwapped();
+        }
+        else {
+            qDebug() << "displayImage() type: not supported";
+            return; // 지원하지 않는 이미지 타입은 처리하지 않음
         }
 
+        // QLabel 위젯에 QPixmap으로 이미지를 설정합니다.
+        QPixmap pixmap = QPixmap::fromImage(qImage);
+        label->setPixmap(pixmap);
         });
-
 }
 
-void MainWindow::handleImageProcessed(const cv::Mat& processedImage, double processingTimeMs, QString processName)
+void MainWindow::handleImageProcessed(QVector<ImageProcessor::ProcessingResult> results)
 {
+    for (int i = 0; i < results.size(); ++i) {
+        const auto& result = results[i];
+        if (i == 0) {
+            displayImage(result.processedImage, ui->label_opencv);
+            ui->label_opencv_title->setText(QString("%1 %2 %3ms")
+                .arg(result.processName)
+                .arg(result.functionName)
+                .arg(result.processingTime));
+        }
+        else if (i == 1) {
+            displayImage(result.processedImage, ui->label_ipp);
+            ui->label_ipp_title->setText(QString("%1 %2 %3ms")
+                .arg(result.processName)
+                .arg(result.functionName)
+                .arg(result.processingTime));
+        }
+        else if (i == 2) {
+            displayImage(result.processedImage, ui->label_cuda);
+            ui->label_cuda_title->setText(QString("%1 %2 %3ms")
+                .arg(result.processName)
+                .arg(result.functionName)
+                .arg(result.processingTime));
+        }
+        else if (i == 3) {
+            displayImage(result.processedImage, ui->label_cudakernel);
+            ui->label_cudakernel_title->setText(QString("%1 %2 %3ms")
+                .arg(result.processName)
+                .arg(result.functionName)
+                .arg(result.processingTime));
+        }
+            
+    }
+
     // 이미지 출력
-    displayImage(processedImage);
+    //displayImage(processedImage);
 
     // 상태 표시줄에 처리 시간 출력
-    statusBar()->showMessage(
-        QString("%1 processed in %2 ms").arg(processName).arg(processingTimeMs));
+    //statusBar()->showMessage(
+    //    QString("%1 processed in %2 ms").arg(processName).arg(processingTimeMs));
 
 }
 

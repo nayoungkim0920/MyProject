@@ -1,5 +1,5 @@
 /********************************************************************************
-** Form generated from reading UI file 'MainWIndow.ui'
+** Form generated from reading UI file 'MainWindow.ui'
 **
 ** Created by: Qt User Interface Compiler version 6.7.1
 **
@@ -12,6 +12,7 @@
 #include <QtCore/QVariant>
 #include <QtGui/QAction>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/QMenu>
@@ -32,6 +33,9 @@ public:
     QAction *actionRotate;
     QAction *actionZoomIn;
     QAction *actionZoomOut;
+    QAction *actionUndo;
+    QAction *actionRedo;
+    QAction *actionFirst;
     QAction *actionGrayscale;
     QAction *actionGaussianBlur;
     QAction *actionCannyEdges;
@@ -39,12 +43,21 @@ public:
     QAction *actionSobelFilter;
     QAction *actionLaplacianFilter;
     QAction *actionBilateralFilter;
-    QAction *actionUndo;
-    QAction *actionRedo;
-    QAction *actionFirst;
     QWidget *centralwidget;
     QVBoxLayout *verticalLayout;
-    QLabel *label;
+    QVBoxLayout *verticalLayout_images_and_times;
+    QHBoxLayout *horizontalLayout_row1;
+    QLabel *label_opencv;
+    QLabel *label_ipp;
+    QHBoxLayout *horizontalLayout_row2;
+    QLabel *label_opencv_title;
+    QLabel *label_ipp_title;
+    QHBoxLayout *horizontalLayout_row3;
+    QLabel *label_cuda;
+    QLabel *label_cudakernel;
+    QHBoxLayout *horizontalLayout_row4;
+    QLabel *label_cuda_title;
+    QLabel *label_cudakernel_title;
     QMenuBar *menubar;
     QMenu *menuFile;
     QMenu *menuEdit;
@@ -71,6 +84,12 @@ public:
         actionZoomIn->setObjectName("actionZoomIn");
         actionZoomOut = new QAction(MainWindow);
         actionZoomOut->setObjectName("actionZoomOut");
+        actionUndo = new QAction(MainWindow);
+        actionUndo->setObjectName("actionUndo");
+        actionRedo = new QAction(MainWindow);
+        actionRedo->setObjectName("actionRedo");
+        actionFirst = new QAction(MainWindow);
+        actionFirst->setObjectName("actionFirst");
         actionGrayscale = new QAction(MainWindow);
         actionGrayscale->setObjectName("actionGrayscale");
         actionGaussianBlur = new QAction(MainWindow);
@@ -85,21 +104,101 @@ public:
         actionLaplacianFilter->setObjectName("actionLaplacianFilter");
         actionBilateralFilter = new QAction(MainWindow);
         actionBilateralFilter->setObjectName("actionBilateralFilter");
-        actionUndo = new QAction(MainWindow);
-        actionUndo->setObjectName("actionUndo");
-        actionRedo = new QAction(MainWindow);
-        actionRedo->setObjectName("actionRedo");
-        actionFirst = new QAction(MainWindow);
-        actionFirst->setObjectName("actionFirst");
         centralwidget = new QWidget(MainWindow);
         centralwidget->setObjectName("centralwidget");
         verticalLayout = new QVBoxLayout(centralwidget);
+        verticalLayout->setSpacing(6);
+        verticalLayout->setContentsMargins(11, 11, 11, 11);
         verticalLayout->setObjectName("verticalLayout");
-        label = new QLabel(centralwidget);
-        label->setObjectName("label");
-        label->setAlignment(Qt::AlignCenter);
+        verticalLayout_images_and_times = new QVBoxLayout();
+        verticalLayout_images_and_times->setSpacing(6);
+        verticalLayout_images_and_times->setObjectName("verticalLayout_images_and_times");
+        horizontalLayout_row1 = new QHBoxLayout();
+        horizontalLayout_row1->setSpacing(6);
+        horizontalLayout_row1->setObjectName("horizontalLayout_row1");
+        label_opencv = new QLabel(centralwidget);
+        label_opencv->setObjectName("label_opencv");
+        label_opencv->setAlignment(Qt::AlignCenter);
+        label_opencv->setMinimumSize(QSize(400, 300));
+        label_opencv->setMaximumSize(QSize(400, 300));
+        label_opencv->setScaledContents(true);
 
-        verticalLayout->addWidget(label);
+        horizontalLayout_row1->addWidget(label_opencv);
+
+        label_ipp = new QLabel(centralwidget);
+        label_ipp->setObjectName("label_ipp");
+        label_ipp->setAlignment(Qt::AlignCenter);
+        label_ipp->setMinimumSize(QSize(400, 300));
+        label_ipp->setMaximumSize(QSize(400, 300));
+        label_ipp->setScaledContents(true);
+
+        horizontalLayout_row1->addWidget(label_ipp);
+
+
+        verticalLayout_images_and_times->addLayout(horizontalLayout_row1);
+
+        horizontalLayout_row2 = new QHBoxLayout();
+        horizontalLayout_row2->setSpacing(6);
+        horizontalLayout_row2->setObjectName("horizontalLayout_row2");
+        label_opencv_title = new QLabel(centralwidget);
+        label_opencv_title->setObjectName("label_opencv_title");
+        label_opencv_title->setAlignment(Qt::AlignLeft);
+
+        horizontalLayout_row2->addWidget(label_opencv_title);
+
+        label_ipp_title = new QLabel(centralwidget);
+        label_ipp_title->setObjectName("label_ipp_title");
+        label_ipp_title->setAlignment(Qt::AlignLeft);
+
+        horizontalLayout_row2->addWidget(label_ipp_title);
+
+
+        verticalLayout_images_and_times->addLayout(horizontalLayout_row2);
+
+        horizontalLayout_row3 = new QHBoxLayout();
+        horizontalLayout_row3->setSpacing(6);
+        horizontalLayout_row3->setObjectName("horizontalLayout_row3");
+        label_cuda = new QLabel(centralwidget);
+        label_cuda->setObjectName("label_cuda");
+        label_cuda->setAlignment(Qt::AlignCenter);
+        label_cuda->setMinimumSize(QSize(400, 300));
+        label_cuda->setMaximumSize(QSize(400, 300));
+        label_cuda->setScaledContents(true);
+
+        horizontalLayout_row3->addWidget(label_cuda);
+
+        label_cudakernel = new QLabel(centralwidget);
+        label_cudakernel->setObjectName("label_cudakernel");
+        label_cudakernel->setAlignment(Qt::AlignCenter);
+        label_cudakernel->setMinimumSize(QSize(400, 300));
+        label_cudakernel->setMaximumSize(QSize(400, 300));
+        label_cudakernel->setScaledContents(true);
+
+        horizontalLayout_row3->addWidget(label_cudakernel);
+
+
+        verticalLayout_images_and_times->addLayout(horizontalLayout_row3);
+
+        horizontalLayout_row4 = new QHBoxLayout();
+        horizontalLayout_row4->setSpacing(6);
+        horizontalLayout_row4->setObjectName("horizontalLayout_row4");
+        label_cuda_title = new QLabel(centralwidget);
+        label_cuda_title->setObjectName("label_cuda_title");
+        label_cuda_title->setAlignment(Qt::AlignLeft);
+
+        horizontalLayout_row4->addWidget(label_cuda_title);
+
+        label_cudakernel_title = new QLabel(centralwidget);
+        label_cudakernel_title->setObjectName("label_cudakernel_title");
+        label_cudakernel_title->setAlignment(Qt::AlignLeft);
+
+        horizontalLayout_row4->addWidget(label_cudakernel_title);
+
+
+        verticalLayout_images_and_times->addLayout(horizontalLayout_row4);
+
+
+        verticalLayout->addLayout(verticalLayout_images_and_times);
 
         MainWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(MainWindow);
@@ -168,29 +267,30 @@ public:
 
     void retranslateUi(QMainWindow *MainWindow)
     {
-        actionOpen->setText(QCoreApplication::translate("MainWindow", "Open", nullptr));
-        actionSave->setText(QCoreApplication::translate("MainWindow", "Save", nullptr));
-        actionExit->setText(QCoreApplication::translate("MainWindow", "Exit", nullptr));
-        actionRotate->setText(QCoreApplication::translate("MainWindow", "Rotate", nullptr));
-        actionZoomIn->setText(QCoreApplication::translate("MainWindow", "Zoom In", nullptr));
-        actionZoomOut->setText(QCoreApplication::translate("MainWindow", "Zoom Out", nullptr));
-        actionGrayscale->setText(QCoreApplication::translate("MainWindow", "Grayscale", nullptr));
-        actionGaussianBlur->setText(QCoreApplication::translate("MainWindow", "Gaussian", nullptr));
-        actionCannyEdges->setText(QCoreApplication::translate("MainWindow", "Canny", nullptr));
-        actionMedianFilter->setText(QCoreApplication::translate("MainWindow", "Median", nullptr));
-        actionSobelFilter->setText(QCoreApplication::translate("MainWindow", "Sobel", nullptr));
-        actionLaplacianFilter->setText(QCoreApplication::translate("MainWindow", "Laplacian", nullptr));
-        actionBilateralFilter->setText(QCoreApplication::translate("MainWindow", "Bilateral", nullptr));
-        actionUndo->setText(QCoreApplication::translate("MainWindow", "Undo", nullptr));
-#if QT_CONFIG(shortcut)
-        actionUndo->setShortcut(QCoreApplication::translate("MainWindow", "Ctrl+Z", nullptr));
-#endif // QT_CONFIG(shortcut)
-        actionRedo->setText(QCoreApplication::translate("MainWindow", "Redo", nullptr));
-#if QT_CONFIG(shortcut)
-        actionRedo->setShortcut(QCoreApplication::translate("MainWindow", "Ctrl+Y", nullptr));
-#endif // QT_CONFIG(shortcut)
-        actionFirst->setText(QCoreApplication::translate("MainWindow", "First", nullptr));
-        label->setText(QCoreApplication::translate("MainWindow", "Image Display", nullptr));
+        actionOpen->setText(QCoreApplication::translate("MainWindow", "&Open", nullptr));
+        actionSave->setText(QCoreApplication::translate("MainWindow", "&Save", nullptr));
+        actionExit->setText(QCoreApplication::translate("MainWindow", "E&xit", nullptr));
+        actionRotate->setText(QCoreApplication::translate("MainWindow", "&Rotate", nullptr));
+        actionZoomIn->setText(QCoreApplication::translate("MainWindow", "Zoom &In", nullptr));
+        actionZoomOut->setText(QCoreApplication::translate("MainWindow", "Zoom &Out", nullptr));
+        actionUndo->setText(QCoreApplication::translate("MainWindow", "&Undo", nullptr));
+        actionRedo->setText(QCoreApplication::translate("MainWindow", "&Redo", nullptr));
+        actionFirst->setText(QCoreApplication::translate("MainWindow", "&First", nullptr));
+        actionGrayscale->setText(QCoreApplication::translate("MainWindow", "&Grayscale", nullptr));
+        actionGaussianBlur->setText(QCoreApplication::translate("MainWindow", "&Gaussian Blur", nullptr));
+        actionCannyEdges->setText(QCoreApplication::translate("MainWindow", "&Canny Edges", nullptr));
+        actionMedianFilter->setText(QCoreApplication::translate("MainWindow", "&Median Filter", nullptr));
+        actionSobelFilter->setText(QCoreApplication::translate("MainWindow", "&Sobel Filter", nullptr));
+        actionLaplacianFilter->setText(QCoreApplication::translate("MainWindow", "&Laplacian Filter", nullptr));
+        actionBilateralFilter->setText(QCoreApplication::translate("MainWindow", "&Bilateral Filter", nullptr));
+        label_opencv->setText(QCoreApplication::translate("MainWindow", "label_opencv", nullptr));
+        label_ipp->setText(QCoreApplication::translate("MainWindow", "label_ipp", nullptr));
+        label_opencv_title->setText(QCoreApplication::translate("MainWindow", "Processing Time:", nullptr));
+        label_ipp_title->setText(QCoreApplication::translate("MainWindow", "Processing Time:", nullptr));
+        label_cuda->setText(QCoreApplication::translate("MainWindow", "label_cuda", nullptr));
+        label_cudakernel->setText(QCoreApplication::translate("MainWindow", "label_cudakernel", nullptr));
+        label_cuda_title->setText(QCoreApplication::translate("MainWindow", "Processing Time:", nullptr));
+        label_cudakernel_title->setText(QCoreApplication::translate("MainWindow", "Processing Time:", nullptr));
         menuFile->setTitle(QCoreApplication::translate("MainWindow", "File", nullptr));
         menuEdit->setTitle(QCoreApplication::translate("MainWindow", "Edit", nullptr));
         menuFilters->setTitle(QCoreApplication::translate("MainWindow", "Filters", nullptr));

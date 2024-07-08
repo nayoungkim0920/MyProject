@@ -8,6 +8,7 @@
 
 #include "../MainWindow.h"
 #include <QtCore/qmetatype.h>
+#include <QtCore/QList>
 
 #include <QtCore/qtmochelpers.h>
 
@@ -56,10 +57,11 @@ constexpr auto qt_meta_stringdata_CLASSMainWindowENDCLASS = QtMocHelpers::string
     "displayImage",
     "cv::Mat",
     "image",
+    "QLabel*",
+    "label",
     "handleImageProcessed",
-    "processedImage",
-    "processingTimeMs",
-    "processName"
+    "QList<ImageProcessor::ProcessingResult>",
+    "results"
 );
 #else  // !QT_MOC_HAS_STRINGDATA
 #error "qtmochelpers.h not found or too old."
@@ -96,8 +98,8 @@ Q_CONSTINIT static const uint qt_meta_data_CLASSMainWindowENDCLASS[] = {
       15,    0,  135,    2, 0x08,   14 /* Private */,
       16,    0,  136,    2, 0x08,   15 /* Private */,
       17,    0,  137,    2, 0x08,   16 /* Private */,
-      18,    1,  138,    2, 0x08,   17 /* Private */,
-      21,    3,  141,    2, 0x08,   19 /* Private */,
+      18,    2,  138,    2, 0x08,   17 /* Private */,
+      23,    1,  143,    2, 0x08,   20 /* Private */,
 
  // slots: parameters
     QMetaType::Void,
@@ -116,8 +118,8 @@ Q_CONSTINIT static const uint qt_meta_data_CLASSMainWindowENDCLASS[] = {
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
-    QMetaType::Void, 0x80000000 | 19,   20,
-    QMetaType::Void, 0x80000000 | 19, QMetaType::Double, QMetaType::QString,   22,   23,   24,
+    QMetaType::Void, 0x80000000 | 19, 0x80000000 | 21,   20,   22,
+    QMetaType::Void, 0x80000000 | 24,   25,
 
        0        // eod
 };
@@ -165,12 +167,11 @@ Q_CONSTINIT const QMetaObject MainWindow::staticMetaObject = { {
         QtPrivate::TypeAndForceComplete<void, std::false_type>,
         // method 'displayImage'
         QtPrivate::TypeAndForceComplete<void, std::false_type>,
-        QtPrivate::TypeAndForceComplete<const cv::Mat &, std::false_type>,
+        QtPrivate::TypeAndForceComplete<cv::Mat, std::false_type>,
+        QtPrivate::TypeAndForceComplete<QLabel *, std::false_type>,
         // method 'handleImageProcessed'
         QtPrivate::TypeAndForceComplete<void, std::false_type>,
-        QtPrivate::TypeAndForceComplete<const cv::Mat &, std::false_type>,
-        QtPrivate::TypeAndForceComplete<double, std::false_type>,
-        QtPrivate::TypeAndForceComplete<QString, std::false_type>
+        QtPrivate::TypeAndForceComplete<QVector<ImageProcessor::ProcessingResult>, std::false_type>
     >,
     nullptr
 } };
@@ -197,8 +198,8 @@ void MainWindow::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, 
         case 13: _t->redoAction(); break;
         case 14: _t->undoAction(); break;
         case 15: _t->first(); break;
-        case 16: _t->displayImage((*reinterpret_cast< std::add_pointer_t<cv::Mat>>(_a[1]))); break;
-        case 17: _t->handleImageProcessed((*reinterpret_cast< std::add_pointer_t<cv::Mat>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[2])),(*reinterpret_cast< std::add_pointer_t<QString>>(_a[3]))); break;
+        case 16: _t->displayImage((*reinterpret_cast< std::add_pointer_t<cv::Mat>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<QLabel*>>(_a[2]))); break;
+        case 17: _t->handleImageProcessed((*reinterpret_cast< std::add_pointer_t<QList<ImageProcessor::ProcessingResult>>>(_a[1]))); break;
         default: ;
         }
     }

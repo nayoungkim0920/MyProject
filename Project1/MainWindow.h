@@ -41,8 +41,8 @@ private slots:
     void redoAction();
     void undoAction();
     void first();
-    void displayImage(const cv::Mat& image);
-    void handleImageProcessed(const cv::Mat& processedImage, double processingTimeMs, QString processName);
+    void displayImage(cv::Mat image, QLabel* label);
+    void handleImageProcessed(QVector<ImageProcessor::ProcessingResult> results);
 
 private:
     Ui::MainWindow* ui;

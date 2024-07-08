@@ -13,14 +13,164 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
-     <widget class="QLabel" name="label">
-      <property name="text">
-       <string>Image Display</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignCenter</set>
-      </property>
-     </widget>
+     <layout class="QVBoxLayout" name="verticalLayout_images_and_times">
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_row1">
+        <item>
+         <widget class="QLabel" name="label_opencv">
+          <property name="text">
+           <string>label_opencv</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>400</width>
+            <height>300</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>400</width>
+            <height>300</height>
+           </size>
+          </property>
+          <property name="scaledContents">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_ipp">
+          <property name="text">
+           <string>label_ipp</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>400</width>
+            <height>300</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>400</width>
+            <height>300</height>
+           </size>
+          </property>
+          <property name="scaledContents">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_row2">
+        <item>
+         <widget class="QLabel" name="label_opencv_title">
+          <property name="text">
+           <string>Processing Time:</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignLeft</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_ipp_title">
+          <property name="text">
+           <string>Processing Time:</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignLeft</set>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_row3">
+        <item>
+         <widget class="QLabel" name="label_cuda">
+          <property name="text">
+           <string>label_cuda</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>400</width>
+            <height>300</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>400</width>
+            <height>300</height>
+           </size>
+          </property>
+          <property name="scaledContents">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_cudakernel">
+          <property name="text">
+           <string>label_cudakernel</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>400</width>
+            <height>300</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>400</width>
+            <height>300</height>
+           </size>
+          </property>
+          <property name="scaledContents">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_row4">
+        <item>
+         <widget class="QLabel" name="label_cuda_title">
+          <property name="text">
+           <string>Processing Time:</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignLeft</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_cudakernel_title">
+          <property name="text">
+           <string>Processing Time:</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignLeft</set>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
     </item>
    </layout>
   </widget>
@@ -111,91 +261,86 @@
   </widget>
   <action name="actionOpen">
    <property name="text">
-    <string>Open</string>
+    <string>&amp;Open</string>
    </property>
   </action>
   <action name="actionSave">
    <property name="text">
-    <string>Save</string>
+    <string>&amp;Save</string>
    </property>
   </action>
   <action name="actionExit">
    <property name="text">
-    <string>Exit</string>
+    <string>E&amp;xit</string>
    </property>
   </action>
   <action name="actionRotate">
    <property name="text">
-    <string>Rotate</string>
+    <string>&amp;Rotate</string>
    </property>
   </action>
   <action name="actionZoomIn">
    <property name="text">
-    <string>Zoom In</string>
+    <string>Zoom &amp;In</string>
    </property>
   </action>
   <action name="actionZoomOut">
    <property name="text">
-    <string>Zoom Out</string>
-   </property>
-  </action>
-  <action name="actionGrayscale">
-   <property name="text">
-    <string>Grayscale</string>
-   </property>
-  </action>
-  <action name="actionGaussianBlur">
-   <property name="text">
-    <string>Gaussian</string>
-   </property>
-  </action>
-  <action name="actionCannyEdges">
-   <property name="text">
-    <string>Canny</string>
-   </property>
-  </action>
-  <action name="actionMedianFilter">
-   <property name="text">
-    <string>Median</string>
-   </property>
-  </action>
-  <action name="actionSobelFilter">
-   <property name="text">
-    <string>Sobel</string>
-   </property>
-  </action>
-  <action name="actionLaplacianFilter">
-   <property name="text">
-    <string>Laplacian</string>
-   </property>
-  </action>
-  <action name="actionBilateralFilter">
-   <property name="text">
-    <string>Bilateral</string>
+    <string>Zoom &amp;Out</string>
    </property>
   </action>
   <action name="actionUndo">
    <property name="text">
-    <string>Undo</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+Z</string> <!-- Undo 단축키 추가 -->
+    <string>&amp;Undo</string>
    </property>
   </action>
   <action name="actionRedo">
    <property name="text">
-    <string>Redo</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+Y</string> <!-- Redo 단축키 추가 -->
+    <string>&amp;Redo</string>
    </property>
   </action>
   <action name="actionFirst">
    <property name="text">
-    <string>First</string>
+    <string>&amp;First</string>
    </property>
   </action>
-  </widget>
+  <action name="actionGrayscale">
+   <property name="text">
+    <string>&amp;Grayscale</string>
+   </property>
+  </action>
+  <action name="actionGaussianBlur">
+   <property name="text">
+    <string>&amp;Gaussian Blur</string>
+   </property>
+  </action>
+  <action name="actionCannyEdges">
+   <property name="text">
+    <string>&amp;Canny Edges</string>
+   </property>
+  </action>
+  <action name="actionMedianFilter">
+   <property name="text">
+    <string>&amp;Median Filter</string>
+   </property>
+  </action>
+  <action name="actionSobelFilter">
+   <property name="text">
+    <string>&amp;Sobel Filter</string>
+   </property>
+  </action>
+  <action name="actionLaplacianFilter">
+   <property name="text">
+    <string>&amp;Laplacian Filter</string>
+   </property>
+  </action>
+  <action name="actionBilateralFilter">
+   <property name="text">
+    <string>&amp;Bilateral Filter</string>
+   </property>
+  </action>
+ </widget>
+ <layoutdefault spacing="6" margin="11"/>
  <resources/>
  <connections/>
 </ui>

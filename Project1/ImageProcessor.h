@@ -31,6 +31,17 @@ public:
     explicit ImageProcessor(QObject* parent = nullptr);
     ~ImageProcessor();
 
+    struct ProcessingResult {
+        QString functionName;
+        QString processName;
+        cv::Mat processedImage; // cv::Mat 객체를 직접 선언
+        double processingTime;
+
+        ProcessingResult()
+            : functionName(""), processName(""), processedImage(cv::Mat()), processingTime(0.0) {
+        }
+    };
+
     bool openImage(const std::string& fileName, cv::Mat& image);
     bool saveImage(const std::string& fileName, const cv::Mat& image);
     QFuture<bool> rotateImage(cv::Mat& image);
@@ -55,7 +66,7 @@ public:
     const cv::Mat& getLastProcessedImage() const;
 
 signals: //이벤트 발생을 알림
-    void imageProcessed(const cv::Mat& processedImage, double processingTimeMs, QString processName);
+    void imageProcessed(QVector<ImageProcessor::ProcessingResult> results);
 //slots: //이벤트를 처리하는 함수 지칭
 
 private:
@@ -68,6 +79,7 @@ private:
     void pushToRedoStack(const cv::Mat& image);
 
     //bool grayScaleCUDA(cv::Mat& image);
+    ProcessingResult grayScaleOpenCV(cv::Mat& image);
 
     double getCurrentTimeMs();
 };
