@@ -121,6 +121,13 @@ add_custom_command(TARGET Project1 POST_BUILD
 # 파일 인코딩 설정 추가
 add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 
+# OpenMP 설정
+find_package(OpenMP REQUIRED)
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(Project1 
+    OpenMP::OpenMP_CXX)
+endif()
+
 if (MSVC)
     set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Project1)
 

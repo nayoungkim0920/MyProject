@@ -17,6 +17,7 @@
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/QMenu>
 #include <QtWidgets/QMenuBar>
+#include <QtWidgets/QScrollArea>
 #include <QtWidgets/QStatusBar>
 #include <QtWidgets/QToolBar>
 #include <QtWidgets/QVBoxLayout>
@@ -45,6 +46,9 @@ public:
     QAction *actionBilateralFilter;
     QWidget *centralwidget;
     QVBoxLayout *verticalLayout;
+    QScrollArea *scrollArea;
+    QWidget *scrollAreaWidgetContents;
+    QVBoxLayout *verticalLayout_scroll;
     QVBoxLayout *verticalLayout_images_and_times;
     QHBoxLayout *horizontalLayout_row1;
     QLabel *label_opencv;
@@ -110,20 +114,29 @@ public:
         verticalLayout->setSpacing(6);
         verticalLayout->setContentsMargins(11, 11, 11, 11);
         verticalLayout->setObjectName("verticalLayout");
+        scrollArea = new QScrollArea(centralwidget);
+        scrollArea->setObjectName("scrollArea");
+        scrollArea->setWidgetResizable(true);
+        scrollAreaWidgetContents = new QWidget();
+        scrollAreaWidgetContents->setObjectName("scrollAreaWidgetContents");
+        verticalLayout_scroll = new QVBoxLayout(scrollAreaWidgetContents);
+        verticalLayout_scroll->setSpacing(6);
+        verticalLayout_scroll->setContentsMargins(11, 11, 11, 11);
+        verticalLayout_scroll->setObjectName("verticalLayout_scroll");
         verticalLayout_images_and_times = new QVBoxLayout();
         verticalLayout_images_and_times->setSpacing(6);
         verticalLayout_images_and_times->setObjectName("verticalLayout_images_and_times");
         horizontalLayout_row1 = new QHBoxLayout();
         horizontalLayout_row1->setSpacing(6);
         horizontalLayout_row1->setObjectName("horizontalLayout_row1");
-        label_opencv = new QLabel(centralwidget);
+        label_opencv = new QLabel(scrollAreaWidgetContents);
         label_opencv->setObjectName("label_opencv");
         label_opencv->setAlignment(Qt::AlignCenter);
         label_opencv->setScaledContents(true);
 
         horizontalLayout_row1->addWidget(label_opencv);
 
-        label_ipp = new QLabel(centralwidget);
+        label_ipp = new QLabel(scrollAreaWidgetContents);
         label_ipp->setObjectName("label_ipp");
         label_ipp->setAlignment(Qt::AlignCenter);
         label_ipp->setScaledContents(true);
@@ -136,13 +149,13 @@ public:
         horizontalLayout_row2 = new QHBoxLayout();
         horizontalLayout_row2->setSpacing(6);
         horizontalLayout_row2->setObjectName("horizontalLayout_row2");
-        label_opencv_title = new QLabel(centralwidget);
+        label_opencv_title = new QLabel(scrollAreaWidgetContents);
         label_opencv_title->setObjectName("label_opencv_title");
         label_opencv_title->setAlignment(Qt::AlignLeft);
 
         horizontalLayout_row2->addWidget(label_opencv_title);
 
-        label_ipp_title = new QLabel(centralwidget);
+        label_ipp_title = new QLabel(scrollAreaWidgetContents);
         label_ipp_title->setObjectName("label_ipp_title");
         label_ipp_title->setAlignment(Qt::AlignLeft);
 
@@ -154,14 +167,14 @@ public:
         horizontalLayout_row3 = new QHBoxLayout();
         horizontalLayout_row3->setSpacing(6);
         horizontalLayout_row3->setObjectName("horizontalLayout_row3");
-        label_cuda = new QLabel(centralwidget);
+        label_cuda = new QLabel(scrollAreaWidgetContents);
         label_cuda->setObjectName("label_cuda");
         label_cuda->setAlignment(Qt::AlignCenter);
         label_cuda->setScaledContents(true);
 
         horizontalLayout_row3->addWidget(label_cuda);
 
-        label_cudakernel = new QLabel(centralwidget);
+        label_cudakernel = new QLabel(scrollAreaWidgetContents);
         label_cudakernel->setObjectName("label_cudakernel");
         label_cudakernel->setAlignment(Qt::AlignCenter);
         label_cudakernel->setScaledContents(true);
@@ -174,13 +187,13 @@ public:
         horizontalLayout_row4 = new QHBoxLayout();
         horizontalLayout_row4->setSpacing(6);
         horizontalLayout_row4->setObjectName("horizontalLayout_row4");
-        label_cuda_title = new QLabel(centralwidget);
+        label_cuda_title = new QLabel(scrollAreaWidgetContents);
         label_cuda_title->setObjectName("label_cuda_title");
         label_cuda_title->setAlignment(Qt::AlignLeft);
 
         horizontalLayout_row4->addWidget(label_cuda_title);
 
-        label_cudakernel_title = new QLabel(centralwidget);
+        label_cudakernel_title = new QLabel(scrollAreaWidgetContents);
         label_cudakernel_title->setObjectName("label_cudakernel_title");
         label_cudakernel_title->setAlignment(Qt::AlignLeft);
 
@@ -190,7 +203,11 @@ public:
         verticalLayout_images_and_times->addLayout(horizontalLayout_row4);
 
 
-        verticalLayout->addLayout(verticalLayout_images_and_times);
+        verticalLayout_scroll->addLayout(verticalLayout_images_and_times);
+
+        scrollArea->setWidget(scrollAreaWidgetContents);
+
+        verticalLayout->addWidget(scrollArea);
 
         MainWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(MainWindow);

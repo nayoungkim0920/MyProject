@@ -13,120 +13,127 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
-     <layout class="QVBoxLayout" name="verticalLayout_images_and_times">
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_row1">
+     <widget class="QScrollArea" name="scrollArea">
+      <property name="widgetResizable">
+       <bool>true</bool>
+      </property>
+      <widget class="QWidget" name="scrollAreaWidgetContents">
+       <layout class="QVBoxLayout" name="verticalLayout_scroll">
         <item>
-         <widget class="QLabel" name="label_opencv">
-          <property name="text">
-           <string>label_opencv</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-           <property name="scaledContents">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_ipp">
-          <property name="text">
-           <string>label_ipp</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-          
-          <property name="scaledContents">
-           <bool>true</bool>
-          </property>
-         </widget>
+         <layout class="QVBoxLayout" name="verticalLayout_images_and_times">
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_row1">
+            <item>
+             <widget class="QLabel" name="label_opencv">
+              <property name="text">
+               <string>label_opencv</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+              <property name="scaledContents">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_ipp">
+              <property name="text">
+               <string>label_ipp</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+              <property name="scaledContents">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_row2">
+            <item>
+             <widget class="QLabel" name="label_opencv_title">
+              <property name="text">
+               <string>Processing Time:</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignLeft</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_ipp_title">
+              <property name="text">
+               <string>Processing Time:</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignLeft</set>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_row3">
+            <item>
+             <widget class="QLabel" name="label_cuda">
+              <property name="text">
+               <string>label_cuda</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+              <property name="scaledContents">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_cudakernel">
+              <property name="text">
+               <string>label_cudakernel</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+              <property name="scaledContents">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_row4">
+            <item>
+             <widget class="QLabel" name="label_cuda_title">
+              <property name="text">
+               <string>Processing Time:</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignLeft</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_cudakernel_title">
+              <property name="text">
+               <string>Processing Time:</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignLeft</set>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
         </item>
        </layout>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_row2">
-        <item>
-         <widget class="QLabel" name="label_opencv_title">
-          <property name="text">
-           <string>Processing Time:</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignLeft</set>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_ipp_title">
-          <property name="text">
-           <string>Processing Time:</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignLeft</set>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_row3">
-        <item>
-         <widget class="QLabel" name="label_cuda">
-          <property name="text">
-           <string>label_cuda</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-          
-          <property name="scaledContents">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_cudakernel">
-          <property name="text">
-           <string>label_cudakernel</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-          
-          
-          <property name="scaledContents">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_row4">
-        <item>
-         <widget class="QLabel" name="label_cuda_title">
-          <property name="text">
-           <string>Processing Time:</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignLeft</set>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_cudakernel_title">
-          <property name="text">
-           <string>Processing Time:</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignLeft</set>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-     </layout>
+      </widget>
+     </widget>
     </item>
    </layout>
   </widget>

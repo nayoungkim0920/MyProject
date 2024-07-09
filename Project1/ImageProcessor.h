@@ -26,6 +26,8 @@
 #include <opencv2/cudafilters.hpp>
 #include <opencv2/cudawarping.hpp>
 
+#include <omp.h>
+
 #include <ipp.h>
 #include <ipp/ippcore.h>
 #include <ipp/ippi.h>
@@ -33,6 +35,9 @@
 #include <ipp/ipps.h>
 #include "imageProcessing.cuh"
 
+#ifndef MAX_NUM_THREADS
+#define MAX_NUM_THREADS 8 // 예시로 임의로 설정
+#endif
 
 class ImageProcessor : public QObject
 {
@@ -56,9 +61,9 @@ public:
     bool openImage(const std::string& fileName, cv::Mat& image);
     bool saveImage(const std::string& fileName, const cv::Mat& image);
 
-    QFuture<bool> rotateImage(cv::Mat& image);
-    QFuture<bool> zoominImage(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, double scaleFactor);
-    QFuture<bool> zoomoutImage(cv::Mat& image, double scaleFactor);
+    QFuture<bool> rotateImage(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
+    QFuture<bool> zoomInImage(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, double scaleFactor);
+    QFuture<bool> zoomOutImage(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, double scaleFactor);
     QFuture<bool> grayScale(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
     QFuture<bool> gaussianBlur(cv::Mat& image, int kernelSize);
     QFuture<bool> cannyEdges(cv::Mat& image);
@@ -117,16 +122,22 @@ private:
     void pushToRedoStackCUDAKernel(const cv::Mat& image);
 
     //bool grayScaleCUDA(cv::Mat& image);
+
     ProcessingResult grayScaleOpenCV(cv::Mat& image);
     ProcessingResult grayScaleIPP(cv::Mat& image);
     ProcessingResult grayScaleCUDA(cv::Mat& image);
     ProcessingResult grayScaleCUDAKernel(cv::Mat& image);
 
-    ProcessingResult zoomInOpenCV(cv::Mat& image, double newWidth, double newHeight);
-    ProcessingResult zoomInIPP(cv::Mat& image, double newWidth, double newHeight);
-    ProcessingResult zoomInCUDA(cv::Mat& image, double newWidth, double newHeight);
-    ProcessingResult zoomInCUDAKernel(cv::Mat& image, double newWidth, double newHeight);
+    ProcessingResult zoomOpenCV(cv::Mat& image, double newWidth, double newHeight);
+    ProcessingResult zoomIPP(cv::Mat& image, double newWidth, double newHeight);
+    ProcessingResult zoomCUDA(cv::Mat& image, double newWidth, double newHeight);
+    ProcessingResult zoomCUDAKernel(cv::Mat& image, double newWidth, double newHeight);
 
+    ProcessingResult rotateOpenCV(cv::Mat& image);
+    ProcessingResult rotateIPP(cv::Mat& image);
+    ProcessingResult rotateCUDA(cv::Mat& image);
+    ProcessingResult rotateCUDAKernel(cv::Mat& image);
+    
     double getCurrentTimeMs();
 };
 

@@ -37,6 +37,9 @@ void MainWindow::openFile()
         cv::Mat loadedImage;
         if (imageProcessor->openImage(fileName.toStdString(), loadedImage)) {
 
+            //이미지크기를 400*300 변경
+            cv::resize(loadedImage, loadedImage, cv::Size(400, 300));
+
             currentImageOpenCV = loadedImage.clone();
             currentImageIPP = loadedImage.clone();
             currentImageCUDA = loadedImage.clone();
@@ -75,11 +78,14 @@ void MainWindow::saveFile()
 
 void MainWindow::rotateImage()
 {
-    //QtConcurrent::run([this]() {
-    //    if (!currentImage.empty()) {
-    //        imageProcessor->rotateImage(currentImage);
-    //    }
-    //});
+    QtConcurrent::run([this]() {
+        if (!currentImageOpenCV.empty()) {
+            imageProcessor->rotateImage(currentImageOpenCV
+                , currentImageIPP
+                , currentImageCUDA
+                , currentImageCUDAKernel);
+        }
+        });
     ////applyImageProcessing(&ImageProcessor::rotateImage, currentImage);
 }
 
@@ -87,7 +93,7 @@ void MainWindow::zoomInImage()
 {
     QtConcurrent::run([this]() {
         if (!currentImageOpenCV.empty()) {
-            imageProcessor->zoominImage(currentImageOpenCV
+            imageProcessor->zoomInImage(currentImageOpenCV
                 , currentImageIPP
                 , currentImageCUDA
                 , currentImageCUDAKernel
@@ -99,11 +105,15 @@ void MainWindow::zoomInImage()
 
 void MainWindow::zoomOutImage()
 {
-    //QtConcurrent::run([this]() {
-    //    if (!currentImage.empty()) {
-    //        imageProcessor->zoomoutImage(currentImage, scaleFactor = 0.8);
-    //    }
-    //    });
+    QtConcurrent::run([this]() {
+        if (!currentImageOpenCV.empty()) {
+            imageProcessor->zoomOutImage(currentImageOpenCV
+                , currentImageIPP
+                , currentImageCUDA
+                , currentImageCUDAKernel
+                , scaleFactor = 0.8);
+        }
+        });
     //applyImageProcessing(&ImageProcessor::zoomoutImage, currentImage, scaleFactor = 0.8);
 }
 
@@ -261,7 +271,7 @@ void MainWindow::displayImage(cv::Mat image, QLabel* label)
         // QLabel 위젯에 QPixmap으로 이미지를 설정합니다.
         QPixmap pixmap = QPixmap::fromImage(qImage);
         label->setPixmap(pixmap);
-        label->setScaledContents(true);
+        label->setScaledContents(false);
         label->adjustSize();
         });
 }
