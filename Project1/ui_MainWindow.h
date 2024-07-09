@@ -119,8 +119,6 @@ public:
         label_opencv = new QLabel(centralwidget);
         label_opencv->setObjectName("label_opencv");
         label_opencv->setAlignment(Qt::AlignCenter);
-        label_opencv->setMinimumSize(QSize(400, 300));
-        label_opencv->setMaximumSize(QSize(400, 300));
         label_opencv->setScaledContents(true);
 
         horizontalLayout_row1->addWidget(label_opencv);
@@ -128,8 +126,6 @@ public:
         label_ipp = new QLabel(centralwidget);
         label_ipp->setObjectName("label_ipp");
         label_ipp->setAlignment(Qt::AlignCenter);
-        label_ipp->setMinimumSize(QSize(400, 300));
-        label_ipp->setMaximumSize(QSize(400, 300));
         label_ipp->setScaledContents(true);
 
         horizontalLayout_row1->addWidget(label_ipp);
@@ -161,8 +157,6 @@ public:
         label_cuda = new QLabel(centralwidget);
         label_cuda->setObjectName("label_cuda");
         label_cuda->setAlignment(Qt::AlignCenter);
-        label_cuda->setMinimumSize(QSize(400, 300));
-        label_cuda->setMaximumSize(QSize(400, 300));
         label_cuda->setScaledContents(true);
 
         horizontalLayout_row3->addWidget(label_cuda);
@@ -170,8 +164,6 @@ public:
         label_cudakernel = new QLabel(centralwidget);
         label_cudakernel->setObjectName("label_cudakernel");
         label_cudakernel->setAlignment(Qt::AlignCenter);
-        label_cudakernel->setMinimumSize(QSize(400, 300));
-        label_cudakernel->setMaximumSize(QSize(400, 300));
         label_cudakernel->setScaledContents(true);
 
         horizontalLayout_row3->addWidget(label_cudakernel);

@@ -39,6 +39,7 @@ target_link_libraries(image_processing
     ippcore.lib
     ippvm.lib
     ipps.lib
+    ippi.lib
 )
 
 # 실행 파일 추가

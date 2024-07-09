@@ -24,19 +24,7 @@
           <property name="alignment">
            <set>Qt::AlignCenter</set>
           </property>
-          <property name="minimumSize">
-           <size>
-            <width>400</width>
-            <height>300</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>400</width>
-            <height>300</height>
-           </size>
-          </property>
-          <property name="scaledContents">
+           <property name="scaledContents">
            <bool>true</bool>
           </property>
          </widget>
@@ -49,18 +37,7 @@
           <property name="alignment">
            <set>Qt::AlignCenter</set>
           </property>
-          <property name="minimumSize">
-           <size>
-            <width>400</width>
-            <height>300</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>400</width>
-            <height>300</height>
-           </size>
-          </property>
+          
           <property name="scaledContents">
            <bool>true</bool>
           </property>
@@ -102,18 +79,7 @@
           <property name="alignment">
            <set>Qt::AlignCenter</set>
           </property>
-          <property name="minimumSize">
-           <size>
-            <width>400</width>
-            <height>300</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>400</width>
-            <height>300</height>
-           </size>
-          </property>
+          
           <property name="scaledContents">
            <bool>true</bool>
           </property>
@@ -127,18 +93,8 @@
           <property name="alignment">
            <set>Qt::AlignCenter</set>
           </property>
-          <property name="minimumSize">
-           <size>
-            <width>400</width>
-            <height>300</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>400</width>
-            <height>300</height>
-           </size>
-          </property>
+          
+          
           <property name="scaledContents">
            <bool>true</bool>
           </property>

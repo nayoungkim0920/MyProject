@@ -46,11 +46,27 @@ private slots:
 
 private:
     Ui::MainWindow* ui;
+
     cv::Mat currentImage;
+
+    cv::Mat currentImageOpenCV;
+    cv::Mat currentImageIPP;
+    cv::Mat currentImageCUDA;
+    cv::Mat currentImageCUDAKernel;
+
     ImageProcessor* imageProcessor;
+
     double scaleFactor;
-    cv::Mat initialImage;
-    cv::Mat previousImage;
+
+    cv::Mat initialImageOpenCV;
+    cv::Mat initialImageIPP;
+    cv::Mat initialImageCUDA;
+    cv::Mat initialImageCUDAKernel;
+
+    cv::Mat previousImageOpenCV;
+    cv::Mat previousImageIPP;
+    cv::Mat previousImageCUDA;
+    cv::Mat previousImageCUDAKernel;
 
     void connectActions();
     void connectImageProcessor();

@@ -36,13 +36,21 @@ void MainWindow::openFile()
     if (!fileName.isEmpty()) {
         cv::Mat loadedImage;
         if (imageProcessor->openImage(fileName.toStdString(), loadedImage)) {
-            currentImage = loadedImage.clone(); // Clone loaded image
-            initialImage = currentImage.clone();
 
-            displayImage(currentImage, ui->label_opencv);
-            displayImage(currentImage, ui->label_ipp);
-            displayImage(currentImage, ui->label_cuda);
-            displayImage(currentImage, ui->label_cudakernel);
+            currentImageOpenCV = loadedImage.clone();
+            currentImageIPP = loadedImage.clone();
+            currentImageCUDA = loadedImage.clone();
+            currentImageCUDAKernel = loadedImage.clone();
+
+            initialImageOpenCV = currentImageOpenCV.clone();
+            initialImageIPP = currentImageIPP.clone();
+            initialImageCUDA = currentImageCUDA.clone();
+            initialImageCUDAKernel = currentImageCUDAKernel.clone();
+
+            displayImage(initialImageOpenCV, ui->label_opencv);
+            displayImage(initialImageIPP, ui->label_ipp);
+            displayImage(initialImageCUDA, ui->label_cuda);
+            displayImage(initialImageCUDAKernel, ui->label_cudakernel);
         }
         else {
             QMessageBox::critical(this, tr("Error"), tr("Failed to open image file"));
@@ -52,34 +60,38 @@ void MainWindow::openFile()
 
 void MainWindow::saveFile()
 {
-    if (!currentImage.empty()) {
-        QString filePath = QFileDialog::getSaveFileName(this, tr("Save Image"), "", tr("Images (*.png *.jpg *.bmp)"));
-        if (!filePath.isEmpty()) {
-            if (!imageProcessor->saveImage(filePath.toStdString(), currentImage)) {
-                QMessageBox::critical(this, tr("Error"), tr("Failed to save image"));
-            }
-        }
-    }
-    else {
-        QMessageBox::critical(this, tr("Error"), tr("No image to save"));
-    }
+    //if (!currentImage.empty()) {
+    //    QString filePath = QFileDialog::getSaveFileName(this, tr("Save Image"), "", tr("Images (*.png *.jpg *.bmp)"));
+    //    if (!filePath.isEmpty()) {
+    //        if (!imageProcessor->saveImage(filePath.toStdString(), currentImage)) {
+    //            QMessageBox::critical(this, tr("Error"), tr("Failed to save image"));
+    //        }
+    //    }
+    //}
+    //else {
+    //    QMessageBox::critical(this, tr("Error"), tr("No image to save"));
+    //}
 }
 
 void MainWindow::rotateImage()
 {
-    QtConcurrent::run([this]() {
-        if (!currentImage.empty()) {
-            imageProcessor->rotateImage(currentImage);
-        }
-    });
-    //applyImageProcessing(&ImageProcessor::rotateImage, currentImage);
+    //QtConcurrent::run([this]() {
+    //    if (!currentImage.empty()) {
+    //        imageProcessor->rotateImage(currentImage);
+    //    }
+    //});
+    ////applyImageProcessing(&ImageProcessor::rotateImage, currentImage);
 }
 
 void MainWindow::zoomInImage()
 {
     QtConcurrent::run([this]() {
-        if (!currentImage.empty()) {
-            imageProcessor->zoominImage(currentImage, scaleFactor = 1.25);
+        if (!currentImageOpenCV.empty()) {
+            imageProcessor->zoominImage(currentImageOpenCV
+                , currentImageIPP
+                , currentImageCUDA
+                , currentImageCUDAKernel
+                , scaleFactor = 1.25);
         }
     });
     //applyImageProcessing(&ImageProcessor::zoominImage, currentImage, scaleFactor=1.25);
@@ -87,21 +99,25 @@ void MainWindow::zoomInImage()
 
 void MainWindow::zoomOutImage()
 {
-    QtConcurrent::run([this]() {
-        if (!currentImage.empty()) {
-            imageProcessor->zoomoutImage(currentImage, scaleFactor = 0.8);
-        }
-        });
+    //QtConcurrent::run([this]() {
+    //    if (!currentImage.empty()) {
+    //        imageProcessor->zoomoutImage(currentImage, scaleFactor = 0.8);
+    //    }
+    //    });
     //applyImageProcessing(&ImageProcessor::zoomoutImage, currentImage, scaleFactor = 0.8);
 }
 
 void MainWindow::grayScale()
 {
     QtConcurrent::run([this]() {
-        if (!currentImage.empty()) {
-            imageProcessor->grayScale(currentImage);
-        }
+        
+        imageProcessor->grayScale(currentImageOpenCV
+        , currentImageIPP
+        , currentImageCUDA
+        , currentImageCUDAKernel);
+
         });
+
     //applyImageProcessing(&ImageProcessor::grayScale, currentImage);
 }
 
@@ -180,14 +196,14 @@ void MainWindow::exitApplication()
 
 void MainWindow::redoAction()
 {
-    if (imageProcessor->canRedo()) {
+    if (imageProcessor->canRedoOpenCV()) {
         imageProcessor->redo();
     }
 }
 
 void MainWindow::undoAction()
 {
-    if (imageProcessor->canUndo()) {
+    if (imageProcessor->canUndoOpenCV()) {
         imageProcessor->undo();
     }
 }
@@ -195,31 +211,29 @@ void MainWindow::undoAction()
 void MainWindow::first()
 {
     //초기 이미지로 되돌리기
-    if (!initialImage.empty()) {
-        currentImage = initialImage.clone();
+    //if (!initialImage.empty()) {
+    //    currentImage = initialImage.clone();
 
-        displayImage(currentImage, ui->label_opencv);
-        displayImage(currentImage, ui->label_ipp);
-        displayImage(currentImage, ui->label_cuda);
-        displayImage(currentImage, ui->label_cudakernel);
+    //    displayImage(currentImage, ui->label_opencv);
+    //    displayImage(currentImage, ui->label_ipp);
+     //   displayImage(currentImage, ui->label_cuda);
+     //   displayImage(currentImage, ui->label_cudakernel);
 
-        imageProcessor->cleanUndoStack();
-        imageProcessor->cleanRedoStack();
-    }
-    else {
-        QMessageBox::warning(this,
-            tr("Warning"),
-            tr("No initial Image available."));
-        return;
-    }
+    //    imageProcessor->cleanUndoStack();
+    //    imageProcessor->cleanRedoStack();
+    //}
+    //else {
+    //    QMessageBox::warning(this,
+   //         tr("Warning"),
+   //         tr("No initial Image available."));
+   //     return;
+   // }
 }
 
 void MainWindow::displayImage(cv::Mat image, QLabel* label)
 {
     QMetaObject::invokeMethod(this, [this, image, label]() {
         qDebug() << "displayImage() channels: " << image.channels();
-
-        currentImage = image;
 
         // 이미지 타입에 따라 QImage를 생성합니다.
         QImage qImage;
@@ -247,6 +261,8 @@ void MainWindow::displayImage(cv::Mat image, QLabel* label)
         // QLabel 위젯에 QPixmap으로 이미지를 설정합니다.
         QPixmap pixmap = QPixmap::fromImage(qImage);
         label->setPixmap(pixmap);
+        label->setScaledContents(true);
+        label->adjustSize();
         });
 }
 
@@ -255,6 +271,7 @@ void MainWindow::handleImageProcessed(QVector<ImageProcessor::ProcessingResult> 
     for (int i = 0; i < results.size(); ++i) {
         const auto& result = results[i];
         if (i == 0) {
+            currentImageOpenCV = result.processedImage.clone();
             displayImage(result.processedImage, ui->label_opencv);
             ui->label_opencv_title->setText(QString("%1 %2 %3ms")
                 .arg(result.processName)
@@ -262,6 +279,7 @@ void MainWindow::handleImageProcessed(QVector<ImageProcessor::ProcessingResult> 
                 .arg(result.processingTime));
         }
         else if (i == 1) {
+            currentImageIPP = result.processedImage;
             displayImage(result.processedImage, ui->label_ipp);
             ui->label_ipp_title->setText(QString("%1 %2 %3ms")
                 .arg(result.processName)
@@ -269,6 +287,7 @@ void MainWindow::handleImageProcessed(QVector<ImageProcessor::ProcessingResult> 
                 .arg(result.processingTime));
         }
         else if (i == 2) {
+            currentImageCUDA= result.processedImage;
             displayImage(result.processedImage, ui->label_cuda);
             ui->label_cuda_title->setText(QString("%1 %2 %3ms")
                 .arg(result.processName)
@@ -276,6 +295,7 @@ void MainWindow::handleImageProcessed(QVector<ImageProcessor::ProcessingResult> 
                 .arg(result.processingTime));
         }
         else if (i == 3) {
+            currentImageCUDAKernel = result.processedImage;
             displayImage(result.processedImage, ui->label_cudakernel);
             ui->label_cudakernel_title->setText(QString("%1 %2 %3ms")
                 .arg(result.processName)
