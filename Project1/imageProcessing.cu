@@ -267,7 +267,7 @@ __global__ void sobelFilterKernel(const unsigned char* input, unsigned char* out
 }
 
 
-void callRotateImageCUDA(cv::Mat & inputImage) {
+void callRotateImageCUDA(cv::Mat& inputImage, cv::Mat& outputImage) {
     int cols = inputImage.cols;
     int rows = inputImage.rows;
     int channels = inputImage.channels();
@@ -301,7 +301,6 @@ void callRotateImageCUDA(cv::Mat & inputImage) {
     dim3 threadsPerBlock(16, 16);
     dim3 numBlocks((cols + threadsPerBlock.x - 1) / threadsPerBlock.x, (rows + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
-    //host를 kernel과분리하여 imageProcessing.cpp로만들었으나 아래를 지원하지않아 다시 .cu파일에 병합함
     rotateImageKernel << <numBlocks, threadsPerBlock >> > (d_inputImage, d_outputImage, cols, rows, channels);
 
     err = cudaGetLastError();
@@ -314,7 +313,9 @@ void callRotateImageCUDA(cv::Mat & inputImage) {
 
     cudaDeviceSynchronize();
 
-    err = cudaMemcpy(inputImage.data, d_outputImage, imageSize, cudaMemcpyDeviceToHost);
+    outputImage.create(rows, cols, inputImage.type());
+
+    err = cudaMemcpy(outputImage.data, d_outputImage, imageSize, cudaMemcpyDeviceToHost);
     if (err != cudaSuccess) {
         std::cerr << "CUDA memcpy error: " << cudaGetErrorString(err) << std::endl;
     }
@@ -323,7 +324,7 @@ void callRotateImageCUDA(cv::Mat & inputImage) {
     cudaFree(d_outputImage);
 }
 
-void callResizeImageCUDA(cv::Mat & inputImage, int newWidth, int newHeight) {
+void callZoomImageCUDA(cv::Mat& inputImage, cv::Mat& outputImage, int newWidth, int newHeight) {
     int oldWidth = inputImage.cols;
     int oldHeight = inputImage.rows;
     int channels = inputImage.channels();
@@ -370,20 +371,18 @@ void callResizeImageCUDA(cv::Mat & inputImage, int newWidth, int newHeight) {
 
     cudaDeviceSynchronize();
 
-    cv::Mat outputImage(newHeight, newWidth, inputImage.type());
+    outputImage.create(newHeight, newWidth, inputImage.type());
+
     err = cudaMemcpy(outputImage.data, d_outputImage, newImageSize, cudaMemcpyDeviceToHost);
     if (err != cudaSuccess) {
         std::cerr << "CUDA memcpy error: " << cudaGetErrorString(err) << std::endl;
-    }
-    else {
-        inputImage = outputImage;
     }
 
     cudaFree(d_inputImage);
     cudaFree(d_outputImage);
 }
 
-void callGrayScaleImageCUDA(cv::Mat & inputImage) {
+void callGrayScaleImageCUDA(cv::Mat& inputImage, cv::Mat& outputImage) {
     int cols = inputImage.cols;
     int rows = inputImage.rows;
     int channels = inputImage.channels();
@@ -435,13 +434,10 @@ void callGrayScaleImageCUDA(cv::Mat & inputImage) {
 
     cudaDeviceSynchronize();
 
-    cv::Mat outputImage(rows, cols, CV_8UC1);
+    outputImage.create(rows, cols, CV_8UC1);
     err = cudaMemcpy(outputImage.data, d_outputImage, outputSize, cudaMemcpyDeviceToHost);
     if (err != cudaSuccess) {
         std::cerr << "CUDA memcpy error: " << cudaGetErrorString(err) << std::endl;
-    }
-    else {
-        inputImage = outputImage;
     }
 
     cudaFree(d_inputImage);
@@ -520,7 +516,7 @@ void callCannyEdgesCUDA(cv::Mat & inputImage) {
     cudaFree(d_outputImage);
 }
 
-void callGaussianBlurCUDA(cv::Mat & inputImage, int kernelSize) {
+void callGaussianBlurCUDA(cv::Mat& inputImage, cv::Mat& outputImage, int kernelSize) {
     int cols = inputImage.cols;
     int rows = inputImage.rows;
     int channels = inputImage.channels();
@@ -567,7 +563,8 @@ void callGaussianBlurCUDA(cv::Mat & inputImage, int kernelSize) {
 
     cudaDeviceSynchronize();
 
-    err = cudaMemcpy(inputImage.data, d_outputImage, outputSize, cudaMemcpyDeviceToHost);
+    outputImage.create(rows, cols, inputImage.type());
+    err = cudaMemcpy(outputImage.data, d_outputImage, outputSize, cudaMemcpyDeviceToHost);
     if (err != cudaSuccess) {
         std::cerr << "CUDA memcpy error: " << cudaGetErrorString(err) << std::endl;
     }

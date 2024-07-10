@@ -33,6 +33,7 @@
 #include <ipp/ippi.h>
 #include <ipp/ippcc.h>
 #include <ipp/ipps.h>
+#include <ipp/ippcv.h>
 #include "imageProcessing.cuh"
 
 #ifndef MAX_NUM_THREADS
@@ -52,10 +53,12 @@ public:
         QString processName;
         cv::Mat processedImage;
         double processingTime;
+        QString inputInfo;
+        QString outputInfo;
 
         ProcessingResult() = default;
-        ProcessingResult(const QString& functionName, const QString& processName, const cv::Mat& processedImage, double processingTime)
-            : functionName(functionName), processName(processName), processedImage(processedImage), processingTime(processingTime) {}
+        ProcessingResult(const QString& functionName, const QString& processName, const cv::Mat& processedImage, double processingTime, const QString& inputInfo, const QString& outputInfo)
+            : functionName(functionName), processName(processName), processedImage(processedImage), processingTime(processingTime), inputInfo(inputInfo), outputInfo(outputInfo) {}
     };
 
     bool openImage(const std::string& fileName, cv::Mat& image);
@@ -65,7 +68,7 @@ public:
     QFuture<bool> zoomInImage(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, double scaleFactor);
     QFuture<bool> zoomOutImage(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, double scaleFactor);
     QFuture<bool> grayScale(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
-    QFuture<bool> gaussianBlur(cv::Mat& image, int kernelSize);
+    QFuture<bool> gaussianBlur(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, int kernelSize);
     QFuture<bool> cannyEdges(cv::Mat& image);
     QFuture<bool> medianFilter(cv::Mat& image);
     QFuture<bool> laplacianFilter(cv::Mat& image);
@@ -121,6 +124,8 @@ private:
     void pushToRedoStackCUDA(const cv::Mat& image);
     void pushToRedoStackCUDAKernel(const cv::Mat& image);
 
+    ProcessingResult setResult(ProcessingResult& result, cv::Mat& inputImage, cv::Mat& outputImage, QString functionName, QString processName, double processingTime);
+
     //bool grayScaleCUDA(cv::Mat& image);
 
     ProcessingResult grayScaleOpenCV(cv::Mat& image);
@@ -137,7 +142,12 @@ private:
     ProcessingResult rotateIPP(cv::Mat& image);
     ProcessingResult rotateCUDA(cv::Mat& image);
     ProcessingResult rotateCUDAKernel(cv::Mat& image);
-    
+
+    ProcessingResult gaussianBlurOpenCV(cv::Mat& image, int kernelSize);
+    ProcessingResult gaussianBlurIPP(cv::Mat& image, int kernelSize);
+    ProcessingResult gaussianBlurCUDA(cv::Mat& image, int kernelSize);
+    ProcessingResult gaussianBlurCUDAKernel(cv::Mat& image, int kernelSize);
+
     double getCurrentTimeMs();
 };
 

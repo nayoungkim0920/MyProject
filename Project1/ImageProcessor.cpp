@@ -341,46 +341,43 @@ QFuture<bool> ImageProcessor::grayScale(cv::Mat& imageOpenCV
     }
 }*/
 
-ImageProcessor::ProcessingResult ImageProcessor::grayScaleOpenCV(cv::Mat& image)
+ImageProcessor::ProcessingResult ImageProcessor::grayScaleOpenCV(cv::Mat& inputImage)
 {
     ProcessingResult result;
-    result.functionName = "grayScale";
-    result.processName = "OpenCV";
-
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::Mat grayImage;
-    cv::cvtColor(image, grayImage, cv::COLOR_BGR2GRAY);
-
-    // 원본 이미지를 그레이스케일 이미지로 업데이트
-    //image = grayImage.clone(); // 변환된 그레이스케일 이미지로 업데이트
-    //lastProcessedImage = image.clone(); // 마지막 처리된 이미지 업데이트
+    cv::Mat outputImage;
+    cv::cvtColor(inputImage, outputImage, cv::COLOR_BGR2GRAY);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result.processedImage = grayImage.clone();
-    result.processingTime = elapsedTimeMs;
+    result = setResult(result, inputImage, outputImage, "grayScale", "OpenCV", elapsedTimeMs);
 
     return result;
 }
 
-ImageProcessor::ProcessingResult ImageProcessor::grayScaleIPP(cv::Mat& image)
+ImageProcessor::ProcessingResult ImageProcessor::grayScaleIPP(cv::Mat& inputImage)
 {
     ProcessingResult result;
-    result.functionName = "grayScale";
-    result.processName = "IPP";
-
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    // IPP 사용을 위한 입력 및 출력 배열 설정
-    IppiSize roiSize = { image.cols, image.rows };
-    int srcStep = image.step;
-    int dstStep = image.cols;
-    Ipp8u* srcData = image.data;
-    Ipp8u* dstData = ippsMalloc_8u(image.rows * image.cols);
+    // 입력 이미지가 3채널 BGR 이미지인지 확인
+    if (inputImage.channels() != 3 || inputImage.type() != CV_8UC3) {
+        std::cerr << "Warning: Input image is not a 3-channel BGR image. Converting to BGR." << std::endl;
+        cv::Mat temp;
+        cv::cvtColor(inputImage, temp, cv::COLOR_GRAY2BGR);
+        inputImage = temp;
+    }
 
-    // IPP 그레이스케일 변환 (고정된 계수 사용)
+    // IPP 사용을 위한 입력 및 출력 설정
+    IppiSize roiSize = { inputImage.cols, inputImage.rows };
+    int srcStep = inputImage.step;
+    int dstStep = inputImage.cols;
+    Ipp8u* srcData = inputImage.data;
+    Ipp8u* dstData = ippsMalloc_8u(inputImage.rows * inputImage.cols);
+
+    // IPP 그레이스케일 변환
     IppStatus status = ippiRGBToGray_8u_C3C1R(srcData, srcStep, dstData, dstStep, roiSize);
 
     if (status != ippStsNoErr) {
@@ -390,29 +387,25 @@ ImageProcessor::ProcessingResult ImageProcessor::grayScaleIPP(cv::Mat& image)
     }
 
     // 결과를 OpenCV Mat으로 변환
-    cv::Mat grayImage(image.rows, image.cols, CV_8UC1, dstData);
-
-    // 원본 이미지를 그레이스케일 이미지로 업데이트
-    //image = grayImage.clone(); // 변환된 그레이스케일 이미지로 업데이트
-    //lastProcessedImage = image.clone(); // 마지막 처리된 이미지 업데이트
+    cv::Mat outputImage(inputImage.rows, inputImage.cols, CV_8UC1, dstData);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
-    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산   
 
-    result.processedImage = grayImage.clone();
-    result.processingTime = elapsedTimeMs;
+    
+
+    result = setResult(result, inputImage, outputImage, "grayScale", "IPP", elapsedTimeMs);
 
     ippsFree(dstData); // 메모리 해제
 
     return result;
 }
 
-ImageProcessor::ProcessingResult ImageProcessor::grayScaleCUDA(cv::Mat& image)
-{
-    ProcessingResult result;
-    result.functionName = "grayScale";
-    result.processName = "CUDA";
 
+
+ImageProcessor::ProcessingResult ImageProcessor::grayScaleCUDA(cv::Mat& inputImage)
+{    
+    ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
     // CUDA 장치 설정
@@ -420,17 +413,17 @@ ImageProcessor::ProcessingResult ImageProcessor::grayScaleCUDA(cv::Mat& image)
 
     // 입력 이미지를 CUDA GpuMat으로 업로드
     cv::cuda::GpuMat d_input;
-    d_input.upload(image);
+    d_input.upload(inputImage);
 
     // CUDA를 사용하여 그레이스케일로 변환
     cv::cuda::GpuMat d_output;
     cv::cuda::cvtColor(d_input, d_output, cv::COLOR_BGR2GRAY);
 
     // CUDA에서 호스트로 이미지 다운로드
-    cv::Mat grayImage;
-    d_output.download(grayImage);
+    cv::Mat outputImage;
+    d_output.download(outputImage);
 
-    if (grayImage.empty() || grayImage.type() != CV_8UC1) {
+    if (outputImage.empty() || outputImage.type() != CV_8UC1) {
         qDebug() << "Output image is empty or not in expected format after CUDA processing.";
         return result;
     }
@@ -438,83 +431,64 @@ ImageProcessor::ProcessingResult ImageProcessor::grayScaleCUDA(cv::Mat& image)
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result.processedImage = grayImage.clone();
-    result.processingTime = elapsedTimeMs;
+    result = setResult(result, inputImage, outputImage, "grayScale", "CUDA", elapsedTimeMs);
 
     return result;
 }
 
-ImageProcessor::ProcessingResult ImageProcessor::grayScaleCUDAKernel(cv::Mat& image)
+ImageProcessor::ProcessingResult ImageProcessor::grayScaleCUDAKernel(cv::Mat& inputImage)
 {
     ProcessingResult result;
-    result.functionName = "grayScale";
-    result.processName = "CUDAKernel";
-
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    callGrayScaleImageCUDA(image);
+    cv::Mat outputImage;
+    callGrayScaleImageCUDA(inputImage, outputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result.processedImage = image.clone();
-    result.processingTime = elapsedTimeMs;
+    result = setResult(result, inputImage, outputImage, "grayScale", "CUDAKernel", elapsedTimeMs);
 
     return result;
 }
 
-ImageProcessor::ProcessingResult ImageProcessor::zoomOpenCV(cv::Mat& image, double newWidth, double newHeight)
+ImageProcessor::ProcessingResult ImageProcessor::zoomOpenCV(cv::Mat& inputImage, double newWidth, double newHeight)
 {
     ProcessingResult result;
-
-    result.functionName = "zoomIn";
-    result.processName = "OpenCV";
-
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::Mat zoomInImage;
-    cv::resize(image, zoomInImage, cv::Size(newWidth, newHeight), 0, 0, cv::INTER_LINEAR);
+    cv::Mat outputImage;
+    cv::resize(inputImage, outputImage, cv::Size(newWidth, newHeight), 0, 0, cv::INTER_LINEAR);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result.processedImage = zoomInImage;
-    result.processingTime = elapsedTimeMs;
+    result = setResult(result, inputImage, outputImage, "zoom", "OpenCV", elapsedTimeMs);
 
     return result;
 }
 
-ImageProcessor::ProcessingResult ImageProcessor::zoomIPP(cv::Mat& image, double newWidth, double newHeight) {
+ImageProcessor::ProcessingResult ImageProcessor::zoomIPP(cv::Mat& inputImage, double newWidth, double newHeight) {
+ 
     ProcessingResult result;
-    result.functionName = "zoomIn";
-    result.processName = "IPP";
-
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::Mat zoomedImage;
-    zoomedImage.create(static_cast<int>(newHeight), static_cast<int>(newWidth), image.type());
-
-    Ipp8u* pSrcData = reinterpret_cast<Ipp8u*>(image.data);
-    Ipp8u* pDstData = reinterpret_cast<Ipp8u*>(zoomedImage.data);
-
-    IppiSize srcSize = { image.cols, image.rows };
+    // IPP 변수들 선언
+    IppStatus status;
+    IppiSize srcSize = { inputImage.cols, inputImage.rows };
     IppiSize dstSize = { static_cast<int>(newWidth), static_cast<int>(newHeight) };
     IppiPoint dstOffset = { 0, 0 };
-
-    int specSize = 0;
-    int initSize = 0;
-    int bufSize = 0;
     std::vector<Ipp8u> pBuffer;
     IppiResizeSpec_32f* pSpec = nullptr;
 
-    // Get the sizes of the spec and initialization buffers
-    IppStatus status = ippiResizeGetSize_8u(srcSize, dstSize, ippNearest, 0, &specSize, &initSize);
+    // 크기 및 초기화 버퍼 할당
+    int specSize = 0, initSize = 0, bufSize = 0;
+    status = ippiResizeGetSize_8u(srcSize, dstSize, ippNearest, 0, &specSize, &initSize);
     if (status != ippStsNoErr) {
         std::cerr << "Error: ippiResizeGetSize_8u failed with status code " << status << std::endl;
         return result;
     }
 
-    // Allocate the spec and initialization buffers
     pSpec = (IppiResizeSpec_32f*)(ippMalloc(specSize));
     if (!pSpec) {
         std::cerr << "Error: Memory allocation failed for pSpec" << std::endl;
@@ -528,7 +502,7 @@ ImageProcessor::ProcessingResult ImageProcessor::zoomIPP(cv::Mat& image, double 
         return result;
     }
 
-    // Initialize the resize specification
+    // 크기 조정 스펙 초기화
     status = ippiResizeNearestInit_8u(srcSize, dstSize, pSpec);
     if (status != ippStsNoErr) {
         std::cerr << "Error: ippiResizeNearestInit_8u failed with status code " << status << std::endl;
@@ -537,7 +511,7 @@ ImageProcessor::ProcessingResult ImageProcessor::zoomIPP(cv::Mat& image, double 
     }
 
     // Get the size of the working buffer
-    status = ippiResizeGetBufferSize_8u(pSpec, dstSize, image.channels(), &bufSize);
+    status = ippiResizeGetBufferSize_8u(pSpec, dstSize, inputImage.channels(), &bufSize);
     if (status != ippStsNoErr) {
         std::cerr << "Error: ippiResizeGetBufferSize_8u failed with status code " << status << std::endl;
         ippFree(pSpec);
@@ -551,15 +525,38 @@ ImageProcessor::ProcessingResult ImageProcessor::zoomIPP(cv::Mat& image, double 
         return result;
     }
 
-    // Perform the resize operation
-    if (image.channels() == 1) {
-        status = ippiResizeNearest_8u_C1R(pSrcData, image.step[0], pDstData, zoomedImage.step[0], dstOffset, dstSize, pSpec, pBuffer.data());
+    // 크기 조정 수행
+    cv::Mat outputImage(dstSize.height, dstSize.width, inputImage.type());
+    Ipp8u* pSrcData = reinterpret_cast<Ipp8u*>(inputImage.data);
+    Ipp8u* pDstData = reinterpret_cast<Ipp8u*>(outputImage.data);
+
+    // 이미지 타입에 따라 IPP 함수 호출
+    if (inputImage.type() == CV_8UC3) {
+        std::cerr << "ippiResizeNearest_8u_C3R" << std::endl;
+        status = ippiResizeNearest_8u_C3R(pSrcData, inputImage.step[0], pDstData, outputImage.step[0], dstOffset, dstSize, pSpec, pBuffer.data());
     }
-    else if (image.channels() == 3) {
-        status = ippiResizeNearest_8u_C3R(pSrcData, image.step[0], pDstData, zoomedImage.step[0], dstOffset, dstSize, pSpec, pBuffer.data());
+    else if (inputImage.type() == CV_16UC3) {
+        std::cerr << "ippiResizeNearest_16u_C3R" << std::endl;
+        status = ippiResizeNearest_16u_C3R(reinterpret_cast<Ipp16u*>(pSrcData), inputImage.step[0], reinterpret_cast<Ipp16u*>(pDstData), outputImage.step[0], dstOffset, dstSize, pSpec, pBuffer.data());
+    }
+    else if (inputImage.type() == CV_32FC3) {
+        std::cerr << "ippiResizeNearest_32f_C3R" << std::endl;
+        status = ippiResizeNearest_32f_C3R(reinterpret_cast<Ipp32f*>(pSrcData), inputImage.step[0], reinterpret_cast<Ipp32f*>(pDstData), outputImage.step[0], dstOffset, dstSize, pSpec, pBuffer.data());
+    }
+    else if (inputImage.type() == CV_8UC1) {
+        std::cerr << "ippiResizeNearest_8u_C1R" << std::endl;
+        status = ippiResizeNearest_8u_C1R(pSrcData, inputImage.step[0], pDstData, outputImage.step[0], dstOffset, dstSize, pSpec, pBuffer.data());
+    }
+    else if (inputImage.type() == CV_16UC1) {
+        std::cerr << "ippiResizeNearest_16u_C1R" << std::endl;
+        status = ippiResizeNearest_16u_C1R(reinterpret_cast<Ipp16u*>(pSrcData), inputImage.step[0], reinterpret_cast<Ipp16u*>(pDstData), outputImage.step[0], dstOffset, dstSize, pSpec, pBuffer.data());
+    }
+    else if (inputImage.type() == CV_32FC1) {
+        std::cerr << "ippiResizeNearest_32f_C1R" << std::endl;
+        status = ippiResizeNearest_32f_C1R(reinterpret_cast<Ipp32f*>(pSrcData), inputImage.step[0], reinterpret_cast<Ipp32f*>(pDstData), outputImage.step[0], dstOffset, dstSize, pSpec, pBuffer.data());
     }
     else {
-        std::cerr << "Error: Unsupported number of channels" << std::endl;
+        std::cerr << "Error: Unsupported image type" << std::endl;
         ippFree(pSpec);
         return result;
     }
@@ -568,13 +565,12 @@ ImageProcessor::ProcessingResult ImageProcessor::zoomIPP(cv::Mat& image, double 
         std::cerr << "Error: ippiResizeNearest_8u failed with status code " << status << std::endl;
         ippFree(pSpec);
         return result;
-    }
+    }    
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result.processedImage = zoomedImage.clone(); // 처리된 이미지 복사
-    result.processingTime = elapsedTimeMs; // 처리 시간 설정
+    result = setResult(result, inputImage, outputImage, "zoom", "IPP", elapsedTimeMs);
 
     // 메모리 해제
     ippFree(pSpec);
@@ -582,17 +578,14 @@ ImageProcessor::ProcessingResult ImageProcessor::zoomIPP(cv::Mat& image, double 
     return result;
 }
 
-ImageProcessor::ProcessingResult ImageProcessor::zoomCUDA(cv::Mat& image, double newWidth, double newHeight)
-{
+ImageProcessor::ProcessingResult ImageProcessor::zoomCUDA(cv::Mat& inputImage, double newWidth, double newHeight)
+{    
     ProcessingResult result;
-    result.functionName = "zoomIn";
-    result.processName = "CUDA";
-
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
     // GPU 메모리로 이미지 업로드
     cv::cuda::GpuMat d_image;
-    d_image.upload(image);
+    d_image.upload(inputImage);
 
     // 결과 이미지를 저장할 GPU 메모리 할당
     cv::cuda::GpuMat d_zoomInImage;
@@ -601,70 +594,59 @@ ImageProcessor::ProcessingResult ImageProcessor::zoomCUDA(cv::Mat& image, double
     cv::cuda::resize(d_image, d_zoomInImage, cv::Size(static_cast<int>(newWidth), static_cast<int>(newHeight)), 0, 0, cv::INTER_LINEAR);
 
     // CPU 메모리로 결과 이미지 다운로드
-    cv::Mat zoomedImage;
-    d_zoomInImage.download(zoomedImage);
+    cv::Mat outputImage;
+    d_zoomInImage.download(outputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result.processedImage = zoomedImage.clone(); // 처리된 이미지 복사
-    result.processingTime = elapsedTimeMs; // 처리 시간 설정
+    result = setResult(result, inputImage, outputImage, "zoom", "CUDA", elapsedTimeMs);
 
     return result;
 }
 
-ImageProcessor::ProcessingResult ImageProcessor::zoomCUDAKernel(cv::Mat& image, double newWidth, double newHeight)
+ImageProcessor::ProcessingResult ImageProcessor::zoomCUDAKernel(cv::Mat& inputImage, double newWidth, double newHeight)
 {
     ProcessingResult result;
-    result.functionName = "zoomIn";
-    result.processName = "CUDAKernel";
-
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    callResizeImageCUDA(image, newWidth, newHeight);
+    cv::Mat outputImage;
+    callZoomImageCUDA(inputImage, outputImage, newWidth, newHeight);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result.processedImage = image.clone(); // 처리된 이미지 복사
-    result.processingTime = elapsedTimeMs; // 처리 시간 설정
+    result = setResult(result, inputImage, outputImage, "zoom", "CUDAKernel", elapsedTimeMs);
 
     return result;
 }
 
-ImageProcessor::ProcessingResult ImageProcessor::rotateOpenCV(cv::Mat& image)
+ImageProcessor::ProcessingResult ImageProcessor::rotateOpenCV(cv::Mat& inputImage)
 {
     ProcessingResult result;
-    result.functionName = "rotate";
-    result.processName = "OpenCV";
-
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::Mat rotatedImage;
-    cv::rotate(image, rotatedImage, cv::ROTATE_90_CLOCKWISE);
+    cv::Mat outputImage;
+    cv::rotate(inputImage, outputImage, cv::ROTATE_90_CLOCKWISE);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result.processedImage = rotatedImage.clone(); // 처리된 이미지 복사
-    result.processingTime = elapsedTimeMs; // 처리 시간 설정
+    result = setResult(result, inputImage, outputImage, "rotate", "OpenCV", elapsedTimeMs);
 
     return result;
 }
 
-ImageProcessor::ProcessingResult ImageProcessor::rotateIPP(cv::Mat& image)
+ImageProcessor::ProcessingResult ImageProcessor::rotateIPP(cv::Mat& inputImage)
 {
     ProcessingResult result;
-    result.functionName = "rotate";
-    result.processName = "IPP";
-
     double startTime = cv::getTickCount();
 
     // 입력 이미지의 크기
-    IppiSize srcSize = { image.cols, image.rows };
+    IppiSize srcSize = { inputImage.cols, inputImage.rows };
 
     // 출력 이미지의 크기 설정: 오른쪽으로 회전된 이미지의 크기와 같도록 설정
-    IppiSize dstSize = { image.rows, image.cols };
+    IppiSize dstSize = { inputImage.rows, inputImage.cols };
 
     // IPP에서 사용할 아핀 변환 계수
     double angle = 270.0;  // 90도 시계 방향으로 회전
@@ -676,8 +658,6 @@ ImageProcessor::ProcessingResult ImageProcessor::rotateIPP(cv::Mat& image)
     IppStatus status = ippiGetRotateTransform(angle, xShift, yShift, coeffs);
     if (status != ippStsNoErr) {
         std::cerr << "ippiGetRotateTransform error: " << status << std::endl;
-        result.processedImage = image.clone();
-        result.processingTime = 0.0;
         return result;
     }
 
@@ -695,8 +675,6 @@ ImageProcessor::ProcessingResult ImageProcessor::rotateIPP(cv::Mat& image)
     status = ippiWarpAffineGetSize(srcSize, dstSize, ipp8u, coeffs, ippLinear, direction, borderType, &specSize, &initSize);
     if (status != ippStsNoErr) {
         std::cerr << "ippiWarpAffineGetSize error: " << status << std::endl;
-        result.processedImage = image.clone();
-        result.processingTime = 0.0;
         return result;
     }
 
@@ -704,8 +682,6 @@ ImageProcessor::ProcessingResult ImageProcessor::rotateIPP(cv::Mat& image)
     pSpec = (IppiWarpSpec*)ippsMalloc_8u(specSize);
     if (pSpec == nullptr) {
         std::cerr << "Memory allocation error for pSpec" << std::endl;
-        result.processedImage = image.clone();
-        result.processingTime = 0.0;
         return result;
     }
 
@@ -714,8 +690,6 @@ ImageProcessor::ProcessingResult ImageProcessor::rotateIPP(cv::Mat& image)
     if (status != ippStsNoErr) {
         std::cerr << "ippiWarpAffineLinearInit error: " << status << std::endl;
         ippsFree(pSpec);
-        result.processedImage = image.clone();
-        result.processingTime = 0.0;
         return result;
     }
 
@@ -724,8 +698,6 @@ ImageProcessor::ProcessingResult ImageProcessor::rotateIPP(cv::Mat& image)
     if (status != ippStsNoErr) {
         std::cerr << "ippiWarpGetBufferSize error: " << status << std::endl;
         ippsFree(pSpec);
-        result.processedImage = image.clone();
-        result.processingTime = 0.0;
         return result;
     }
 
@@ -733,48 +705,39 @@ ImageProcessor::ProcessingResult ImageProcessor::rotateIPP(cv::Mat& image)
     if (pBuffer == nullptr) {
         std::cerr << "Memory allocation error for pBuffer" << std::endl;
         ippsFree(pSpec);
-        result.processedImage = image.clone();
-        result.processingTime = 0.0;
         return result;
     }
 
     // 회전된 이미지를 저장할 Mat 생성
-    cv::Mat rotatedImage(dstSize.width, dstSize.height, image.type());
+    cv::Mat outputImage(dstSize.width, dstSize.height, inputImage.type());
 
     // dstOffset 정의 (오른쪽으로 90도 회전 시)
     IppiPoint dstOffset = { 0, 0 };
 
     // IPP를 이용하여 이미지 회전
-    status = ippiWarpAffineLinear_8u_C3R(image.data, srcSize.width * 3, rotatedImage.data, dstSize.width * 3, dstOffset, dstSize, pSpec, pBuffer);
+    status = ippiWarpAffineLinear_8u_C3R(inputImage.data, srcSize.width * 3, outputImage.data, dstSize.width * 3, dstOffset, dstSize, pSpec, pBuffer);
     if (status != ippStsNoErr) {
         std::cerr << "ippiWarpAffineLinear_8u_C3R error: " << status << std::endl;
         ippsFree(pSpec);
         ippsFree(pBuffer);
-        result.processedImage = image.clone();
-        result.processingTime = 0.0;
         return result;
-    }
+    }   
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "rotate", "IPP", elapsedTimeMs);
 
     // 메모리 해제
     ippsFree(pSpec);
     ippsFree(pBuffer);
 
-    double endTime = cv::getTickCount(); // 종료 시간 측정
-    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
-
-    result.processedImage = rotatedImage.clone();
-    result.processingTime = elapsedTimeMs; // 처리 시간 설정
-
     return result;
 }
 
-
-
-ImageProcessor::ProcessingResult ImageProcessor::rotateCUDA(cv::Mat& image)
+ImageProcessor::ProcessingResult ImageProcessor::rotateCUDA(cv::Mat& inputImage)
 {
     ProcessingResult result;
-    result.functionName = "rotate";
-    result.processName = "CUDA";
 
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
@@ -783,7 +746,7 @@ ImageProcessor::ProcessingResult ImageProcessor::rotateCUDA(cv::Mat& image)
 
     // 이미지를 GPU 메모리에 업로드
     cv::cuda::GpuMat gpuImage;
-    gpuImage.upload(image);
+    gpuImage.upload(inputImage);
 
     // 회전 중심을 이미지의 중앙으로 설정
     cv::Point2f center(gpuImage.cols / 2.0f, gpuImage.rows / 2.0f);
@@ -796,33 +759,29 @@ ImageProcessor::ProcessingResult ImageProcessor::rotateCUDA(cv::Mat& image)
     cv::cuda::warpAffine(gpuImage, gpuRotatedImage, rotationMatrix, gpuImage.size());
 
     // 결과 이미지를 CPU 메모리로 다운로드
-    cv::Mat rotatedImage;
-    gpuRotatedImage.download(rotatedImage);
+    cv::Mat outputImage;
+    gpuRotatedImage.download(outputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result.processedImage = rotatedImage.clone(); // 처리된 이미지 복사
-    result.processingTime = elapsedTimeMs; // 처리 시간 설정
+    result = setResult(result, inputImage, outputImage, "rotate", "CUDA", elapsedTimeMs);
 
     return result;
 }
 
-ImageProcessor::ProcessingResult ImageProcessor::rotateCUDAKernel(cv::Mat& image)
+ImageProcessor::ProcessingResult ImageProcessor::rotateCUDAKernel(cv::Mat& inputImage)
 {
     ProcessingResult result;
-    result.functionName = "rotate";
-    result.processName = "CUDAKernel";
-
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    callRotateImageCUDA(image);
+    cv::Mat outputImage;
+    callRotateImageCUDA(inputImage, outputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result.processedImage = image.clone(); // 처리된 이미지 복사
-    result.processingTime = elapsedTimeMs; // 처리 시간 설정
+    result = setResult(result, inputImage, outputImage, "rotate", "CUDAKernel", elapsedTimeMs);
 
     return result;
 }
@@ -833,18 +792,28 @@ double ImageProcessor::getCurrentTimeMs()
         (std::chrono::steady_clock::now().time_since_epoch()).count();
 }
 
-QFuture<bool> ImageProcessor::gaussianBlur(cv::Mat& image, int kernelSize)
+QFuture<bool> ImageProcessor::gaussianBlur(cv::Mat& imageOpenCV
+                                            , cv::Mat& imageIPP
+                                            , cv::Mat& imageCUDA
+                                            , cv::Mat& imageCUDAKernel
+                                            , int kernelSize)
 {
     //함수 이름을 문자열로 저장
     const char* functionName = __func__;
 
-    return QtConcurrent::run([this, &image, kernelSize, functionName]() -> bool {
+    return QtConcurrent::run([this
+        , &imageOpenCV
+        , &imageIPP
+        , &imageCUDA
+        , &imageCUDAKernel
+        , kernelSize
+        , functionName]() -> bool {
 
         QMutexLocker locker(&mutex);
 
         try {
 
-            if (image.empty()) {
+            if (imageOpenCV.empty()) {
                 qDebug() << "Input image is empty.";
                 return false;
             }
@@ -854,56 +823,32 @@ QFuture<bool> ImageProcessor::gaussianBlur(cv::Mat& image, int kernelSize)
                 return false;
             }
 
-            //pushToUndoStack(image);
+            pushToUndoStackOpenCV(imageOpenCV.clone());
+            pushToUndoStackIPP(imageIPP.clone());
+            pushToUndoStackCUDA(imageCUDA.clone());
+            pushToUndoStackCUDAKernel(imageCUDAKernel.clone());
 
-            // 처리시간계산 시작
-            double startTime = getCurrentTimeMs();
+            QVector<ProcessingResult> results;
 
-            // Upload image to GPU
-            //cv::cuda::GpuMat gpuImage;
-            //gpuImage.upload(image);
+            ProcessingResult outputOpenCV = gaussianBlurOpenCV(imageOpenCV, kernelSize);
+            lastProcessedImageOpenCV = outputOpenCV.processedImage.clone();
+            results.append(outputOpenCV);
 
-            // Create Gaussian filter
-            //cv::Ptr<cv::cuda::Filter> gaussianFilter =
-            //    cv::cuda::createGaussianFilter(
-            //        gpuImage.type(),
-            //        gpuImage.type(),
-            //        cv::Size(kernelSize, kernelSize),
-            //        0);
+            ProcessingResult outputIPP = gaussianBlurIPP(imageIPP, kernelSize);
+            lastProcessedImageIPP = outputIPP.processedImage.clone();
+            results.append(outputIPP);
 
-            // Apply Gaussian blur on GPU
-            //cv::cuda::GpuMat blurredGpuImage;
-            //gaussianFilter->apply(gpuImage, blurredGpuImage);
+            ProcessingResult outputCUDA = gaussianBlurCUDA(imageCUDA, kernelSize);
+            lastProcessedImageCUDA = outputCUDA.processedImage.clone();
+            results.append(outputCUDA);
 
-            // Download the result back to CPU
-            //cv::Mat blurredImage;
-            //blurredGpuImage.download(blurredImage);
+            ProcessingResult outputCUDAKernel = gaussianBlurCUDAKernel(imageCUDAKernel, kernelSize);
+            lastProcessedImageCUDAKernel = outputCUDAKernel.processedImage.clone();
+            results.append(outputCUDAKernel);
 
-            //CUDA Kernel
-            callGaussianBlurCUDA(image, kernelSize);
-
-            // 처리시간계산 종료
-            double endTime = getCurrentTimeMs();
-            double processingTime = endTime - startTime;
-
-            //image = blurredImage.clone();
-            //lastProcessedImage = image.clone();
-
-            //emit imageProcessed(image, processingTime, functionName);
+            emit imageProcessed(results);
 
             return true;
-
-            /* OpenCV
-            cv::Mat blurredImage;
-            cv::GaussianBlur(image, blurredImage, cv::Size(kernelSize, kernelSize), 0, 0);
-
-            image = blurredImage.clone();
-            lastProcessedImage = image.clone();
-
-            emit imageProcessed(image);
-
-            return true;
-            */
         }
         catch (const cv::Exception& e) {
             qDebug() << "Exception occurred while applying Gaussian blur:"
@@ -911,6 +856,151 @@ QFuture<bool> ImageProcessor::gaussianBlur(cv::Mat& image, int kernelSize)
             return false;
         }
         });
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::gaussianBlurOpenCV(cv::Mat& inputImage, int kernelSize)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    cv::Mat outputImage;
+    cv::GaussianBlur(inputImage, outputImage, cv::Size(kernelSize, kernelSize), 0, 0);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "gaussianBlur", "OpenCV", elapsedTimeMs);
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::gaussianBlurIPP(cv::Mat& inputImage, int kernelSize) {
+    
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    // 입력 이미지가 3채널 BGR 이미지인지 확인하고, 아닌 경우 변환
+    cv::Mat bgrImage;
+    if (inputImage.channels() != 3 || inputImage.type() != CV_8UC3) {
+        std::cerr << "Warning: Input image is not a 3-channel BGR image. Converting to BGR." << std::endl;
+        cv::cvtColor(inputImage, bgrImage, cv::COLOR_GRAY2BGR);
+    }
+    else {
+        bgrImage = inputImage.clone(); // 이미 BGR인 경우 그대로 사용
+    }
+
+    // 출력 이미지를 16비트 3채널(CV_16UC3)로 선언
+    cv::Mat outputImage(bgrImage.size(), CV_16UC3);
+
+    // IPP 함수에 전달할 포인터들
+    Ipp16u* pSrc = reinterpret_cast<Ipp16u*>(bgrImage.data);
+    Ipp16u* pDst = reinterpret_cast<Ipp16u*>(outputImage.data);
+
+    // ROI 크기 설정
+    IppiSize roiSize = { bgrImage.cols, bgrImage.rows };
+
+    // 필터링을 위한 버퍼 및 스펙트럼 크기 계산
+    int specSize, bufferSize;
+    IppStatus status = ippiFilterGaussianGetBufferSize(roiSize, 3, ipp16u, 3, &specSize, &bufferSize);
+    if (status != ippStsNoErr) {
+        std::cerr << "Error: ippiFilterGaussianGetBufferSize failed with status " << status << std::endl;
+        return result; // 빈 결과 반환
+    }
+
+    // 외부 버퍼 할당
+    Ipp8u* pBuffer = ippsMalloc_8u(bufferSize);
+    if (pBuffer == nullptr) {
+        std::cerr << "Error: Failed to allocate buffer." << std::endl;
+        return result; // 빈 결과 반환
+    }
+
+    // 가우시안 필터 스펙트럼 구조체 메모리 할당
+    IppFilterGaussianSpec* pSpec = reinterpret_cast<IppFilterGaussianSpec*>(ippsMalloc_8u(specSize));
+    if (pSpec == nullptr) {
+        std::cerr << "Error: Failed to allocate spec structure." << std::endl;
+        ippsFree(pBuffer);
+        return result; // 빈 결과 반환
+    }
+
+    // 가우시안 필터 초기화 (표준 편차는 예시로 1.5로 설정)
+    float sigma = 1.5f;
+    status = ippiFilterGaussianInit(roiSize, 3, sigma, ippBorderRepl, ipp16u, 3, pSpec, pBuffer);
+    if (status != ippStsNoErr) {
+        std::cerr << "Error: ippiFilterGaussianInit failed with status " << status << std::endl;
+        ippsFree(pBuffer);
+        ippsFree(pSpec);
+        return result; // 빈 결과 반환
+    }
+
+    // 가우시안 필터 적용
+    int srcStep = bgrImage.cols * sizeof(Ipp16u) * 3;
+    int dstStep = outputImage.cols * sizeof(Ipp16u) * 3;
+    Ipp16u borderValue[3] = { 0, 0, 0 }; // 가우시안 필터 적용 시 사용할 보더 값
+    status = ippiFilterGaussianBorder_16u_C3R(pSrc, srcStep, pDst, dstStep, roiSize, borderValue, pSpec, pBuffer);
+    if (status != ippStsNoErr) {
+        std::cerr << "Error: ippiFilterGaussianBorder_16u_C3R failed with status " << status << std::endl;
+        ippsFree(pBuffer);
+        ippsFree(pSpec);
+        return result; // 빈 결과 반환
+    }    
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    // 결과 설정
+    result = setResult(result, inputImage, outputImage, "gaussianBlur", "IPP", elapsedTimeMs);
+
+    // 메모리 해제
+    ippsFree(pBuffer);
+    ippsFree(pSpec);
+
+    return result;
+}
+
+
+ImageProcessor::ProcessingResult ImageProcessor::gaussianBlurCUDA(cv::Mat& inputImage, int kernelSize)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    cv::cuda::GpuMat gpuImage;
+    gpuImage.upload(inputImage);
+
+    cv::Ptr<cv::cuda::Filter> gaussianFilter =
+    cv::cuda::createGaussianFilter(gpuImage.type()
+        , gpuImage.type()
+        , cv::Size(kernelSize, kernelSize)
+        , 0);
+
+    cv::cuda::GpuMat blurredGpuImage;
+    gaussianFilter->apply(gpuImage, blurredGpuImage);
+
+    cv::Mat outputImage;
+    blurredGpuImage.download(outputImage);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "gaussianBlur", "CUDA", elapsedTimeMs);
+
+    return result;
+
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::gaussianBlurCUDAKernel(cv::Mat& inputImage, int kernelSize)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    cv::Mat outputImage;
+    callGaussianBlurCUDA(inputImage, outputImage, kernelSize);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "gaussianBlur", "OpenCV", elapsedTimeMs);
+
+    return result;
 }
 
 //Canny
@@ -942,7 +1032,12 @@ QFuture<bool> ImageProcessor::cannyEdges(cv::Mat& image)
                 //}
 
                 //CUDA Kernel
-                callGrayScaleImageCUDA(image);
+                
+                
+                
+                
+                
+                //callGrayScaleImageCUDA(image);
             }
 
             // GPU에서 캐니 엣지 감지기 생성
@@ -1254,14 +1349,27 @@ void ImageProcessor::undo()
         undoStackCUDA.pop();
         undoStackCUDAKernel.pop();
 
+        QString outputInfoOpenCV = "(Output) Channels: " + QString::number(lastProcessedImageOpenCV.channels())
+            + ", type: " + QString::number(lastProcessedImageOpenCV.type())
+            + ", depth: " + QString::number(lastProcessedImageOpenCV.depth());
+        QString outputInfoIPP = "(Output) Channels: " + QString::number(lastProcessedImageIPP.channels())
+            + ", type: " + QString::number(lastProcessedImageIPP.type())
+            + ", depth: " + QString::number(lastProcessedImageIPP.depth());
+        QString outputInfoCUDA = "(Output) Channels: " + QString::number(lastProcessedImageCUDA.channels())
+            + ", type: " + QString::number(lastProcessedImageCUDA.type())
+            + ", depth: " + QString::number(lastProcessedImageCUDA.depth());
+        QString outputInfoCUDAKernel = "(Output) Channels: " + QString::number(lastProcessedImageCUDAKernel.channels())
+            + ", type: " + QString::number(lastProcessedImageCUDAKernel.type())
+            + ", depth: " + QString::number(lastProcessedImageCUDAKernel.depth());
+
         double endTime = cv::getTickCount(); // 종료 시간 측정
         double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
         // 결과 생성
-        results.append(ProcessingResult(functionName, "OpenCV", lastProcessedImageOpenCV.clone(), elapsedTimeMs));
-        results.append(ProcessingResult(functionName, "IPP", lastProcessedImageIPP.clone(), elapsedTimeMs));
-        results.append(ProcessingResult(functionName, "CUDA", lastProcessedImageCUDA.clone(), elapsedTimeMs));
-        results.append(ProcessingResult(functionName, "CUDAKernel", lastProcessedImageCUDAKernel.clone(), elapsedTimeMs));
+        results.append(ProcessingResult(functionName, "OpenCV", lastProcessedImageOpenCV.clone(), elapsedTimeMs, "", outputInfoOpenCV));
+        results.append(ProcessingResult(functionName, "IPP", lastProcessedImageIPP.clone(), elapsedTimeMs, "", outputInfoIPP));
+        results.append(ProcessingResult(functionName, "CUDA", lastProcessedImageCUDA.clone(), elapsedTimeMs, "", outputInfoCUDA));
+        results.append(ProcessingResult(functionName, "CUDAKernel", lastProcessedImageCUDAKernel.clone(), elapsedTimeMs, "", outputInfoCUDAKernel));
 
         emit imageProcessed(results);
     }
@@ -1302,14 +1410,27 @@ void ImageProcessor::redo()
         redoStackCUDA.pop();
         redoStackCUDAKernel.pop();
 
+        QString outputInfoOpenCV = "(Output) Channels: " + QString::number(lastProcessedImageOpenCV.channels())
+            + ", type: " + QString::number(lastProcessedImageOpenCV.type())
+            + ", depth: " + QString::number(lastProcessedImageOpenCV.depth());
+        QString outputInfoIPP = "(Output) Channels: " + QString::number(lastProcessedImageIPP.channels())
+            + ", type: " + QString::number(lastProcessedImageIPP.type())
+            + ", depth: " + QString::number(lastProcessedImageIPP.depth());
+        QString outputInfoCUDA = "(Output) Channels: " + QString::number(lastProcessedImageCUDA.channels())
+            + ", type: " + QString::number(lastProcessedImageCUDA.type())
+            + ", depth: " + QString::number(lastProcessedImageCUDA.depth());
+        QString outputInfoCUDAKernel = "(Output) Channels: " + QString::number(lastProcessedImageCUDAKernel.channels())
+            + ", type: " + QString::number(lastProcessedImageCUDAKernel.type())
+            + ", depth: " + QString::number(lastProcessedImageCUDAKernel.depth());
+
         double endTime = cv::getTickCount(); // 종료 시간 측정
         double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
         // 결과 생성
-        results.append(ProcessingResult(functionName, "OpenCV", lastProcessedImageOpenCV.clone(), elapsedTimeMs));
-        results.append(ProcessingResult(functionName, "IPP", lastProcessedImageIPP.clone(), elapsedTimeMs));
-        results.append(ProcessingResult(functionName, "CUDA", lastProcessedImageCUDA.clone(), elapsedTimeMs));
-        results.append(ProcessingResult(functionName, "CUDAKernel", lastProcessedImageCUDAKernel.clone(), elapsedTimeMs));
+        results.append(ProcessingResult(functionName, "OpenCV", lastProcessedImageOpenCV.clone(), elapsedTimeMs, "", outputInfoOpenCV));
+        results.append(ProcessingResult(functionName, "IPP", lastProcessedImageIPP.clone(), elapsedTimeMs, "", outputInfoIPP));
+        results.append(ProcessingResult(functionName, "CUDA", lastProcessedImageCUDA.clone(), elapsedTimeMs, "", outputInfoCUDA));
+        results.append(ProcessingResult(functionName, "CUDAKernel", lastProcessedImageCUDAKernel.clone(), elapsedTimeMs, "", outputInfoCUDAKernel));
 
         emit imageProcessed(results);
     }
@@ -1426,4 +1547,20 @@ void ImageProcessor::pushToRedoStackCUDA(const cv::Mat& image)
 void ImageProcessor::pushToRedoStackCUDAKernel(const cv::Mat& image)
 {
     redoStackCUDAKernel.push(image.clone());
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::setResult(ProcessingResult& result, cv::Mat& inputImage, cv::Mat& outputImage, QString functionName, QString processName, double processingTime)
+{
+    result.functionName = functionName;
+    result.processName = processName;
+    result.inputInfo = "(Input) Channels: " + QString::number(inputImage.channels())
+        + ", type: " + QString::number(inputImage.type())
+        + ", depth: " + QString::number(inputImage.depth());
+    result.processedImage = outputImage.clone();
+    result.processingTime = processingTime;
+    result.outputInfo = "(Output) Channels: " + QString::number(outputImage.channels())
+        + ", type: " + QString::number(outputImage.type())
+        + ", depth: " + QString::number(outputImage.depth());
+
+    return result;
 }

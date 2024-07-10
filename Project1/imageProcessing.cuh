@@ -9,11 +9,11 @@
 #include <iostream>
 
 // CUDA 함수 호출 선언
-void callRotateImageCUDA(cv::Mat& inputImage);
-void callResizeImageCUDA(cv::Mat& inputImage, int newWidth, int newHeight);
-void callGrayScaleImageCUDA(cv::Mat& inputImage);
+void callRotateImageCUDA(cv::Mat& inputImage, cv::Mat& outputImage);
+void callZoomImageCUDA(cv::Mat& inputImage, cv::Mat& outputImage, int newWidth, int newHeight);
+void callGrayScaleImageCUDA(cv::Mat& inputImage, cv::Mat& outputImage);
 void callCannyEdgesCUDA(cv::Mat& inputImage);
-void callGaussianBlurCUDA(cv::Mat& inputImage, int kernelSize);
+void callGaussianBlurCUDA(cv::Mat& inputImage, cv::Mat& outputImage, int kernelSize);
 void callMedianFilterCUDA(cv::Mat& inputImage);
 void callLaplacianFilterCUDA(cv::Mat& inputImage);
 void callBilateralFilterCUDA(cv::Mat& inputImage, int kernelSize, float sigmaColor, float sigmaSpace);
