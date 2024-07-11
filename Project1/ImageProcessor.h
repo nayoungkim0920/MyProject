@@ -35,6 +35,7 @@
 #include <ipp/ipps.h>
 #include <ipp/ippcv.h>
 #include "imageProcessing.cuh"
+#include "ImageTypeConverter.h"
 
 #ifndef MAX_NUM_THREADS
 #define MAX_NUM_THREADS 8 // 예시로 임의로 설정
@@ -69,7 +70,7 @@ public:
     QFuture<bool> zoomOutImage(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, double scaleFactor);
     QFuture<bool> grayScale(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
     QFuture<bool> gaussianBlur(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, int kernelSize);
-    QFuture<bool> cannyEdges(cv::Mat& image);
+    QFuture<bool> cannyEdges(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
     QFuture<bool> medianFilter(cv::Mat& image);
     QFuture<bool> laplacianFilter(cv::Mat& image);
     QFuture<bool> bilateralFilter(cv::Mat& image);
@@ -128,25 +129,35 @@ private:
 
     //bool grayScaleCUDA(cv::Mat& image);
 
-    ProcessingResult grayScaleOpenCV(cv::Mat& image);
-    ProcessingResult grayScaleIPP(cv::Mat& image);
-    ProcessingResult grayScaleCUDA(cv::Mat& image);
-    ProcessingResult grayScaleCUDAKernel(cv::Mat& image);
+    ProcessingResult grayScaleOpenCV(cv::Mat& inputImage);
+    ProcessingResult grayScaleIPP(cv::Mat& inputImage);
+    ProcessingResult grayScaleCUDA(cv::Mat& inputImage);
+    ProcessingResult grayScaleCUDAKernel(cv::Mat& inputImage);
 
-    ProcessingResult zoomOpenCV(cv::Mat& image, double newWidth, double newHeight);
-    ProcessingResult zoomIPP(cv::Mat& image, double newWidth, double newHeight);
-    ProcessingResult zoomCUDA(cv::Mat& image, double newWidth, double newHeight);
-    ProcessingResult zoomCUDAKernel(cv::Mat& image, double newWidth, double newHeight);
+    ProcessingResult zoomOpenCV(cv::Mat& inputImage, double newWidth, double newHeight);
+    ProcessingResult zoomIPP(cv::Mat& inputImage, double newWidth, double newHeight);
+    ProcessingResult zoomCUDA(cv::Mat& inputImage, double newWidth, double newHeight);
+    ProcessingResult zoomCUDAKernel(cv::Mat& inputImage, double newWidth, double newHeight);
 
-    ProcessingResult rotateOpenCV(cv::Mat& image);
-    ProcessingResult rotateIPP(cv::Mat& image);
-    ProcessingResult rotateCUDA(cv::Mat& image);
-    ProcessingResult rotateCUDAKernel(cv::Mat& image);
+    ProcessingResult rotateOpenCV(cv::Mat& inputImage);
+    ProcessingResult rotateIPP(cv::Mat& inputImage);
+    ProcessingResult rotateCUDA(cv::Mat& inputImage);
+    ProcessingResult rotateCUDAKernel(cv::Mat& inputImage);
 
-    ProcessingResult gaussianBlurOpenCV(cv::Mat& image, int kernelSize);
-    ProcessingResult gaussianBlurIPP(cv::Mat& image, int kernelSize);
-    ProcessingResult gaussianBlurCUDA(cv::Mat& image, int kernelSize);
-    ProcessingResult gaussianBlurCUDAKernel(cv::Mat& image, int kernelSize);
+    ProcessingResult gaussianBlurOpenCV(cv::Mat& inputImage, int kernelSize);
+    ProcessingResult gaussianBlurIPP(cv::Mat& inputImage, int kernelSize);
+    ProcessingResult gaussianBlurCUDA(cv::Mat& inputImage, int kernelSize);
+    ProcessingResult gaussianBlurCUDAKernel(cv::Mat& inputImage, int kernelSize);
+
+    ProcessingResult cannyEdgesOpenCV(cv::Mat& inputImage);
+    ProcessingResult cannyEdgesIPP(cv::Mat& inputImage);
+    ProcessingResult cannyEdgesCUDA(cv::Mat& inputImage);
+    ProcessingResult cannyEdgesCUDAKernel(cv::Mat& inputImage);
+
+    cv::Mat convertToGrayOpenCV(const cv::Mat& inputImage);
+    cv::Mat convertToGrayIPP(const cv::Mat& inputImage);
+    cv::Mat convertToGrayCUDA(const cv::Mat& inputImage);
+    cv::Mat convertToGrayCUDAKernel(cv::Mat& inputImage);
 
     double getCurrentTimeMs();
 };

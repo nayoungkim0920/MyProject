@@ -444,19 +444,19 @@ void callGrayScaleImageCUDA(cv::Mat& inputImage, cv::Mat& outputImage) {
     cudaFree(d_outputImage);
 }
 
-void callCannyEdgesCUDA(cv::Mat & inputImage) {
+void callCannyEdgesCUDA(cv::Mat& inputImage, cv::Mat& outputImage) {
     int cols = inputImage.cols;
     int rows = inputImage.rows;
     int channels = inputImage.channels();
 
-    if (channels != 1) {
-        std::cerr << "Input image must be a single-channel grayscale image." << std::endl;
-        return;
-    }
+    //if (channels != 3) {
+    //    std::cerr << "Input image must be a 3-channel BGR image." << std::endl;
+    //    return;
+    //}
 
     uchar* d_inputImage = nullptr;
     uchar* d_outputImage = nullptr;
-    size_t inputSize = cols * rows * sizeof(uchar);
+    size_t inputSize = cols * rows * channels * sizeof(uchar);
     size_t outputSize = cols * rows * sizeof(uchar);
 
     cudaError_t err;
@@ -484,16 +484,6 @@ void callCannyEdgesCUDA(cv::Mat & inputImage) {
     dim3 threadsPerBlock(16, 16);
     dim3 numBlocks((cols + threadsPerBlock.x - 1) / threadsPerBlock.x, (rows + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
-    // Initialize output image to 0 (optional, for safety)
-    err = cudaMemset(d_outputImage, 0, outputSize);
-    if (err != cudaSuccess) {
-        std::cerr << "CUDA memset error: " << cudaGetErrorString(err) << std::endl;
-        cudaFree(d_inputImage);
-        cudaFree(d_outputImage);
-        return;
-    }
-
-    // Launch CUDA kernel
     cannyEdgesKernel << <numBlocks, threadsPerBlock >> > (d_inputImage, d_outputImage, cols, rows);
 
     err = cudaGetLastError();
@@ -506,8 +496,8 @@ void callCannyEdgesCUDA(cv::Mat & inputImage) {
 
     cudaDeviceSynchronize();
 
-    // Copy result back to host
-    err = cudaMemcpy(inputImage.data, d_outputImage, outputSize, cudaMemcpyDeviceToHost);
+    outputImage.create(rows, cols, CV_8UC1);
+    err = cudaMemcpy(outputImage.data, d_outputImage, outputSize, cudaMemcpyDeviceToHost);
     if (err != cudaSuccess) {
         std::cerr << "CUDA memcpy error: " << cudaGetErrorString(err) << std::endl;
     }
@@ -515,7 +505,6 @@ void callCannyEdgesCUDA(cv::Mat & inputImage) {
     cudaFree(d_inputImage);
     cudaFree(d_outputImage);
 }
-
 void callGaussianBlurCUDA(cv::Mat& inputImage, cv::Mat& outputImage, int kernelSize) {
     int cols = inputImage.cols;
     int rows = inputImage.rows;

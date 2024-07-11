@@ -346,8 +346,7 @@ ImageProcessor::ProcessingResult ImageProcessor::grayScaleOpenCV(cv::Mat& inputI
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::Mat outputImage;
-    cv::cvtColor(inputImage, outputImage, cv::COLOR_BGR2GRAY);
+    cv::Mat outputImage = convertToGrayOpenCV(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -363,54 +362,58 @@ ImageProcessor::ProcessingResult ImageProcessor::grayScaleIPP(cv::Mat& inputImag
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
     // 입력 이미지가 3채널 BGR 이미지인지 확인
-    if (inputImage.channels() != 3 || inputImage.type() != CV_8UC3) {
-        std::cerr << "Warning: Input image is not a 3-channel BGR image. Converting to BGR." << std::endl;
-        cv::Mat temp;
-        cv::cvtColor(inputImage, temp, cv::COLOR_GRAY2BGR);
-        inputImage = temp;
-    }
+    //if (inputImage.channels() != 3 || inputImage.type() != CV_8UC3) {
+        //std::cerr << "Warning: Input image is not a 3-channel BGR image. Converting to BGR." << std::endl;
+    //    cv::Mat temp;
+    //    cv::cvtColor(inputImage, temp, cv::COLOR_GRAY2BGR);
+    //    inputImage = temp;
+    //}
 
-    // IPP 사용을 위한 입력 및 출력 설정
-    IppiSize roiSize = { inputImage.cols, inputImage.rows };
-    int srcStep = inputImage.step;
-    int dstStep = inputImage.cols;
-    Ipp8u* srcData = inputImage.data;
-    Ipp8u* dstData = ippsMalloc_8u(inputImage.rows * inputImage.cols);
-
-    // IPP 그레이스케일 변환
-    IppStatus status = ippiRGBToGray_8u_C3C1R(srcData, srcStep, dstData, dstStep, roiSize);
-
-    if (status != ippStsNoErr) {
-        std::cerr << "IPP 오류: " << status << std::endl;
-        ippsFree(dstData); // 메모리 해제
-        return result; // 오류 발생 시 처리 중단
-    }
-
-    // 결과를 OpenCV Mat으로 변환
-    cv::Mat outputImage(inputImage.rows, inputImage.cols, CV_8UC1, dstData);
+    cv::Mat outputImage = ImageProcessor::convertToGrayIPP(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산   
 
-    
-
     result = setResult(result, inputImage, outputImage, "grayScale", "IPP", elapsedTimeMs);
-
-    ippsFree(dstData); // 메모리 해제
 
     return result;
 }
 
+cv::Mat ImageProcessor::convertToGrayOpenCV(const cv::Mat& inputImage)
+{
+    cv::Mat grayImage;
+    cv::cvtColor(inputImage, grayImage, cv::COLOR_BGR2GRAY);
 
+    return grayImage;
+}
 
-ImageProcessor::ProcessingResult ImageProcessor::grayScaleCUDA(cv::Mat& inputImage)
-{    
-    ProcessingResult result;
-    double startTime = cv::getTickCount(); // 시작 시간 측정
+cv::Mat ImageProcessor::convertToGrayIPP(const cv::Mat& inputImage)
+{
+    // IPP 초기화
+    ippInit();
 
-    // CUDA 장치 설정
-    //cv::cuda::setDevice(0);
+    // 입력 이미지의 크기 및 스텝 설정
+    IppiSize roiSize = { inputImage.cols, inputImage.rows };
+    int srcStep = inputImage.step;
+    int dstStep = inputImage.cols;
+    Ipp8u* srcData = inputImage.data;
 
+    // 출력 이미지 생성 및 IPP 메모리 할당
+    cv::Mat grayImage(inputImage.rows, inputImage.cols, CV_8UC1);
+    Ipp8u* dstData = grayImage.data;
+
+    // IPP RGB to Gray 변환 수행
+    IppStatus status = ippiRGBToGray_8u_C3C1R(srcData, srcStep, dstData, dstStep, roiSize);
+    if (status != ippStsNoErr) {
+        std::cerr << "IPP 오류: " << status << std::endl;
+        return cv::Mat(); // 오류 발생 시 빈 Mat 반환
+    }
+
+    return grayImage;
+}
+
+cv::Mat ImageProcessor::convertToGrayCUDA(const cv::Mat& inputImage)
+{
     // 입력 이미지를 CUDA GpuMat으로 업로드
     cv::cuda::GpuMat d_input;
     d_input.upload(inputImage);
@@ -420,13 +423,26 @@ ImageProcessor::ProcessingResult ImageProcessor::grayScaleCUDA(cv::Mat& inputIma
     cv::cuda::cvtColor(d_input, d_output, cv::COLOR_BGR2GRAY);
 
     // CUDA에서 호스트로 이미지 다운로드
-    cv::Mat outputImage;
-    d_output.download(outputImage);
+    cv::Mat grayImage;
+    d_output.download(grayImage);
 
-    if (outputImage.empty() || outputImage.type() != CV_8UC1) {
-        qDebug() << "Output image is empty or not in expected format after CUDA processing.";
-        return result;
-    }
+    return grayImage;
+}
+
+cv::Mat ImageProcessor::convertToGrayCUDAKernel(cv::Mat& inputImage)
+{
+    cv::Mat grayImage;
+    callGrayScaleImageCUDA(inputImage, grayImage);
+
+    return grayImage;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::grayScaleCUDA(cv::Mat& inputImage)
+{    
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    cv::Mat outputImage = convertToGrayCUDA(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -441,8 +457,7 @@ ImageProcessor::ProcessingResult ImageProcessor::grayScaleCUDAKernel(cv::Mat& in
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::Mat outputImage;
-    callGrayScaleImageCUDA(inputImage, outputImage);
+    cv::Mat outputImage = convertToGrayCUDAKernel(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -882,8 +897,14 @@ ImageProcessor::ProcessingResult ImageProcessor::gaussianBlurIPP(cv::Mat& inputI
     // 입력 이미지가 3채널 BGR 이미지인지 확인하고, 아닌 경우 변환
     cv::Mat bgrImage;
     if (inputImage.channels() != 3 || inputImage.type() != CV_8UC3) {
-        std::cerr << "Warning: Input image is not a 3-channel BGR image. Converting to BGR." << std::endl;
-        cv::cvtColor(inputImage, bgrImage, cv::COLOR_GRAY2BGR);
+        //std::cerr << "Warning: Input image is not a 3-channel BGR image. Converting to BGR." << std::endl;
+        if (inputImage.channels() == 1) {
+            cv::cvtColor(inputImage, bgrImage, cv::COLOR_GRAY2BGR);
+        }
+        else {
+            std::cerr << "Error: Unsupported image format." << std::endl;
+            return result;
+        }
     }
     else {
         bgrImage = inputImage.clone(); // 이미 BGR인 경우 그대로 사용
@@ -901,7 +922,7 @@ ImageProcessor::ProcessingResult ImageProcessor::gaussianBlurIPP(cv::Mat& inputI
 
     // 필터링을 위한 버퍼 및 스펙트럼 크기 계산
     int specSize, bufferSize;
-    IppStatus status = ippiFilterGaussianGetBufferSize(roiSize, 3, ipp16u, 3, &specSize, &bufferSize);
+    IppStatus status = ippiFilterGaussianGetBufferSize(roiSize, kernelSize, ipp16u, 3, &specSize, &bufferSize);
     if (status != ippStsNoErr) {
         std::cerr << "Error: ippiFilterGaussianGetBufferSize failed with status " << status << std::endl;
         return result; // 빈 결과 반환
@@ -924,7 +945,7 @@ ImageProcessor::ProcessingResult ImageProcessor::gaussianBlurIPP(cv::Mat& inputI
 
     // 가우시안 필터 초기화 (표준 편차는 예시로 1.5로 설정)
     float sigma = 1.5f;
-    status = ippiFilterGaussianInit(roiSize, 3, sigma, ippBorderRepl, ipp16u, 3, pSpec, pBuffer);
+    status = ippiFilterGaussianInit(roiSize, kernelSize, sigma, ippBorderRepl, ipp16u, 3, pSpec, pBuffer);
     if (status != ippStsNoErr) {
         std::cerr << "Error: ippiFilterGaussianInit failed with status " << status << std::endl;
         ippsFree(pBuffer);
@@ -942,13 +963,17 @@ ImageProcessor::ProcessingResult ImageProcessor::gaussianBlurIPP(cv::Mat& inputI
         ippsFree(pBuffer);
         ippsFree(pSpec);
         return result; // 빈 결과 반환
-    }    
+    }
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
+    // 8비트 이미지로 변환
+    cv::Mat finalOutputImage;
+    outputImage.convertTo(finalOutputImage, CV_8UC3, 1.0 / 256.0);
+
     // 결과 설정
-    result = setResult(result, inputImage, outputImage, "gaussianBlur", "IPP", elapsedTimeMs);
+    result = setResult(result, inputImage, finalOutputImage, "gaussianBlur", "IPP", elapsedTimeMs);
 
     // 메모리 해제
     ippsFree(pBuffer);
@@ -998,81 +1023,62 @@ ImageProcessor::ProcessingResult ImageProcessor::gaussianBlurCUDAKernel(cv::Mat&
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "gaussianBlur", "OpenCV", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "gaussianBlur", "CUDAKernel", elapsedTimeMs);
 
     return result;
 }
 
+
+
 //Canny
-QFuture<bool> ImageProcessor::cannyEdges(cv::Mat& image)
+QFuture<bool> ImageProcessor::cannyEdges(cv::Mat& imageOpenCV
+                                        , cv::Mat& imageIPP
+                                        , cv::Mat& imageCUDA
+                                        , cv::Mat& imageCUDAKernel)
 {
     //함수 이름을 문자열로 저장
     const char* functionName = __func__;
 
-    return QtConcurrent::run([this, &image, functionName]() -> bool {
+    return QtConcurrent::run([this
+        , &imageOpenCV
+        , &imageIPP
+        , &imageCUDA
+        , &imageCUDAKernel
+        , functionName]() -> bool {
+
         QMutexLocker locker(&mutex);
 
         try {
 
-            if (image.empty()) {
+            if (imageOpenCV.empty()) {
                 qDebug() << "Input image is empty.";
                 return false;
             }
 
-            //pushToUndoStack(image);
+            pushToUndoStackOpenCV(imageOpenCV.clone());
+            pushToUndoStackIPP(imageIPP.clone());
+            pushToUndoStackCUDA(imageCUDA.clone());
+            pushToUndoStackCUDAKernel(imageCUDAKernel.clone());            
 
-            // 처리시간계산 시작
-            double startTime = getCurrentTimeMs();
+            QVector<ProcessingResult> results;
 
-            //그레이스케일이 아닌경우
-            if (image.channels() != 1)
-            {
-                //if (!grayScaleCUDA(image)) {
-                //    return false;
-                //}
+            ProcessingResult outputOpenCV = cannyEdgesOpenCV(imageOpenCV);
+            lastProcessedImageOpenCV = outputOpenCV.processedImage.clone();
+            results.append(outputOpenCV);
 
-                //CUDA Kernel
-                
-                
-                
-                
-                
-                //callGrayScaleImageCUDA(image);
-            }
+            ProcessingResult outputIPP = cannyEdgesIPP(imageIPP);
+            lastProcessedImageIPP = outputIPP.processedImage.clone();
+            results.append(outputIPP);
 
-            // GPU에서 캐니 엣지 감지기 생성
-            //cv::cuda::GpuMat d_input(image);
-            //cv::cuda::GpuMat d_cannyEdges;
-            //cv::Ptr<cv::cuda::CannyEdgeDetector> cannyDetector = cv::cuda::createCannyEdgeDetector(50, 150);
-            //cannyDetector->detect(d_input, d_cannyEdges);
+            ProcessingResult outputCUDA = cannyEdgesCUDA(imageCUDA);
+            lastProcessedImageCUDA = outputCUDA.processedImage.clone();
+            results.append(outputCUDA);
 
-            // 결과를 CPU 메모리로 복사
-            //cv::Mat edges;
-            //d_cannyEdges.download(edges);
+            ProcessingResult outputCUDAKernel = cannyEdgesCUDAKernel(imageCUDAKernel);
+            lastProcessedImageCUDAKernel = outputCUDAKernel.processedImage.clone();
+            results.append(outputCUDAKernel);            
 
-            // 출력 이미지에 초록색 엣지 표시
-            //cv::Mat outputImage = cv::Mat::zeros(image.size(), CV_8UC3); // 3-channel BGR image
-            //cv::Mat mask(edges.size(), CV_8UC1, cv::Scalar(0)); // Mask for green edges
-            //mask.setTo(cv::Scalar(255), edges); // Set pixels to 255 (white) where edges are detected
-            //cv::Mat channels[3];
-            //cv::split(outputImage, channels);
-            //channels[1] = mask; // Green channel is set by mask
-            //cv::merge(channels, 3, outputImage); // Merge channels to get green edges
-
-            //CUDA Kernel
-            callCannyEdgesCUDA(image);
-
-            // 처리시간계산 종료
-            double endTime = getCurrentTimeMs();
-            double processingTime = endTime - startTime;
-
-            //image = outputImage.clone();
-            //lastProcessedImage = image.clone();
-
-            // GPU 메모리 해제
-            //d_cannyEdges.release();
-
-            //emit imageProcessed(image, processingTime, functionName);
+            emit imageProcessed(results);
 
             return true;
         }
@@ -1081,6 +1087,166 @@ QFuture<bool> ImageProcessor::cannyEdges(cv::Mat& image)
             return false;
         }
         });
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::cannyEdgesOpenCV(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    cv::Mat grayImage;
+    if (inputImage.channels() == 3) {
+        grayImage = convertToGrayOpenCV(inputImage);
+    }
+    else {
+        grayImage = inputImage.clone();
+    }
+
+    cv::Mat outputImage;
+    cv::Canny(grayImage, outputImage, 50, 150);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "cannyEdges", "OpenCV", elapsedTimeMs);
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::cannyEdgesIPP(cv::Mat& inputImage) {
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    cv::Mat grayImage;
+    if (inputImage.channels() == 3) {
+        grayImage = convertToGrayIPP(inputImage);
+    } else {
+        grayImage = inputImage.clone();
+    }    
+
+    // IPP를 사용하여 Canny 엣지 감지 수행
+    IppiSize roiSize = { grayImage.cols, grayImage.rows };
+    int srcStep = grayImage.step;
+    int dstStep = grayImage.cols;
+    Ipp8u* srcData = grayImage.data;
+    Ipp8u* dstData = ippsMalloc_8u(roiSize.width * roiSize.height); // 출력 이미지 메모리 할당
+
+    if (!dstData) {
+        std::cerr << "Memory allocation error: Failed to allocate dstData" << std::endl;
+        return result; // 메모리 할당 오류 처리 중단
+    }
+
+    // IPP Canny 처리를 위한 임시 버퍼 크기 계산
+    int bufferSize;
+    IppStatus status = ippiCannyBorderGetSize(roiSize, ippFilterSobel, ippMskSize3x3, ipp8u, &bufferSize);
+    if (status != ippStsNoErr) {
+        std::cerr << "IPP error: Failed to calculate buffer size for Canny edge detection (" << status << ")";
+        ippsFree(dstData); // 할당된 메모리 해제
+        return result; // 오류 발생 시 처리 중단
+    }
+
+    // 임시 버퍼 할당
+    Ipp8u* pBuffer = ippsMalloc_8u(bufferSize);
+    if (!pBuffer) {
+        std::cerr << "Memory allocation error: Failed to allocate dstData" << std::endl;
+        ippsFree(dstData); // 이미 할당된 dstData 메모리도 해제
+        return result; // 메모리 할당 오류 처리 중단
+    }
+
+    // IPP Canny 엣지 감지 수행
+    status = ippiCannyBorder_8u_C1R(srcData, srcStep, dstData, dstStep, roiSize, ippFilterSobel, ippMskSize3x3, ippBorderRepl, 0, 50.0f, 150.0f, ippNormL2, pBuffer);
+    if (status != ippStsNoErr) {
+        std::cerr << "IPP error: Failed to perform Canny edge detection (" << status << ")";
+        ippsFree(pBuffer); // 할당된 메모리 해제
+        ippsFree(dstData); // 할당된 메모리 해제
+        return result; // 오류 발생 시 처리 중단
+    }
+
+
+    // 결과를 OpenCV Mat 형식으로 변환
+    cv::Mat outputImage(grayImage.rows, grayImage.cols, CV_8UC1, dstData);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 경과 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "cannyEdges", "IPP", elapsedTimeMs);
+
+    // 할당된 메모리 해제
+    ippsFree(pBuffer);
+    ippsFree(dstData);
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::cannyEdgesCUDA(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    cv::Mat grayImage;
+    if (inputImage.channels() == 3) {
+        grayImage = convertToGrayCUDA(inputImage);
+    }
+    else {
+        grayImage = inputImage.clone();
+    }
+
+    // GPU에서 캐니 엣지 감지기 생성
+    cv::cuda::GpuMat d_gray;
+    d_gray.upload(grayImage);
+
+    cv::cuda::GpuMat d_cannyEdges;
+    cv::Ptr<cv::cuda::CannyEdgeDetector> cannyDetector = cv::cuda::createCannyEdgeDetector(50, 150);
+    cannyDetector->detect(d_gray, d_cannyEdges);
+
+    // 결과를 CPU 메모리로 복사
+    cv::Mat edges;
+    d_cannyEdges.download(edges);
+
+    // 출력 이미지에 초록색 엣지 표시
+    cv::Mat outputImage = cv::Mat::zeros(inputImage.size(), CV_8UC3); // 3-channel BGR image
+    cv::Mat mask(edges.size(), CV_8UC1, cv::Scalar(0)); // Mask for green edges
+    mask.setTo(cv::Scalar(255), edges); // Set pixels to 255 (white) where edges are detected
+    cv::Mat channels[3];
+    cv::split(outputImage, channels);
+    //channels[1] = mask; // Green channel is set by mask
+    channels[0] = mask; // Blue channel is set by mask
+    channels[1] = mask; // Green channel is set by mask
+    channels[2] = mask; // Red channel is set by mask
+    cv::merge(channels, 3, outputImage); // Merge channels to get green edges
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "cannyEdges", "CUDA", elapsedTimeMs);
+
+    // GPU 메모리 해제는 GpuMat 객체가 스코프를 벗어날 때 자동으로 처리됩니다.
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::cannyEdgesCUDAKernel(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    cv::Mat grayImage;
+    if (inputImage.channels() == 3) {
+        grayImage = convertToGrayCUDAKernel(inputImage);
+    }
+    else {
+        grayImage = inputImage.clone();
+    }
+
+    cv::Mat outputImage;
+    callCannyEdgesCUDA(grayImage, outputImage);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, grayImage, outputImage, "cannyEdges", "CUDAKernel", elapsedTimeMs);
+
+    return result;
 }
 
 QFuture<bool> ImageProcessor::medianFilter(cv::Mat& image)
@@ -1553,13 +1719,15 @@ ImageProcessor::ProcessingResult ImageProcessor::setResult(ProcessingResult& res
 {
     result.functionName = functionName;
     result.processName = processName;
-    result.inputInfo = "(Input) Channels: " + QString::number(inputImage.channels())
+    result.inputInfo = "\n(Input) Channels: " + QString::number(inputImage.channels())
         + ", type: " + QString::number(inputImage.type())
+        + "(" + ImageTypeConverter::getImageTypeString(inputImage.type()) + ")"
         + ", depth: " + QString::number(inputImage.depth());
     result.processedImage = outputImage.clone();
     result.processingTime = processingTime;
-    result.outputInfo = "(Output) Channels: " + QString::number(outputImage.channels())
+    result.outputInfo = "\n(Output) Channels: " + QString::number(outputImage.channels())
         + ", type: " + QString::number(outputImage.type())
+        + "(" + ImageTypeConverter::getImageTypeString(outputImage.type()) + ")"
         + ", depth: " + QString::number(outputImage.depth());
 
     return result;

@@ -12,7 +12,7 @@
 void callRotateImageCUDA(cv::Mat& inputImage, cv::Mat& outputImage);
 void callZoomImageCUDA(cv::Mat& inputImage, cv::Mat& outputImage, int newWidth, int newHeight);
 void callGrayScaleImageCUDA(cv::Mat& inputImage, cv::Mat& outputImage);
-void callCannyEdgesCUDA(cv::Mat& inputImage);
+void callCannyEdgesCUDA(cv::Mat& inputImage, cv::Mat& outputImage);
 void callGaussianBlurCUDA(cv::Mat& inputImage, cv::Mat& outputImage, int kernelSize);
 void callMedianFilterCUDA(cv::Mat& inputImage);
 void callLaplacianFilterCUDA(cv::Mat& inputImage);

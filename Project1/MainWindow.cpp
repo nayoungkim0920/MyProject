@@ -134,29 +134,40 @@ void MainWindow::grayScale()
 void MainWindow::gaussianBlur()
 {
     bool ok;
-    int kernelSize = QInputDialog::getInt(this,
-        tr("Gaussian Blur"),
-        tr("Enter kernel size (odd nubmber):"),
-        5, 1, 101, 2, &ok);
 
-    if (ok) {
+    QInputDialog inputDialog(this);
+    inputDialog.setWindowTitle(tr("Gaussian Blur"));
+    inputDialog.setLabelText(tr("Enter kernel size (odd number):"));
+    inputDialog.setIntRange(1, 101);
+    inputDialog.setIntStep(2);
+    inputDialog.setIntValue(5);
+
+    // 최소 크기 설정
+    inputDialog.setMinimumSize(200, 100);
+    inputDialog.resize(200, 100);
+
+    // 현재 윈도우의 위치와 크기를 얻어옴
+    QRect windowGeometry = geometry();
+    int x = windowGeometry.x() + (windowGeometry.width() - inputDialog.width()) / 2;
+    int y = windowGeometry.y() + (windowGeometry.height() - inputDialog.height()) / 2;
+
+    // 위치 설정
+    inputDialog.move(x, y);
+
+    if (inputDialog.exec() == QDialog::Accepted) {
+        int kernelSize = inputDialog.intValue();
         QtConcurrent::run([this, kernelSize]() {
-                imageProcessor->gaussianBlur(currentImageOpenCV
-                    , currentImageIPP
-                    , currentImageCUDA
-                    , currentImageCUDAKernel
-                    , kernelSize);
+            imageProcessor->gaussianBlur(currentImageOpenCV, currentImageIPP, currentImageCUDA, currentImageCUDAKernel, kernelSize);
             });
-        //applyImageProcessing(&ImageProcessor::gaussianBlur, currentImage, kernelSize);
     }
 }
+
+
 
 void MainWindow::cannyEdges()
 {
     QtConcurrent::run([this]() {
-        if (!currentImage.empty()) {
-            imageProcessor->cannyEdges(currentImage);
-        }
+            imageProcessor->cannyEdges(currentImageOpenCV, currentImageIPP, currentImageCUDA, currentImageCUDAKernel);
         });
     //applyImageProcessing(&ImageProcessor::cannyEdges, currentImage);
 }

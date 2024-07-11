@@ -16,12 +16,18 @@
     <ClCompile Include="C:\myLab\Project1\Project1\build\moc_ImageProcessor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\ImageTypeConverter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="C:\myLab\Project1\Project1\MainWindow.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="C:\myLab\Project1\Project1\ImageProcessor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ImageTypeConverter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
