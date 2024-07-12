@@ -570,6 +570,14 @@ ImageProcessor::ProcessingResult ImageProcessor::zoomIPP(cv::Mat& inputImage, do
         std::cerr << "ippiResizeNearest_32f_C1R" << std::endl;
         status = ippiResizeNearest_32f_C1R(reinterpret_cast<Ipp32f*>(pSrcData), inputImage.step[0], reinterpret_cast<Ipp32f*>(pDstData), outputImage.step[0], dstOffset, dstSize, pSpec, pBuffer.data());
     }
+    else if (inputImage.type() == CV_16SC1) {
+        std::cerr << "ippiResizeNearest_16s_C1R" << std::endl;
+        status = ippiResizeNearest_16s_C1R(reinterpret_cast<Ipp16s*>(pSrcData), inputImage.step[0], reinterpret_cast<Ipp16s*>(pDstData), outputImage.step[0], dstOffset, dstSize, pSpec, pBuffer.data());
+    }
+    else if (inputImage.type() == CV_16SC3) {
+        std::cerr << "ippiResizeNearest_16s_C3R" << std::endl;
+        status = ippiResizeNearest_16s_C3R(reinterpret_cast<Ipp16s*>(pSrcData), inputImage.step[0], reinterpret_cast<Ipp16s*>(pDstData), outputImage.step[0], dstOffset, dstSize, pSpec, pBuffer.data());
+    }
     else {
         std::cerr << "Error: Unsupported image type" << std::endl;
         ippFree(pSpec);
@@ -1419,41 +1427,54 @@ ImageProcessor::ProcessingResult ImageProcessor::medianFilterCUDAKernel(cv::Mat&
     return result;
 }
 
-QFuture<bool> ImageProcessor::laplacianFilter(cv::Mat& image)
+QFuture<bool> ImageProcessor::laplacianFilter(cv::Mat& imageOpenCV
+    , cv::Mat& imageIPP
+    , cv::Mat& imageCUDA
+    , cv::Mat& imageCUDAKernel)
 {
     //함수 이름을 문자열로 저장
     const char* functionName = __func__;
 
-    return QtConcurrent::run([this, &image, functionName]()->bool {
+    return QtConcurrent::run([this
+        , &imageOpenCV
+        , &imageIPP
+        , &imageCUDA
+        , &imageCUDAKernel
+        , functionName]() -> bool {
 
         QMutexLocker locker(&mutex);
 
         try {
 
-            if (image.empty()) {
-                qDebug() << "laplacian 필터를 적용할 이미지가 없습니다.";
+            if (imageOpenCV.empty()) {
+                qDebug() << "Input image is empty.";
                 return false;
             }
 
-            //pushToUndoStack(image);
+            pushToUndoStackOpenCV(imageOpenCV.clone());
+            pushToUndoStackIPP(imageIPP.clone());
+            pushToUndoStackCUDA(imageCUDA.clone());
+            pushToUndoStackCUDAKernel(imageCUDAKernel.clone());
 
-            // 처리시간계산 시작
-            double startTime = getCurrentTimeMs();
+            QVector<ProcessingResult> results;
 
-            //cv::Mat filteredImage;
-            //cv::Laplacian(image, filteredImage, CV_8U, 3);
+            ProcessingResult outputOpenCV = laplacianFilterOpenCV(imageOpenCV);
+            lastProcessedImageOpenCV = outputOpenCV.processedImage.clone();
+            results.append(outputOpenCV);
 
-            //CUDA Kernel
-            callLaplacianFilterCUDA(image);
+            ProcessingResult outputIPP = laplacianFilterIPP(imageOpenCV);
+            lastProcessedImageIPP = outputIPP.processedImage.clone();
+            results.append(outputIPP);
 
-            // 처리시간계산 종료
-            double endTime = getCurrentTimeMs();
-            double processingTime = endTime - startTime;
+            ProcessingResult outputCUDA = laplacianFilterCUDA(imageCUDA);
+            lastProcessedImageCUDA = outputCUDA.processedImage.clone();
+            results.append(outputCUDA);
 
-            //image = filteredImage.clone();
-            //lastProcessedImage = image.clone();
+            ProcessingResult outputCUDAKernel = laplacianFilterCUDAKernel(imageCUDAKernel);
+            lastProcessedImageCUDAKernel = outputCUDAKernel.processedImage.clone();
+            results.append(outputCUDAKernel);                  
 
-            //emit imageProcessed(image, processingTime, functionName);
+            emit imageProcessed(results);
 
             return true;
         }
@@ -1464,6 +1485,129 @@ QFuture<bool> ImageProcessor::laplacianFilter(cv::Mat& image)
         }
         });
 }
+
+ImageProcessor::ProcessingResult ImageProcessor::laplacianFilterOpenCV(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    cv::Mat outputImage;
+    cv::Laplacian(inputImage, outputImage, CV_8U, 3);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "laplacianFilter", "OpenCV", elapsedTimeMs);
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::laplacianFilterIPP(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    // 입력 이미지를 IPP 형식으로 변환
+    IppiSize roiSize = { inputImage.cols, inputImage.rows };
+    int step = inputImage.step;
+    Ipp8u* pSrc = inputImage.data;
+
+    // 출력 이미지 준비
+    cv::Mat outputImage(inputImage.size(), CV_16S); // 16비트 정수형으로 변경
+    Ipp16s* pDst = reinterpret_cast<Ipp16s*>(outputImage.data); // 포인터 형변환
+    int dstStep = outputImage.step;
+
+    // 필요한 버퍼 크기 계산
+    int bufferSize = 0;
+    IppStatus status = ippiFilterLaplacianGetBufferSize_8u16s_C1R(roiSize, ippMskSize3x3, &bufferSize);
+    if (status != ippStsNoErr) {
+        std::cerr << "Failed to get buffer size with status: " << status << std::endl;
+        return result;
+    }
+
+    Ipp8u* pBuffer = ippsMalloc_8u(bufferSize);
+
+    // 필터 적용
+    status = ippiFilterLaplacianBorder_8u16s_C1R(
+        pSrc, step, pDst, dstStep, roiSize, ippMskSize3x3, ippBorderRepl, 0, pBuffer);
+
+    ippsFree(pBuffer);
+
+    if (status != ippStsNoErr) {
+        std::cerr << "IPP Laplacian filter failed with status: " << status << std::endl;
+        return result; // 에러 처리
+    }
+
+    // 결과를 8비트 이미지로 변환
+    cv::Mat finalOutputImage;
+    outputImage.convertTo(finalOutputImage, CV_8U);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "laplacianFilter", "IPP", elapsedTimeMs);
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::laplacianFilterCUDA(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    // 입력 이미지를 GPU 메모리로 업로드
+    cv::cuda::GpuMat d_inputImage;
+    d_inputImage.upload(inputImage);
+
+    // 입력 이미지 타입 확인 및 채널 수 변환
+    int inputType = d_inputImage.type();
+    int scn = d_inputImage.channels();
+    if (scn != 1 && scn != 4) {
+        cv::cuda::GpuMat d_convertedImage;
+        cv::cuda::cvtColor(d_inputImage, d_convertedImage, cv::COLOR_BGR2GRAY); // 컬러를 그레이스케일로 변환
+        d_inputImage = d_convertedImage;
+    }
+
+    // 출력 이미지 메모리 할당
+    cv::cuda::GpuMat d_outputImage(d_inputImage.size(), CV_8U);
+
+    // CUDA Laplacian 필터 생성 (입력과 출력 모두 동일한 타입 설정)
+    cv::Ptr<cv::cuda::Filter> laplacianFilter = cv::cuda::createLaplacianFilter(d_inputImage.type(), d_outputImage.type(), 3);
+
+    // Laplacian 필터 적용
+    laplacianFilter->apply(d_inputImage, d_outputImage);
+
+    // GPU에서 CPU로 결과 이미지 다운로드
+    cv::Mat outputImage;
+    d_outputImage.download(outputImage);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "laplacianFilter", "CUDA", elapsedTimeMs);
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::laplacianFilterCUDAKernel(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    cv::Mat outputImage;
+    callLaplacianFilterCUDA(inputImage, outputImage);     
+    // outputImage를 출력하여 내용 확인
+    //std::cout << "Output Image:" << std::endl;
+    //std::cout << outputImage << std::endl;
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "laplacianFilter", "CUDAKernel", elapsedTimeMs);
+
+    return result;
+}
+
 
 QFuture<bool> ImageProcessor::bilateralFilter(cv::Mat& image)
 {

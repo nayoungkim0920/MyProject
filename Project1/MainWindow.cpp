@@ -183,9 +183,7 @@ void MainWindow::medianFilter()
 void MainWindow::laplacianFilter()
 {
     QtConcurrent::run([this]() {
-        if (!currentImage.empty()) {
-            imageProcessor->laplacianFilter(currentImage);
-        }
+        imageProcessor->laplacianFilter(currentImageOpenCV, currentImageIPP, currentImageCUDA, currentImageCUDAKernel);
         });
     //applyImageProcessing(&ImageProcessor::laplacianFilter, currentImage);
 }
@@ -293,8 +291,24 @@ void MainWindow::displayImage(cv::Mat image, QLabel* label)
             static_cast<int>(temp.step),
             QImage::Format_RGB888).rgbSwapped(); // BGR -> RGB 순서로 변환
     }
+    else if (image.type() == CV_16SC1) {
+        qDebug() << "displayImage() type: 16-bit signed integer CV_16SC1 Format_Grayscale16";
+        qImage = QImage(reinterpret_cast<const uchar*>(image.data),
+            image.cols,
+            image.rows,
+            static_cast<int>(image.step),
+            QImage::Format_Grayscale16);
+    }
+    else if (image.type() == CV_16SC3) {
+        qDebug() << "displayImage() type: 16-bit signed integer CV_16SC3 Format_RGB16";
+        qImage = QImage(reinterpret_cast<const uchar*>(image.data),
+            image.cols,
+            image.rows,
+            static_cast<int>(image.step),
+            QImage::Format_RGB16);
+    }
     else {
-        qDebug() << "displayImage() type: not supported";
+        qDebug() << "displayImage() type: " << image.type() << " not supported";
         return; // 지원하지 않는 이미지 타입은 처리하지 않음
     }
 

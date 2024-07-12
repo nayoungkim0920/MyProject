@@ -72,7 +72,7 @@ public:
     QFuture<bool> gaussianBlur(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, int kernelSize);
     QFuture<bool> cannyEdges(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
     QFuture<bool> medianFilter(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
-    QFuture<bool> laplacianFilter(cv::Mat& image);
+    QFuture<bool> laplacianFilter(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
     QFuture<bool> bilateralFilter(cv::Mat& image);
     QFuture<bool> sobelFilter(cv::Mat& image);
 
@@ -164,6 +164,11 @@ private:
     ProcessingResult medianFilterIPP(cv::Mat& inputImage);
     ProcessingResult medianFilterCUDA(cv::Mat& inputImage);
     ProcessingResult medianFilterCUDAKernel(cv::Mat& inputImage);
+
+    ProcessingResult laplacianFilterOpenCV(cv::Mat& inputImage);
+    ProcessingResult laplacianFilterIPP(cv::Mat& inputImage);
+    ProcessingResult laplacianFilterCUDA(cv::Mat& inputImage);
+    ProcessingResult laplacianFilterCUDAKernel(cv::Mat& inputImage);
 
     double getCurrentTimeMs();
     // 유틸리티 함수 선언

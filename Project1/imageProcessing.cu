@@ -168,22 +168,38 @@ __global__ void laplacianFilterKernel(const unsigned char* input, unsigned char*
 
     if (x < cols && y < rows) {
         // Laplacian 필터 계산
-        int sum = 0;
-        sum += input[y * pitch + x * channels]; // 현재 픽셀
+        float sum = 0.0f;
 
-        if (x > 0)
-            sum += input[y * pitch + (x - 1) * channels]; // 왼쪽 픽셀
+        // 현재 픽셀
+        for (int c = 0; c < channels; ++c) {
+            sum += input[y * pitch + x * channels + c];
+        }
 
-        if (x < cols - 1)
-            sum += input[y * pitch + (x + 1) * channels]; // 오른쪽 픽셀
+        // 주변 픽셀
+        if (x > 0) {
+            for (int c = 0; c < channels; ++c) {
+                sum += input[y * pitch + (x - 1) * channels + c];
+            }
+        }
+        if (x < cols - 1) {
+            for (int c = 0; c < channels; ++c) {
+                sum += input[y * pitch + (x + 1) * channels + c];
+            }
+        }
+        if (y > 0) {
+            for (int c = 0; c < channels; ++c) {
+                sum += input[(y - 1) * pitch + x * channels + c];
+            }
+        }
+        if (y < rows - 1) {
+            for (int c = 0; c < channels; ++c) {
+                sum += input[(y + 1) * pitch + x * channels + c];
+            }
+        }
 
-        if (y > 0)
-            sum += input[(y - 1) * pitch + x * channels]; // 위쪽 픽셀
-
-        if (y < rows - 1)
-            sum += input[(y + 1) * pitch + x * channels]; // 아래쪽 픽셀
-
-        output[y * pitch + x * channels] = static_cast<unsigned char>(sum / 5); // Laplacian 필터 결과
+        for (int c = 0; c < channels; ++c) {
+            output[y * pitch + x * channels + c] = static_cast<unsigned char>(sum / 5.0f);
+        }
     }
 }
 
@@ -643,7 +659,7 @@ void callMedianFilterCUDA(cv::Mat & inputImage, cv::Mat& outputImage)
     cudaFree(d_outputImage);
 }
 
-void callLaplacianFilterCUDA(cv::Mat& inputImage) {
+void callLaplacianFilterCUDA(cv::Mat& inputImage, cv::Mat& outputImage) {
     int width = inputImage.cols;
     int height = inputImage.rows;
     int channels = inputImage.channels();
@@ -652,18 +668,28 @@ void callLaplacianFilterCUDA(cv::Mat& inputImage) {
     unsigned char* d_output;
     size_t pitch;
 
+    // CUDA 메모리 할당
     cudaMallocPitch(&d_input, &pitch, width * channels * sizeof(unsigned char), height);
     cudaMallocPitch(&d_output, &pitch, width * channels * sizeof(unsigned char), height);
 
+    // 입력 이미지 복사
     cudaMemcpy2D(d_input, pitch, inputImage.ptr(), width * channels * sizeof(unsigned char), width * channels * sizeof(unsigned char), height, cudaMemcpyHostToDevice);
 
+    // CUDA 커널 실행 구성
     dim3 blockSize(16, 16);
     dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
 
+    // CUDA 커널 호출
     laplacianFilterKernel << <gridSize, blockSize >> > (d_input, d_output, width, height, pitch, channels);
 
-    cudaMemcpy2D(inputImage.ptr(), width * channels * sizeof(unsigned char), d_output, pitch, width * channels * sizeof(unsigned char), height, cudaMemcpyDeviceToHost);
-
+    // 결과 이미지 복사
+    outputImage.create(width, height, inputImage.type());
+    cudaMemcpy2D(outputImage.ptr(), width * channels * sizeof(unsigned char), d_output, pitch, width * channels * sizeof(unsigned char), height, cudaMemcpyDeviceToHost);
+    //std::cout << "Input Image:" << std::endl;
+    //std::cout << inputImage.empty() << std::endl;
+    //std::cout << "Output Image:" << std::endl;
+    //std::cout << outputImage.empty() << std::endl;
+    // 메모리 해제
     cudaFree(d_input);
     cudaFree(d_output);
 }
