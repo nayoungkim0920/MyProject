@@ -1249,68 +1249,57 @@ ImageProcessor::ProcessingResult ImageProcessor::cannyEdgesCUDAKernel(cv::Mat& i
     return result;
 }
 
-QFuture<bool> ImageProcessor::medianFilter(cv::Mat& image)
+QFuture<bool> ImageProcessor::medianFilter(cv::Mat& imageOpenCV
+    , cv::Mat& imageIPP
+    , cv::Mat& imageCUDA
+    , cv::Mat& imageCUDAKernel)
 {
 
     //함수 이름을 문자열로 저장
     const char* functionName = __func__;
 
-    return QtConcurrent::run([this, &image, functionName]()->bool {
+    return QtConcurrent::run([this
+        , &imageOpenCV
+        , &imageIPP
+        , &imageCUDA
+        , &imageCUDAKernel
+        , functionName]() -> bool {
 
         QMutexLocker locker(&mutex);
 
         try {
 
-            if (image.empty()) {
-                qDebug() << "median 필터를 적용할 이미지가 없습니다.";
+            if (imageOpenCV.empty()) {
+                qDebug() << "Input image is empty.";
                 return false;
             }
 
-            //pushToUndoStack(image);
+            pushToUndoStackOpenCV(imageOpenCV.clone());
+            pushToUndoStackIPP(imageIPP.clone());
+            pushToUndoStackCUDA(imageCUDA.clone());
+            pushToUndoStackCUDAKernel(imageCUDAKernel.clone());
 
-            // 처리시간계산 시작
-            double startTime = getCurrentTimeMs();
+            QVector<ProcessingResult> results;
 
-            // Upload image to GPU
-            //cv::cuda::GpuMat gpuImage;
-            //gpuImage.upload(image);
+            ProcessingResult outputOpenCV = medianFilterOpenCV(imageOpenCV);
+            lastProcessedImageOpenCV = outputOpenCV.processedImage.clone();
+            results.append(outputOpenCV);
 
-            // Create median filter
-            //cv::Ptr<cv::cuda::Filter> medianFilter =
-            //    cv::cuda::createMedianFilter(gpuImage.type(), 5);
+            ProcessingResult outputIPP = medianFilterIPP(imageIPP);
+            lastProcessedImageIPP = outputIPP.processedImage.clone();
+            results.append(outputIPP);
 
-            // Apply median filter on GPU
-            //cv::cuda::GpuMat medianedGpuImage;
-            //medianFilter->apply(gpuImage, medianedGpuImage);
+            ProcessingResult outputCUDA = medianFilterCUDA(imageCUDA);
+            lastProcessedImageCUDA = outputCUDA.processedImage.clone();
+            results.append(outputCUDA);
 
-            // Download the result back to CPU
-            //cv::Mat medianedImage;
-            //medianedGpuImage.download(medianedImage);
+            ProcessingResult outputCUDAKernel = medianFilterCUDAKernel(imageCUDAKernel);
+            lastProcessedImageCUDAKernel = outputCUDAKernel.processedImage.clone();
+            results.append(outputCUDAKernel);
 
-            //CUDA Kernel
-            callMedianFilterCUDA(image);
-
-            // 처리시간계산 종료
-            double endTime = getCurrentTimeMs();
-            double processingTime = endTime - startTime;
-
-            //image = medianedImage.clone();
-            //lastProcessedImage = image.clone();
-
-            //emit imageProcessed(image, processingTime, functionName);
+            emit imageProcessed(results);
 
             return true;
-
-            /*
-            cv::Mat medianedImage;
-            cv::medianBlur(image, medianedImage, 5);
-            image = medianedImage.clone();
-            lastProcessedImage = image.clone();
-
-            emit imageProcessed(image);
-
-            return true;
-            */
         }
         catch (const cv::Exception& e) {
             qDebug() << "median 필터 적용 중 오류 발생: "
@@ -1318,6 +1307,116 @@ QFuture<bool> ImageProcessor::medianFilter(cv::Mat& image)
             return false;
         }
         });
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::medianFilterOpenCV(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    cv::Mat outputImage;
+    cv::medianBlur(inputImage, outputImage, 5);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "medianFilter", "OpenCV", elapsedTimeMs);
+
+    return result;
+}
+
+Ipp8u* ImageProcessor::matToIpp8u(cv::Mat& mat)
+{
+    return mat.ptr<Ipp8u>();
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::medianFilterIPP(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    // IPP 미디언 필터 적용
+    IppiSize roiSize = { inputImage.cols, inputImage.rows };
+    IppiSize kernelSize = { 5, 5 }; // 5x5 커널 크기
+    int bufferSize = 0;
+
+    // IPP 초기화
+    ippInit();
+
+    // 버퍼 크기 계산
+    IppStatus status = ippiFilterMedianBorderGetBufferSize(roiSize, kernelSize, ipp8u, 1, &bufferSize);
+    if (status != ippStsNoErr) {
+        // 오류 처리
+        return result;
+    }
+
+    Ipp8u* pBuffer = ippsMalloc_8u(bufferSize);
+
+    // 출력 이미지 초기화
+    cv::Mat outputImage = cv::Mat::zeros(inputImage.size(), inputImage.type());
+
+    // 미디언 필터 적용
+    status = ippiFilterMedianBorder_8u_C1R(matToIpp8u(inputImage), inputImage.step[0], matToIpp8u(outputImage), outputImage.step[0], roiSize, kernelSize, ippBorderRepl, 0, pBuffer);
+    if (status != ippStsNoErr) {
+        // 오류 처리
+        ippsFree(pBuffer);
+        return result;
+    }
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "medianFilter", "IPP", elapsedTimeMs);
+
+    // 메모리 해제
+    ippsFree(pBuffer);
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::medianFilterCUDA(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    // Upload image to GPU
+    cv::cuda::GpuMat gpuImage;
+    gpuImage.upload(inputImage);
+
+    // Create median filter
+    cv::Ptr<cv::cuda::Filter> medianFilter =
+        cv::cuda::createMedianFilter(gpuImage.type(), 5);
+
+    // Apply median filter on GPU
+    cv::cuda::GpuMat medianedGpuImage;
+    medianFilter->apply(gpuImage, medianedGpuImage);
+
+    // Download the result back to CPU
+    cv::Mat outputImage;
+    medianedGpuImage.download(outputImage);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "medianFilter", "CUDA", elapsedTimeMs);
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::medianFilterCUDAKernel(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    cv::Mat outputImage;
+    callMedianFilterCUDA(inputImage, outputImage);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "medianFilter", "OpenCV", elapsedTimeMs);
+
+    return result;
 }
 
 QFuture<bool> ImageProcessor::laplacianFilter(cv::Mat& image)

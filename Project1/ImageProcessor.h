@@ -71,7 +71,7 @@ public:
     QFuture<bool> grayScale(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
     QFuture<bool> gaussianBlur(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, int kernelSize);
     QFuture<bool> cannyEdges(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
-    QFuture<bool> medianFilter(cv::Mat& image);
+    QFuture<bool> medianFilter(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
     QFuture<bool> laplacianFilter(cv::Mat& image);
     QFuture<bool> bilateralFilter(cv::Mat& image);
     QFuture<bool> sobelFilter(cv::Mat& image);
@@ -125,7 +125,8 @@ private:
     void pushToRedoStackCUDA(const cv::Mat& image);
     void pushToRedoStackCUDAKernel(const cv::Mat& image);
 
-    ProcessingResult setResult(ProcessingResult& result, cv::Mat& inputImage, cv::Mat& outputImage, QString functionName, QString processName, double processingTime);
+    ProcessingResult setResult(ProcessingResult& result, cv::Mat& inputImage
+        , cv::Mat& outputImage, QString functionName, QString processName, double processingTime);
 
     //bool grayScaleCUDA(cv::Mat& image);
 
@@ -159,7 +160,14 @@ private:
     cv::Mat convertToGrayCUDA(const cv::Mat& inputImage);
     cv::Mat convertToGrayCUDAKernel(cv::Mat& inputImage);
 
+    ProcessingResult medianFilterOpenCV(cv::Mat& inputImage);
+    ProcessingResult medianFilterIPP(cv::Mat& inputImage);
+    ProcessingResult medianFilterCUDA(cv::Mat& inputImage);
+    ProcessingResult medianFilterCUDAKernel(cv::Mat& inputImage);
+
     double getCurrentTimeMs();
+    // 유틸리티 함수 선언
+    Ipp8u* matToIpp8u(cv::Mat& mat);
 };
 
 #endif // IMAGEPROCESSOR_H

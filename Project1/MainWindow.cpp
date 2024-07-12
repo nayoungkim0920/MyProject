@@ -175,9 +175,7 @@ void MainWindow::cannyEdges()
 void MainWindow::medianFilter()
 {
     QtConcurrent::run([this]() {
-        if (!currentImage.empty()) {
-            imageProcessor->medianFilter(currentImage);
-        }
+            imageProcessor->medianFilter(currentImageOpenCV, currentImageIPP, currentImageCUDA, currentImageCUDAKernel);
         });
     //applyImageProcessing(&ImageProcessor::medianFilter, currentImage);
 }

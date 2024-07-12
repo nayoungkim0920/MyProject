@@ -505,6 +505,7 @@ void callCannyEdgesCUDA(cv::Mat& inputImage, cv::Mat& outputImage) {
     cudaFree(d_inputImage);
     cudaFree(d_outputImage);
 }
+
 void callGaussianBlurCUDA(cv::Mat& inputImage, cv::Mat& outputImage, int kernelSize) {
     int cols = inputImage.cols;
     int rows = inputImage.rows;
@@ -562,7 +563,7 @@ void callGaussianBlurCUDA(cv::Mat& inputImage, cv::Mat& outputImage, int kernelS
     cudaFree(d_outputImage);
 }
 
-void callMedianFilterCUDA(cv::Mat & inputImage)
+void callMedianFilterCUDA(cv::Mat & inputImage, cv::Mat& outputImage)
 {
     // 이미지의 너비, 높이, 채널 수 확인
     int cols = inputImage.cols;
@@ -627,14 +628,15 @@ void callMedianFilterCUDA(cv::Mat & inputImage)
     cudaDeviceSynchronize();
 
     // GPU에서 CPU로 결과 이미지 복사
-    cv::Mat outputImage(rows, cols, inputImage.type());
-    err = cudaMemcpy(outputImage.data, d_outputImage, outputSize, cudaMemcpyDeviceToHost);
+    cv::Mat gpuOutputImage(rows, cols, inputImage.type());
+    err = cudaMemcpy(gpuOutputImage.data, d_outputImage, outputSize, cudaMemcpyDeviceToHost);
     if (err != cudaSuccess) {
         std::cerr << "CUDA memcpy D2H error: " << cudaGetErrorString(err) << std::endl;
     }
-    else {
-        inputImage = outputImage.clone();
-    }
+    //else {
+    //    inputImage = outputImage.clone();
+    //}
+    outputImage = gpuOutputImage.clone();
 
     // 메모리 해제
     cudaFree(d_inputImage);
