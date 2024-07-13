@@ -17,6 +17,6 @@ void callGaussianBlurCUDA(cv::Mat& inputImage, cv::Mat& outputImage, int kernelS
 void callMedianFilterCUDA(cv::Mat& inputImage, cv::Mat& outputImage);
 void callLaplacianFilterCUDA(cv::Mat& inputImage, cv::Mat& outputImage);
 void callBilateralFilterCUDA(cv::Mat& inputImage, cv::Mat& outputImage, int kernelSize, float sigmaColor, float sigmaSpace);
-void callSobelFilterCUDA(cv::Mat& inputImage);
+void callSobelFilterCUDA(cv::Mat& inputImage, cv::Mat& outputImage);
 
 #endif // IMAGE_PROCESSING_CUH_

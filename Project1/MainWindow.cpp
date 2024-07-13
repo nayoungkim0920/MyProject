@@ -199,9 +199,7 @@ void MainWindow::bilateralFilter()
 void MainWindow::sobelFilter()
 {
     QtConcurrent::run([this]() {
-        if (!currentImage.empty()) {
-            imageProcessor->sobelFilter(currentImage);
-        }
+            imageProcessor->sobelFilter(currentImageOpenCV, currentImageIPP, currentImageCUDA, currentImageCUDAKernel);
         });
     //applyImageProcessing(&ImageProcessor::)
 }
@@ -316,6 +314,7 @@ void MainWindow::displayImage(cv::Mat image, QLabel* label)
     label->setScaledContents(false); // 이미지를 Label 크기에 맞게 조정
     label->adjustSize(); // Label 크기 조정
 }
+
 
 void MainWindow::handleImageProcessed(QVector<ImageProcessor::ProcessingResult> results)
 {

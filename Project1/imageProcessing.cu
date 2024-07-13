@@ -720,7 +720,7 @@ void callBilateralFilterCUDA(cv::Mat& inputImage, cv::Mat& outputImage, int kern
     cudaFree(d_output);
 }
 
-void callSobelFilterCUDA(cv::Mat& inputImage) {
+void callSobelFilterCUDA(cv::Mat& inputImage, cv::Mat& outputImage) {
     // 입력 이미지의 너비, 높이, 채널 수
     int width = inputImage.cols;
     int height = inputImage.rows;
@@ -742,7 +742,8 @@ void callSobelFilterCUDA(cv::Mat& inputImage) {
     sobelFilterKernel << <gridSize, blockSize >> > (d_input, d_output, width, height, channels);
 
     // CUDA에서 처리된 결과를 호스트로 복사
-    cudaMemcpy2D(inputImage.ptr(), width * channels * sizeof(unsigned char), d_output, pitch, width * channels * sizeof(unsigned char), height, cudaMemcpyDeviceToHost);
+    outputImage.create(width, height, inputImage.type());
+    cudaMemcpy2D(outputImage.ptr(), width * channels * sizeof(unsigned char), d_output, pitch, width * channels * sizeof(unsigned char), height, cudaMemcpyDeviceToHost);
 
     // 메모리 해제
     cudaFree(d_input);

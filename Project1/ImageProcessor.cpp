@@ -412,19 +412,10 @@ cv::Mat ImageProcessor::convertToGrayIPP(const cv::Mat& inputImage)
     return grayImage;
 }
 
-cv::Mat ImageProcessor::convertToGrayCUDA(const cv::Mat& inputImage)
+cv::cuda::GpuMat ImageProcessor::convertToGrayCUDA(const cv::cuda::GpuMat& inputImage)
 {
-    // 입력 이미지를 CUDA GpuMat으로 업로드
-    cv::cuda::GpuMat d_input;
-    d_input.upload(inputImage);
-
-    // CUDA를 사용하여 그레이스케일로 변환
-    cv::cuda::GpuMat d_output;
-    cv::cuda::cvtColor(d_input, d_output, cv::COLOR_BGR2GRAY);
-
-    // CUDA에서 호스트로 이미지 다운로드
-    cv::Mat grayImage;
-    d_output.download(grayImage);
+    cv::cuda::GpuMat grayImage;
+    cv::cuda::cvtColor(inputImage, grayImage, cv::COLOR_BGR2GRAY);
 
     return grayImage;
 }
@@ -442,7 +433,12 @@ ImageProcessor::ProcessingResult ImageProcessor::grayScaleCUDA(cv::Mat& inputIma
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::Mat outputImage = convertToGrayCUDA(inputImage);
+    cv::cuda::GpuMat d_inputImage;
+    d_inputImage.upload(inputImage);
+
+    cv::Mat outputImage;
+    cv::cuda::GpuMat d_outputImage = convertToGrayCUDA(d_inputImage);
+    d_outputImage.download(outputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -1193,7 +1189,12 @@ ImageProcessor::ProcessingResult ImageProcessor::cannyEdgesCUDA(cv::Mat& inputIm
 
     cv::Mat grayImage;
     if (inputImage.channels() == 3) {
-        grayImage = convertToGrayCUDA(inputImage);
+        //grayImage = convertToGrayCUDA(inputImage);
+        cv::cuda::GpuMat d_inputImage;
+        d_inputImage.upload(inputImage);
+        cv::cuda::GpuMat d_outputImage;
+        d_outputImage = convertToGrayCUDA(d_inputImage);
+        d_outputImage.download(grayImage);
     }
     else {
         grayImage = inputImage.clone();
@@ -1488,6 +1489,8 @@ QFuture<bool> ImageProcessor::laplacianFilter(cv::Mat& imageOpenCV
 
 ImageProcessor::ProcessingResult ImageProcessor::laplacianFilterOpenCV(cv::Mat& inputImage)
 {
+    std::cout << "laplacianFilter OpenCV" << std::endl;
+
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
@@ -1504,6 +1507,8 @@ ImageProcessor::ProcessingResult ImageProcessor::laplacianFilterOpenCV(cv::Mat& 
 
 ImageProcessor::ProcessingResult ImageProcessor::laplacianFilterIPP(cv::Mat& inputImage)
 {
+    std::cout << "laplacianFilter IPP" << std::endl;
+
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
@@ -1552,6 +1557,8 @@ ImageProcessor::ProcessingResult ImageProcessor::laplacianFilterIPP(cv::Mat& inp
 
 ImageProcessor::ProcessingResult ImageProcessor::laplacianFilterCUDA(cv::Mat& inputImage)
 {
+    std::cout << "laplacianFilter CUDA" << std::endl;
+
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
@@ -1562,20 +1569,24 @@ ImageProcessor::ProcessingResult ImageProcessor::laplacianFilterCUDA(cv::Mat& in
     // 입력 이미지 타입 확인 및 채널 수 변환
     int inputType = d_inputImage.type();
     int scn = d_inputImage.channels();
-    if (scn != 1 && scn != 4) {
-        cv::cuda::GpuMat d_convertedImage;
-        cv::cuda::cvtColor(d_inputImage, d_convertedImage, cv::COLOR_BGR2GRAY); // 컬러를 그레이스케일로 변환
-        d_inputImage = d_convertedImage;
+
+    // CUDA Laplacian 필터를 적용할 수 있는 데이터 타입으로 변환
+    cv::cuda::GpuMat d_grayImage;
+    if (inputType != CV_8U && inputType != CV_16U && inputType != CV_32F) {
+        d_inputImage.convertTo(d_grayImage, CV_32F);  // 입력 이미지를 CV_32F로 변환
+    }
+    else {
+        d_grayImage = d_inputImage.clone();  // 이미 적절한 타입인 경우 그대로 사용
     }
 
     // 출력 이미지 메모리 할당
-    cv::cuda::GpuMat d_outputImage(d_inputImage.size(), CV_8U);
+    cv::cuda::GpuMat d_outputImage(d_grayImage.size(), CV_32F);
 
-    // CUDA Laplacian 필터 생성 (입력과 출력 모두 동일한 타입 설정)
-    cv::Ptr<cv::cuda::Filter> laplacianFilter = cv::cuda::createLaplacianFilter(d_inputImage.type(), d_outputImage.type(), 3);
+    // CUDA Laplacian 필터 생성
+    cv::Ptr<cv::cuda::Filter> laplacianFilter = cv::cuda::createLaplacianFilter(CV_32F, CV_32F, 3);
 
     // Laplacian 필터 적용
-    laplacianFilter->apply(d_inputImage, d_outputImage);
+    laplacianFilter->apply(d_grayImage, d_outputImage);
 
     // GPU에서 CPU로 결과 이미지 다운로드
     cv::Mat outputImage;
@@ -1591,6 +1602,8 @@ ImageProcessor::ProcessingResult ImageProcessor::laplacianFilterCUDA(cv::Mat& in
 
 ImageProcessor::ProcessingResult ImageProcessor::laplacianFilterCUDAKernel(cv::Mat& inputImage)
 {
+    std::cout << "laplacianFilter CUDAKernel" << std::endl;
+
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
@@ -1828,66 +1841,240 @@ ImageProcessor::ProcessingResult ImageProcessor::bilateralFilterCUDAKernel(cv::M
     return result;
 }
 
-QFuture<bool> ImageProcessor::sobelFilter(cv::Mat& image)
+QFuture<bool> ImageProcessor::sobelFilter(cv::Mat& imageOpenCV
+                                        , cv::Mat& imageIPP
+                                        , cv::Mat& imageCUDA
+                                        , cv::Mat& imageCUDAKernel)
 {
-    // 함수 이름을 문자열로 저장
+    //함수 이름을 문자열로 저장
     const char* functionName = __func__;
 
-    return QtConcurrent::run([this, &image, functionName]()->bool {
-        if (cv::cuda::getCudaEnabledDeviceCount() <= 0) {
-            qDebug() << "No CUDA-enabled device found. Falling back to CPU implementation.";
+    return QtConcurrent::run([this
+        , &imageOpenCV
+        , &imageIPP
+        , &imageCUDA
+        , &imageCUDAKernel
+        , functionName]() -> bool {
+
+        if (imageOpenCV.empty()) {
+            qDebug() << "Input image is empty.";
             return false;
         }
 
-        //pushToUndoStack(image);
+        pushToUndoStackOpenCV(imageOpenCV.clone());
+        pushToUndoStackIPP(imageIPP.clone());
+        pushToUndoStackCUDA(imageCUDA.clone());
+        pushToUndoStackCUDAKernel(imageCUDAKernel.clone());
 
-        // 처리시간계산 시작
-        double startTime = getCurrentTimeMs();
+        QVector<ProcessingResult> results;
 
-        //cv::cuda::GpuMat gpuImage, gpuGray, gpuSobelX, gpuSobelY;
+        ProcessingResult outputOpenCV = sobelFilterOpenCV(imageOpenCV);
+        lastProcessedImageOpenCV = outputOpenCV.processedImage.clone();
+        results.append(outputOpenCV);
 
-        // 입력 이미지가 BGR 색상 포맷이 아닌 경우, BGR2GRAY 변환 수행
-        //if (image.channels() != 3) {
-        //    qDebug() << "Input image is not in BGR format. Converting to BGR...";
-        //    cv::cvtColor(image, image, cv::COLOR_GRAY2BGR); // 예시로 GRAY2BGR 사용. 실제로는 적절한 변환 사용
-        //}
+        ProcessingResult outputIPP = sobelFilterIPP(imageIPP);
+        lastProcessedImageIPP = outputIPP.processedImage.clone();
+        results.append(outputIPP);
 
-        //gpuImage.upload(image);
-        //cv::cuda::cvtColor(gpuImage, gpuGray, cv::COLOR_BGR2GRAY);
+        ProcessingResult outputCUDA = sobelFilterCUDA(imageCUDA);
+        lastProcessedImageCUDA = outputCUDA.processedImage.clone();
+        results.append(outputCUDA);
 
-        //cv::Ptr<cv::cuda::Filter> sobelX =
-        //    cv::cuda::createSobelFilter(gpuGray.type(), CV_16S, 1, 0);
-        //cv::Ptr<cv::cuda::Filter> sobelY =
-        //    cv::cuda::createSobelFilter(gpuGray.type(), CV_16S, 0, 1);
+        ProcessingResult outputCUDAKernel = sobelFilterCUDAKernel(imageCUDAKernel);
+        lastProcessedImageCUDAKernel = outputCUDAKernel.processedImage.clone();
+        results.append(outputCUDAKernel);
 
-        //sobelX->apply(gpuGray, gpuSobelX);
-        //sobelY->apply(gpuGray, gpuSobelY);
-
-        //cv::cuda::GpuMat sobelX_8U, sobelY_8U;
-        //gpuSobelX.convertTo(sobelX_8U, CV_8U);
-        //gpuSobelY.convertTo(sobelY_8U, CV_8U);
-
-        //cv::cuda::addWeighted(sobelX_8U, 0.5, sobelY_8U, 0.5, 0, gpuGray);
-
-        //cv::Mat sobeledImage;
-        //gpuGray.download(sobeledImage);
-
-        //CUDA Kernel
-        callSobelFilterCUDA(image);
-
-        // 처리시간계산 종료
-        double endTime = getCurrentTimeMs();
-        double processingTime = endTime - startTime;
-
-        //image = sobeledImage.clone();
-        //lastProcessedImage = image.clone();
-
-        //emit imageProcessed(image, processingTime, functionName);
+        emit imageProcessed(results);
 
         return true;
         });
 }
 
+ImageProcessor::ProcessingResult ImageProcessor::sobelFilterOpenCV(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    cv::Mat gradX, gradY, absGradX, absGradY, outputImage;
+
+    if (inputImage.channels() == 1) {
+        // 그레이스케일 이미지 처리
+        cv::Sobel(inputImage, gradX, CV_16S, 1, 0, 3, 1, 0, cv::BORDER_DEFAULT);
+        cv::Sobel(inputImage, gradY, CV_16S, 0, 1, 3, 1, 0, cv::BORDER_DEFAULT);
+
+        cv::convertScaleAbs(gradX, absGradX);
+        cv::convertScaleAbs(gradY, absGradY);
+
+        cv::addWeighted(absGradX, 0.5, absGradY, 0.5, 0, outputImage);
+    }
+    else {
+        // 컬러 이미지 처리
+        std::vector<cv::Mat> channels, gradXChannels, gradYChannels, absGradXChannels, absGradYChannels, outputChannels;
+
+        // 컬러 채널 분리
+        cv::split(inputImage, channels);
+
+        // 각 채널에 Sobel 연산자 적용
+        for (int i = 0; i < channels.size(); ++i) {
+            cv::Sobel(channels[i], gradX, CV_16S, 1, 0, 3, 1, 0, cv::BORDER_DEFAULT);
+            cv::Sobel(channels[i], gradY, CV_16S, 0, 1, 3, 1, 0, cv::BORDER_DEFAULT);
+
+            cv::convertScaleAbs(gradX, absGradX);
+            cv::convertScaleAbs(gradY, absGradY);
+
+            gradXChannels.push_back(absGradX);
+            gradYChannels.push_back(absGradY);
+
+            // 각 채널의 결과를 결합
+            cv::Mat outputChannel;
+            cv::addWeighted(absGradX, 0.5, absGradY, 0.5, 0, outputChannel);
+            outputChannels.push_back(outputChannel);
+        }
+
+        // 채널 병합
+        cv::merge(outputChannels, outputImage);
+    }
+
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "sobelFilter", "OpenCV", elapsedTimeMs);
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::sobelFilterIPP(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    // Convert input image to grayscale if it is not
+    cv::Mat grayImage;
+    if (inputImage.channels() > 1) {
+        grayImage = convertToGrayOpenCV(inputImage);  // Use OpenCV for conversion
+    }
+    else {
+        grayImage = inputImage.clone();  // If already grayscale, make a copy
+    }
+
+    // Prepare destination image
+    cv::Mat outputImage = cv::Mat::zeros(grayImage.size(), CV_16SC1);
+
+    // IPP specific variables
+    IppiSize roiSize = { grayImage.cols, grayImage.rows };
+    IppiMaskSize mask = ippMskSize3x3; // Using 3x3 Sobel kernel
+    IppNormType normType = ippNormL1;
+    int bufferSize = 0;
+    IppStatus status;
+
+    // Calculate buffer size
+    status = ippiFilterSobelGetBufferSize(roiSize, mask, normType, ipp8u, ipp16s, 1, &bufferSize);
+    if (status != ippStsNoErr) {
+        std::cerr << "Error calculating buffer size: " << status << std::endl;
+        return result;
+    }
+
+    // Allocate buffer
+    Ipp8u* pBuffer = ippsMalloc_8u(bufferSize);
+    if (!pBuffer) {
+        std::cerr << "Error allocating buffer." << std::endl;
+        return result;
+    }
+
+    // Apply Sobel filter
+    status = ippiFilterSobel_8u16s_C1R(
+        grayImage.data,
+        static_cast<int>(grayImage.step),
+        reinterpret_cast<Ipp16s*>(outputImage.data),
+        static_cast<int>(outputImage.step),
+        roiSize,
+        mask,
+        normType,
+        ippBorderRepl,
+        0,
+        pBuffer
+    );
+
+    if (status != ippStsNoErr) {
+        std::cerr << "Error applying Sobel filter: " << status << std::endl;
+        ippsFree(pBuffer);
+        return result;
+    }
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "sobelFilter", "IPP", elapsedTimeMs);
+
+    // Free the buffer
+    ippsFree(pBuffer);
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::sobelFilterCUDA(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    cv::Mat outputImage;
+
+    // Convert input image to grayscale if necessary
+    cv::Mat grayImage;
+    if (inputImage.channels() > 1) {
+        cv::cuda::GpuMat d_inputImage;
+        d_inputImage.upload(inputImage);
+        cv::cuda::GpuMat d_outputImage;
+        d_outputImage = convertToGrayCUDA(d_inputImage);
+        d_outputImage.download(grayImage);
+    }
+    else {
+        grayImage = inputImage;
+    }
+
+    // Transfer input image to GPU
+    cv::cuda::GpuMat d_inputImage(grayImage);
+    cv::cuda::GpuMat d_outputImage;
+
+    // Create Sobel filter on GPU
+    cv::Ptr<cv::cuda::Filter> sobelFilter = cv::cuda::createSobelFilter(
+        d_inputImage.type(),   // srcType
+        CV_16SC1,              // dstType
+        1,                     // dx (order of derivative in x)
+        0,                     // dy (order of derivative in y)
+        3                      // ksize (kernel size, 3x3 Sobel)
+    );
+
+    // Apply Sobel filter on GPU
+    sobelFilter->apply(d_inputImage, d_outputImage);
+
+    // Transfer result back to CPU
+    d_outputImage.download(outputImage);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "sobelFilter", "CUDA", elapsedTimeMs);
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::sobelFilterCUDAKernel(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    cv::Mat outputImage = convertToGrayCUDAKernel(inputImage);
+    callSobelFilterCUDA(inputImage, outputImage);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "sobelFilter", "CUDAKernel", elapsedTimeMs);
+
+    return result;
+}
 
 bool ImageProcessor::canUndoOpenCV() const
 {

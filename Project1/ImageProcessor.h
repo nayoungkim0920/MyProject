@@ -78,7 +78,7 @@ public:
     QFuture<bool> medianFilter(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
     QFuture<bool> laplacianFilter(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
     QFuture<bool> bilateralFilter(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
-    QFuture<bool> sobelFilter(cv::Mat& image);
+    QFuture<bool> sobelFilter(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
 
     bool canUndoOpenCV() const;
     bool canRedoOpenCV() const;
@@ -161,7 +161,7 @@ private:
 
     cv::Mat convertToGrayOpenCV(const cv::Mat& inputImage);
     cv::Mat convertToGrayIPP(const cv::Mat& inputImage);
-    cv::Mat convertToGrayCUDA(const cv::Mat& inputImage);
+    cv::cuda::GpuMat convertToGrayCUDA(const cv::cuda::GpuMat& inputImage);
     cv::Mat convertToGrayCUDAKernel(cv::Mat& inputImage);
 
     ProcessingResult medianFilterOpenCV(cv::Mat& inputImage);
@@ -178,6 +178,11 @@ private:
     ProcessingResult bilateralFilterIPP(cv::Mat& inputImage);
     ProcessingResult bilateralFilterCUDA(cv::Mat& inputImage);
     ProcessingResult bilateralFilterCUDAKernel(cv::Mat& inputImage);
+
+    ProcessingResult sobelFilterOpenCV(cv::Mat& inputImage);
+    ProcessingResult sobelFilterIPP(cv::Mat& inputImage);
+    ProcessingResult sobelFilterCUDA(cv::Mat& inputImage);
+    ProcessingResult sobelFilterCUDAKernel(cv::Mat& inputImage);
 
     double getCurrentTimeMs();
     // 유틸리티 함수 선언
