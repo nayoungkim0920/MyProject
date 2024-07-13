@@ -7,6 +7,10 @@ find_package(Qt6 REQUIRED COMPONENTS Widgets Core Gui)
 find_package(OpenCV REQUIRED COMPONENTS core imgproc highgui cudaarithm cudafilters cudawarping cudacodec cudafeatures2d cudaimgproc)
 find_package(CUDA REQUIRED)
 
+# CUDA 경로 설정
+set(CUDA_TOOLKIT_ROOT_DIR "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.5")
+find_package(CUDA REQUIRED)
+
 # IPP 설정
 set(IPP_ROOT "C:/Program Files (x86)/Intel/oneAPI/ipp/2021.11")  # IPP 라이브러리 설치 경로
 include_directories("${IPP_ROOT}/include")
@@ -16,7 +20,8 @@ link_directories("${IPP_ROOT}/lib")  # IPP 라이브러리 lib 경로
 include_directories(
     ${CUDA_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
-    ${IPP_ROOT}/include
+    "${CUDA_TOOLKIT_ROOT_DIR}/include"  # CUDA Toolkit include 폴더 추가
+    ${IPP_ROOT}/include  # IPP include 폴더 추가
 )
 
 # CUDA 파일 설정
@@ -41,6 +46,16 @@ target_link_libraries(image_processing
     ipps.lib
     ippi.lib
     ippcv.lib
+    nppial
+    nppicc
+    nppidei
+    nppif
+    nppig
+    nppim
+    nppist
+    nppisu
+    nppitc
+    npps
 )
 
 # 실행 파일 추가
@@ -69,62 +84,6 @@ target_link_libraries(Project1
 set_target_properties(Project1 PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/Debug"
     RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/Release"
-)
-
-# 디버그 빌드에서의 OpenCV opencv_world DLL 복사
-add_custom_command(TARGET Project1 POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/opencv/build/x64/vc16/bin/opencv_world4100d.dll" "$<TARGET_FILE_DIR:Project1>"
-    COMMENT "Copying OpenCV Debug opencv_world DLL to output directory"
-)
-
-# 릴리스 빌드에서의 OpenCV opencv_world DLL 복사
-add_custom_command(TARGET Project1 POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/opencv/build/x64/vc16/bin/opencv_world4100.dll" "$<TARGET_FILE_DIR:Project1>"
-    COMMENT "Copying OpenCV Release opencv_world DLL to output directory"
-)
-
-# 디버그 빌드에서의 OpenCV DLL 복사
-add_custom_command(TARGET Project1 POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/opencv/build/bin/Debug/opencv_cudaarithm4100d.dll" "$<TARGET_FILE_DIR:Project1>"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/opencv/build/bin/Debug/opencv_highgui4100d.dll" "$<TARGET_FILE_DIR:Project1>"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/opencv/build/bin/Debug/opencv_videoio4100d.dll" "$<TARGET_FILE_DIR:Project1>"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/opencv/build/bin/Debug/opencv_cudaimgproc4100d.dll" "$<TARGET_FILE_DIR:Project1>"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/opencv/build/bin/Debug/opencv_cudafilters4100d.dll" "$<TARGET_FILE_DIR:Project1>"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/opencv/build/bin/Debug/opencv_imgcodecs4100d.dll" "$<TARGET_FILE_DIR:Project1>"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/opencv/build/bin/Debug/opencv_core4100d.dll" "$<TARGET_FILE_DIR:Project1>"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/opencv/build/bin/Debug/opencv_imgproc4100d.dll" "$<TARGET_FILE_DIR:Project1>"
-    COMMENT "Copying OpenCV Debug DLLs to output directory"
-)
-
-# 릴리스 빌드에서의 OpenCV DLL 복사
-add_custom_command(TARGET Project1 POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/opencv/build/bin/Release/opencv_cudaarithm4100.dll" "$<TARGET_FILE_DIR:Project1>"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/opencv/build/bin/Release/opencv_highgui4100.dll" "$<TARGET_FILE_DIR:Project1>"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/opencv/build/bin/Release/opencv_videoio4100.dll" "$<TARGET_FILE_DIR:Project1>"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/opencv/build/bin/Release/opencv_cudaimgproc4100.dll" "$<TARGET_FILE_DIR:Project1>"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/opencv/build/bin/Release/opencv_cudafilters4100.dll" "$<TARGET_FILE_DIR:Project1>"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/opencv/build/bin/Release/opencv_imgcodecs4100.dll" "$<TARGET_FILE_DIR:Project1>"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/opencv/build/bin/Release/opencv_core4100.dll" "$<TARGET_FILE_DIR:Project1>"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/opencv/build/bin/Release/opencv_imgproc4100.dll" "$<TARGET_FILE_DIR:Project1>"
-    COMMENT "Copying OpenCV Release DLLs to output directory"
 )
 
 # 파일 인코딩 설정 추가

@@ -694,12 +694,10 @@ void callLaplacianFilterCUDA(cv::Mat& inputImage, cv::Mat& outputImage) {
     cudaFree(d_output);
 }
 
-void callBilateralFilterCUDA(cv::Mat& inputImage, int kernelSize, float sigmaColor, float sigmaSpace) {
+void callBilateralFilterCUDA(cv::Mat& inputImage, cv::Mat& outputImage, int kernelSize, float sigmaColor, float sigmaSpace) {
     int width = inputImage.cols;
     int height = inputImage.rows;
     int channels = inputImage.channels();
-
-    cv::Mat outputImage(height, width, inputImage.type());
 
     unsigned char* d_input;
     unsigned char* d_output;
@@ -715,7 +713,8 @@ void callBilateralFilterCUDA(cv::Mat& inputImage, int kernelSize, float sigmaCol
 
     bilateralKernel << <gridSize, blockSize >> > (d_input, d_output, width, height, kernelSize, channels, sigmaColor, sigmaSpace);
 
-    cudaMemcpy2D(inputImage.ptr(), width * channels * sizeof(unsigned char), d_output, pitch, width * channels * sizeof(unsigned char), height, cudaMemcpyDeviceToHost);
+    outputImage.create(width, height, inputImage.type());
+    cudaMemcpy2D(outputImage.ptr(), width * channels * sizeof(unsigned char), d_output, pitch, width * channels * sizeof(unsigned char), height, cudaMemcpyDeviceToHost);
 
     cudaFree(d_input);
     cudaFree(d_output);

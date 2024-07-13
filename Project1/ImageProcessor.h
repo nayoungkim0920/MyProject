@@ -28,6 +28,10 @@
 
 #include <omp.h>
 
+#include <npp.h>
+#include <nppi.h>
+#include <nppi_filtering_functions.h>
+
 #include <ipp.h>
 #include <ipp/ippcore.h>
 #include <ipp/ippi.h>
@@ -73,7 +77,7 @@ public:
     QFuture<bool> cannyEdges(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
     QFuture<bool> medianFilter(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
     QFuture<bool> laplacianFilter(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
-    QFuture<bool> bilateralFilter(cv::Mat& image);
+    QFuture<bool> bilateralFilter(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
     QFuture<bool> sobelFilter(cv::Mat& image);
 
     bool canUndoOpenCV() const;
@@ -169,6 +173,11 @@ private:
     ProcessingResult laplacianFilterIPP(cv::Mat& inputImage);
     ProcessingResult laplacianFilterCUDA(cv::Mat& inputImage);
     ProcessingResult laplacianFilterCUDAKernel(cv::Mat& inputImage);
+
+    ProcessingResult bilateralFilterOpenCV(cv::Mat& inputImage);
+    ProcessingResult bilateralFilterIPP(cv::Mat& inputImage);
+    ProcessingResult bilateralFilterCUDA(cv::Mat& inputImage);
+    ProcessingResult bilateralFilterCUDAKernel(cv::Mat& inputImage);
 
     double getCurrentTimeMs();
     // 유틸리티 함수 선언

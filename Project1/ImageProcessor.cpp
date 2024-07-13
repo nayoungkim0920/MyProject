@@ -1609,41 +1609,54 @@ ImageProcessor::ProcessingResult ImageProcessor::laplacianFilterCUDAKernel(cv::M
 }
 
 
-QFuture<bool> ImageProcessor::bilateralFilter(cv::Mat& image)
+QFuture<bool> ImageProcessor::bilateralFilter(cv::Mat& imageOpenCV
+                                            , cv::Mat& imageIPP
+                                            , cv::Mat& imageCUDA
+                                            , cv::Mat& imageCUDAKernel)
 {
     //함수 이름을 문자열로 저장
     const char* functionName = __func__;
 
-    return QtConcurrent::run([this, &image, functionName]()->bool {
+    return QtConcurrent::run([this
+        , &imageOpenCV
+        , &imageIPP
+        , &imageCUDA
+        , &imageCUDAKernel
+        , functionName]() -> bool {
 
         QMutexLocker locker(&mutex);
 
         try {
 
-            if (image.empty()) {
-                qDebug() << "bilateral 필터를 적용할 이미지가 없습니다.";
+            if (imageOpenCV.empty()) {
+                qDebug() << "Input image is empty.";
                 return false;
             }
 
-            //pushToUndoStack(image);
+            pushToUndoStackOpenCV(imageOpenCV.clone());
+            pushToUndoStackIPP(imageIPP.clone());
+            pushToUndoStackCUDA(imageCUDA.clone());
+            pushToUndoStackCUDAKernel(imageCUDAKernel.clone());
 
-            // 처리시간계산 시작
-            double startTime = getCurrentTimeMs();
+            QVector<ProcessingResult> results;
 
-            //CUDA Kernel
-            callBilateralFilterCUDA(image, 9, 75, 75);
+            ProcessingResult outputOpenCV = bilateralFilterOpenCV(imageOpenCV);
+            lastProcessedImageOpenCV = outputOpenCV.processedImage.clone();
+            results.append(outputOpenCV);
 
-            //cv::Mat filteredImage;
-            //cv::bilateralFilter(image, filteredImage, 9, 75, 75);
+            ProcessingResult outputIPP = bilateralFilterIPP(imageIPP);
+            lastProcessedImageIPP = outputIPP.processedImage.clone();
+            results.append(outputIPP);
 
-            // 처리시간계산 종료
-            double endTime = getCurrentTimeMs();
-            double processingTime = endTime - startTime;
+            ProcessingResult outputCUDA = bilateralFilterCUDA(imageCUDA);
+            lastProcessedImageCUDA = outputCUDA.processedImage.clone();
+            results.append(outputCUDA);
 
-            //image = filteredImage.clone();
-            //lastProcessedImage = image.clone();
+            ProcessingResult outputCUDAKernel = bilateralFilterCUDAKernel(imageIPP);
+            lastProcessedImageCUDAKernel = outputCUDAKernel.processedImage.clone();
+            results.append(outputCUDAKernel);   
 
-            //emit imageProcessed(image, processingTime, functionName);
+            emit imageProcessed(results);
 
             return true;
         }
@@ -1653,6 +1666,166 @@ QFuture<bool> ImageProcessor::bilateralFilter(cv::Mat& image)
             return false;
         }
         });
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::bilateralFilterOpenCV(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    cv::Mat outputImage;
+    cv::bilateralFilter(inputImage, outputImage, 9, 75, 75);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "bilateralFilter", "OpenCV", elapsedTimeMs);
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::bilateralFilterIPP(cv::Mat& inputImage)
+{
+    // NPP
+    /* 
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    // 입력 이미지를 GPU 메모리로 복사
+    Npp8u* d_inputImage;
+    size_t inputImagePitch;
+    cudaMallocPitch((void**)&d_inputImage, &inputImagePitch, inputImage.cols * sizeof(Npp8u) * inputImage.channels(), inputImage.rows);
+    cudaMemcpy2D(d_inputImage, inputImagePitch, inputImage.data, inputImage.step, inputImage.cols * sizeof(Npp8u) * inputImage.channels(), inputImage.rows, cudaMemcpyHostToDevice);
+
+    // 출력 이미지를 GPU 메모리로 할당
+    cv::Mat outputImage(inputImage.size(), inputImage.type());
+    Npp8u* d_outputImage;
+    size_t outputImagePitch;
+    cudaMallocPitch((void**)&d_outputImage, &outputImagePitch, outputImage.cols * sizeof(Npp8u) * outputImage.channels(), outputImage.rows);
+
+    // 양방향 필터 파라미터 설정
+    NppiSize oSrcSize = { inputImage.cols, inputImage.rows };
+    NppiPoint oSrcOffset = { 0, 0 };
+    Npp32f nValSquareSigma = 75.0f;
+    Npp32f nPosSquareSigma = 75.0f;
+    int nRadius = 9;
+    NppiBorderType eBorderType = NPP_BORDER_REPLICATE;
+
+    // 이미지 채널 수에 따라 함수 선택
+    if (inputImage.channels() == 1) {
+        NppStatus status = nppiFilterBilateralGaussBorder_8u_C1R(d_inputImage, static_cast<int>(inputImagePitch), oSrcSize, oSrcOffset,
+            d_outputImage, static_cast<int>(outputImagePitch), oSrcSize,
+            nRadius, 1, nValSquareSigma, nPosSquareSigma, eBorderType);
+        if (status != NPP_SUCCESS) {
+            std::cerr << "Error applying bilateral filter: " << status << std::endl;
+        }
+    }
+    else if (inputImage.channels() == 3) {
+        NppStatus status = nppiFilterBilateralGaussBorder_8u_C3R(d_inputImage, static_cast<int>(inputImagePitch), oSrcSize, oSrcOffset,
+            d_outputImage, static_cast<int>(outputImagePitch), oSrcSize,
+            nRadius, 3, nValSquareSigma, nPosSquareSigma, eBorderType);
+        if (status != NPP_SUCCESS) {
+            std::cerr << "Error applying bilateral filter: " << status << std::endl;
+        }
+    }
+    else {
+        std::cerr << "Unsupported number of channels: " << inputImage.channels() << std::endl;
+    }
+
+    // 처리된 이미지를 호스트로 복사
+    cudaMemcpy2D(outputImage.data, outputImage.step, d_outputImage, outputImagePitch, outputImage.cols * sizeof(Npp8u) * outputImage.channels(), outputImage.rows, cudaMemcpyDeviceToHost);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "bilateralFilter", "NPP", elapsedTimeMs);
+
+    // 메모리 해제
+    cudaFree(d_inputImage);
+    cudaFree(d_outputImage);
+
+    return result;
+    */
+
+    // IPP
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    // IPP 구조체와 버퍼 크기 계산
+    IppiSize roiSize = {inputImage.cols, inputImage.rows};
+    int kernelSize = 9; // 필터 크기
+    IppDataType dataType = ipp8u; // 데이터 타입 (8비트 무채색 이미지)
+    int numChannels = 3; // 채널 수
+    IppiDistanceMethodType distMethod = ippDistNormL2; // 거리 방법
+    int specSize = 0, bufferSize = 0;
+
+    ippiFilterBilateralGetBufferSize(ippiFilterBilateralGauss, roiSize, kernelSize, dataType, numChannels, distMethod, &specSize, &bufferSize);
+
+    // 메모리 할당
+    IppiFilterBilateralSpec* pSpec = (IppiFilterBilateralSpec*)ippMalloc(specSize);
+    Ipp8u* pBuffer = (Ipp8u*)ippMalloc(bufferSize);
+
+    // 필터 초기화
+    IppStatus status = ippiFilterBilateralInit(ippiFilterBilateralGauss, roiSize, kernelSize, dataType, numChannels, distMethod, 75, 75, pSpec);
+    if (status != ippStsNoErr) {
+        std::cerr << "Error initializing bilateral filter: " << status << std::endl;
+        ippFree(pSpec);
+        ippFree(pBuffer);
+        return result;
+    }
+
+    // 출력 이미지 버퍼 할당
+    cv::Mat outputImage(inputImage.size(), inputImage.type());
+
+    // 양방향 필터 적용
+    status = ippiFilterBilateral_8u_C3R(inputImage.ptr<Ipp8u>(), inputImage.step, outputImage.ptr<Ipp8u>(), outputImage.step, roiSize, ippBorderRepl, NULL, pSpec, pBuffer);
+    if (status != ippStsNoErr) {
+        std::cerr << "Error applying bilateral filter: " << status << std::endl;
+    }
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "bilateralFilter", "IPP", elapsedTimeMs);
+
+    // 메모리 해제
+    ippFree(pSpec);
+    ippFree(pBuffer);
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::bilateralFilterCUDA(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    //cv::cuda 에서 createBilateralFilter 지원하지 않아 CUDA Kernel로 해야함
+    cv::Mat outputImage;
+    callBilateralFilterCUDA(inputImage, outputImage, 9, 75, 75);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "bilateralFilter", "CUDA-not support", elapsedTimeMs);
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::bilateralFilterCUDAKernel(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    cv::Mat outputImage;
+    callBilateralFilterCUDA(inputImage, outputImage, 9, 75, 75);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "bilateralFilter", "CUDAKernel", elapsedTimeMs);
+
+    return result;
 }
 
 QFuture<bool> ImageProcessor::sobelFilter(cv::Mat& image)

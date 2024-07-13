@@ -191,9 +191,7 @@ void MainWindow::laplacianFilter()
 void MainWindow::bilateralFilter()
 {
     QtConcurrent::run([this]() {
-        if (!currentImage.empty()) {
-            imageProcessor->bilateralFilter(currentImage);
-        }
+            imageProcessor->bilateralFilter(currentImageOpenCV, currentImageIPP, currentImageCUDA, currentImageCUDAKernel);
         });
     //applyImageProcessing(&ImageProcessor::bilateralFilter, currentImage);
 }
