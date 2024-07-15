@@ -19,7 +19,12 @@
     <ClCompile Include="..\ImageTypeConverter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="OpenCVImageProcessor.cpp" />
+    <ClCompile Include="..\ImageProcessorOpenCV.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ImageProcessorIPP.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="C:\myLab\Project1\Project1\MainWindow.h">
@@ -31,7 +36,10 @@
     <ClInclude Include="..\ImageTypeConverter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="OpenCVImageProcessor.h">
+    <ClInclude Include="..\ImageProcessorOpenCV.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imageProcessorIPP.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

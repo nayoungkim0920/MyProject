@@ -498,13 +498,15 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\ImageProcessorIPP.cpp" />
+    <ClCompile Include="..\ImageProcessorOpenCV.cpp" />
     <ClCompile Include="..\ImageTypeConverter.cpp" />
     <ClCompile Include="C:\myLab\Project1\Project1\main.cpp" />
     <ClCompile Include="C:\myLab\Project1\Project1\MainWindow.cpp" />
-    <ClCompile Include="OpenCVImageProcessor.cpp" />
+    <ClInclude Include="..\imageProcessorIPP.h" />
+    <ClInclude Include="..\ImageProcessorOpenCV.h" />
     <ClInclude Include="..\ImageTypeConverter.h" />
     <ClInclude Include="C:\myLab\Project1\Project1\MainWindow.h" />
-    <ClInclude Include="OpenCVImageProcessor.h" />
     <None Include="C:\myLab\Project1\Project1\MainWindow.ui">
     </None>
     <ClCompile Include="C:\myLab\Project1\Project1\ImageProcessor.cpp" />

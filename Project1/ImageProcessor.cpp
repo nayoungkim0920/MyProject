@@ -346,7 +346,8 @@ ImageProcessor::ProcessingResult ImageProcessor::grayScaleOpenCV(cv::Mat& inputI
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::Mat outputImage = convertToGrayOpenCV(inputImage);
+    ImageProcessorOpenCV IPOpenCV;
+    cv::Mat outputImage = IPOpenCV.grayScale(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -468,8 +469,9 @@ ImageProcessor::ProcessingResult ImageProcessor::zoomOpenCV(cv::Mat& inputImage,
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
+    ImageProcessorOpenCV IPOpenCV;
     cv::Mat outputImage;
-    cv::resize(inputImage, outputImage, cv::Size(newWidth, newHeight), 0, 0, cv::INTER_LINEAR);
+    outputImage = IPOpenCV.zoom(inputImage, newWidth, newHeight, 0, 0, cv::INTER_LINEAR);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -645,8 +647,8 @@ ImageProcessor::ProcessingResult ImageProcessor::rotateOpenCV(cv::Mat& inputImag
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::Mat outputImage;
-    cv::rotate(inputImage, outputImage, cv::ROTATE_90_CLOCKWISE);
+    ImageProcessorOpenCV IPOpenCV;
+    cv::Mat outputImage = IPOpenCV.rotate(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -882,8 +884,8 @@ ImageProcessor::ProcessingResult ImageProcessor::gaussianBlurOpenCV(cv::Mat& inp
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::Mat outputImage;
-    cv::GaussianBlur(inputImage, outputImage, cv::Size(kernelSize, kernelSize), 0, 0);
+    ImageProcessorOpenCV IPOpenCV;
+    cv::Mat outputImage = IPOpenCV.gaussianBlur(inputImage, kernelSize, 0, 0, 1);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -986,7 +988,6 @@ ImageProcessor::ProcessingResult ImageProcessor::gaussianBlurIPP(cv::Mat& inputI
     return result;
 }
 
-
 ImageProcessor::ProcessingResult ImageProcessor::gaussianBlurCUDA(cv::Mat& inputImage, int kernelSize)
 {
     ProcessingResult result;
@@ -1031,8 +1032,6 @@ ImageProcessor::ProcessingResult ImageProcessor::gaussianBlurCUDAKernel(cv::Mat&
 
     return result;
 }
-
-
 
 //Canny
 QFuture<bool> ImageProcessor::cannyEdges(cv::Mat& imageOpenCV
@@ -1098,16 +1097,8 @@ ImageProcessor::ProcessingResult ImageProcessor::cannyEdgesOpenCV(cv::Mat& input
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::Mat grayImage;
-    if (inputImage.channels() == 3) {
-        grayImage = convertToGrayOpenCV(inputImage);
-    }
-    else {
-        grayImage = inputImage.clone();
-    }
-
-    cv::Mat outputImage;
-    cv::Canny(grayImage, outputImage, 50, 150);
+    ImageProcessorOpenCV IPOpenCV;
+    cv::Mat outputImage = IPOpenCV.cannyEdges(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -1323,8 +1314,8 @@ ImageProcessor::ProcessingResult ImageProcessor::medianFilterOpenCV(cv::Mat& inp
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::Mat outputImage;
-    cv::medianBlur(inputImage, outputImage, 5);
+    ImageProcessorOpenCV IPOpenCV;
+    cv::Mat outputImage = IPOpenCV.medianFilter(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -1494,8 +1485,8 @@ ImageProcessor::ProcessingResult ImageProcessor::laplacianFilterOpenCV(cv::Mat& 
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::Mat outputImage;
-    cv::Laplacian(inputImage, outputImage, CV_8U, 3);
+    ImageProcessorOpenCV IPOpenCV;
+    cv::Mat outputImage = IPOpenCV.laplacianFilter(inputImage);    
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -1686,8 +1677,8 @@ ImageProcessor::ProcessingResult ImageProcessor::bilateralFilterOpenCV(cv::Mat& 
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::Mat outputImage;
-    cv::bilateralFilter(inputImage, outputImage, 9, 75, 75);
+    ImageProcessorOpenCV IPOpenCV;
+    cv::Mat outputImage = IPOpenCV.bilateralFilter(inputImage);   
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -1895,46 +1886,8 @@ ImageProcessor::ProcessingResult ImageProcessor::sobelFilterOpenCV(cv::Mat& inpu
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::Mat gradX, gradY, absGradX, absGradY, outputImage;
-
-    if (inputImage.channels() == 1) {
-        // 그레이스케일 이미지 처리
-        cv::Sobel(inputImage, gradX, CV_16S, 1, 0, 3, 1, 0, cv::BORDER_DEFAULT);
-        cv::Sobel(inputImage, gradY, CV_16S, 0, 1, 3, 1, 0, cv::BORDER_DEFAULT);
-
-        cv::convertScaleAbs(gradX, absGradX);
-        cv::convertScaleAbs(gradY, absGradY);
-
-        cv::addWeighted(absGradX, 0.5, absGradY, 0.5, 0, outputImage);
-    }
-    else {
-        // 컬러 이미지 처리
-        std::vector<cv::Mat> channels, gradXChannels, gradYChannels, absGradXChannels, absGradYChannels, outputChannels;
-
-        // 컬러 채널 분리
-        cv::split(inputImage, channels);
-
-        // 각 채널에 Sobel 연산자 적용
-        for (int i = 0; i < channels.size(); ++i) {
-            cv::Sobel(channels[i], gradX, CV_16S, 1, 0, 3, 1, 0, cv::BORDER_DEFAULT);
-            cv::Sobel(channels[i], gradY, CV_16S, 0, 1, 3, 1, 0, cv::BORDER_DEFAULT);
-
-            cv::convertScaleAbs(gradX, absGradX);
-            cv::convertScaleAbs(gradY, absGradY);
-
-            gradXChannels.push_back(absGradX);
-            gradYChannels.push_back(absGradY);
-
-            // 각 채널의 결과를 결합
-            cv::Mat outputChannel;
-            cv::addWeighted(absGradX, 0.5, absGradY, 0.5, 0, outputChannel);
-            outputChannels.push_back(outputChannel);
-        }
-
-        // 채널 병합
-        cv::merge(outputChannels, outputImage);
-    }
-
+    ImageProcessorOpenCV IPOpenCV;
+    cv::Mat outputImage = IPOpenCV.sobelFilter(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산

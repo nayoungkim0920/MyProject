@@ -38,8 +38,12 @@
 #include <ipp/ippcc.h>
 #include <ipp/ipps.h>
 #include <ipp/ippcv.h>
+
 #include "imageProcessing.cuh"
 #include "ImageTypeConverter.h"
+#include "ImageProcessorOpenCV.h"
+
+
 
 #ifndef MAX_NUM_THREADS
 #define MAX_NUM_THREADS 8 // 예시로 임의로 설정
