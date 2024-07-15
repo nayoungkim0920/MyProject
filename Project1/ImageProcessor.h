@@ -42,6 +42,7 @@
 #include "imageProcessing.cuh"
 #include "ImageTypeConverter.h"
 #include "ImageProcessorOpenCV.h"
+#include "ImageProcessorIPP.h"
 
 
 

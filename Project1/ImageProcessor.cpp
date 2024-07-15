@@ -362,15 +362,8 @@ ImageProcessor::ProcessingResult ImageProcessor::grayScaleIPP(cv::Mat& inputImag
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    // 입력 이미지가 3채널 BGR 이미지인지 확인
-    //if (inputImage.channels() != 3 || inputImage.type() != CV_8UC3) {
-        //std::cerr << "Warning: Input image is not a 3-channel BGR image. Converting to BGR." << std::endl;
-    //    cv::Mat temp;
-    //    cv::cvtColor(inputImage, temp, cv::COLOR_GRAY2BGR);
-    //    inputImage = temp;
-    //}
-
-    cv::Mat outputImage = ImageProcessor::convertToGrayIPP(inputImage);
+    ImageProcessorIPP IPIPP;
+    cv::Mat outputImage = IPIPP.grayScale(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산   
@@ -486,115 +479,13 @@ ImageProcessor::ProcessingResult ImageProcessor::zoomIPP(cv::Mat& inputImage, do
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    // IPP 변수들 선언
-    IppStatus status;
-    IppiSize srcSize = { inputImage.cols, inputImage.rows };
-    IppiSize dstSize = { static_cast<int>(newWidth), static_cast<int>(newHeight) };
-    IppiPoint dstOffset = { 0, 0 };
-    std::vector<Ipp8u> pBuffer;
-    IppiResizeSpec_32f* pSpec = nullptr;
-
-    // 크기 및 초기화 버퍼 할당
-    int specSize = 0, initSize = 0, bufSize = 0;
-    status = ippiResizeGetSize_8u(srcSize, dstSize, ippNearest, 0, &specSize, &initSize);
-    if (status != ippStsNoErr) {
-        std::cerr << "Error: ippiResizeGetSize_8u failed with status code " << status << std::endl;
-        return result;
-    }
-
-    pSpec = (IppiResizeSpec_32f*)(ippMalloc(specSize));
-    if (!pSpec) {
-        std::cerr << "Error: Memory allocation failed for pSpec" << std::endl;
-        return result;
-    }
-
-    pBuffer.resize(initSize);
-    if (pBuffer.empty()) {
-        std::cerr << "Error: Memory allocation failed for pBuffer" << std::endl;
-        ippFree(pSpec);
-        return result;
-    }
-
-    // 크기 조정 스펙 초기화
-    status = ippiResizeNearestInit_8u(srcSize, dstSize, pSpec);
-    if (status != ippStsNoErr) {
-        std::cerr << "Error: ippiResizeNearestInit_8u failed with status code " << status << std::endl;
-        ippFree(pSpec);
-        return result;
-    }
-
-    // Get the size of the working buffer
-    status = ippiResizeGetBufferSize_8u(pSpec, dstSize, inputImage.channels(), &bufSize);
-    if (status != ippStsNoErr) {
-        std::cerr << "Error: ippiResizeGetBufferSize_8u failed with status code " << status << std::endl;
-        ippFree(pSpec);
-        return result;
-    }
-
-    pBuffer.resize(bufSize);
-    if (pBuffer.empty()) {
-        std::cerr << "Error: Memory allocation failed for pBuffer" << std::endl;
-        ippFree(pSpec);
-        return result;
-    }
-
-    // 크기 조정 수행
-    cv::Mat outputImage(dstSize.height, dstSize.width, inputImage.type());
-    Ipp8u* pSrcData = reinterpret_cast<Ipp8u*>(inputImage.data);
-    Ipp8u* pDstData = reinterpret_cast<Ipp8u*>(outputImage.data);
-
-    // 이미지 타입에 따라 IPP 함수 호출
-    if (inputImage.type() == CV_8UC3) {
-        std::cerr << "ippiResizeNearest_8u_C3R" << std::endl;
-        status = ippiResizeNearest_8u_C3R(pSrcData, inputImage.step[0], pDstData, outputImage.step[0], dstOffset, dstSize, pSpec, pBuffer.data());
-    }
-    else if (inputImage.type() == CV_16UC3) {
-        std::cerr << "ippiResizeNearest_16u_C3R" << std::endl;
-        status = ippiResizeNearest_16u_C3R(reinterpret_cast<Ipp16u*>(pSrcData), inputImage.step[0], reinterpret_cast<Ipp16u*>(pDstData), outputImage.step[0], dstOffset, dstSize, pSpec, pBuffer.data());
-    }
-    else if (inputImage.type() == CV_32FC3) {
-        std::cerr << "ippiResizeNearest_32f_C3R" << std::endl;
-        status = ippiResizeNearest_32f_C3R(reinterpret_cast<Ipp32f*>(pSrcData), inputImage.step[0], reinterpret_cast<Ipp32f*>(pDstData), outputImage.step[0], dstOffset, dstSize, pSpec, pBuffer.data());
-    }
-    else if (inputImage.type() == CV_8UC1) {
-        std::cerr << "ippiResizeNearest_8u_C1R" << std::endl;
-        status = ippiResizeNearest_8u_C1R(pSrcData, inputImage.step[0], pDstData, outputImage.step[0], dstOffset, dstSize, pSpec, pBuffer.data());
-    }
-    else if (inputImage.type() == CV_16UC1) {
-        std::cerr << "ippiResizeNearest_16u_C1R" << std::endl;
-        status = ippiResizeNearest_16u_C1R(reinterpret_cast<Ipp16u*>(pSrcData), inputImage.step[0], reinterpret_cast<Ipp16u*>(pDstData), outputImage.step[0], dstOffset, dstSize, pSpec, pBuffer.data());
-    }
-    else if (inputImage.type() == CV_32FC1) {
-        std::cerr << "ippiResizeNearest_32f_C1R" << std::endl;
-        status = ippiResizeNearest_32f_C1R(reinterpret_cast<Ipp32f*>(pSrcData), inputImage.step[0], reinterpret_cast<Ipp32f*>(pDstData), outputImage.step[0], dstOffset, dstSize, pSpec, pBuffer.data());
-    }
-    else if (inputImage.type() == CV_16SC1) {
-        std::cerr << "ippiResizeNearest_16s_C1R" << std::endl;
-        status = ippiResizeNearest_16s_C1R(reinterpret_cast<Ipp16s*>(pSrcData), inputImage.step[0], reinterpret_cast<Ipp16s*>(pDstData), outputImage.step[0], dstOffset, dstSize, pSpec, pBuffer.data());
-    }
-    else if (inputImage.type() == CV_16SC3) {
-        std::cerr << "ippiResizeNearest_16s_C3R" << std::endl;
-        status = ippiResizeNearest_16s_C3R(reinterpret_cast<Ipp16s*>(pSrcData), inputImage.step[0], reinterpret_cast<Ipp16s*>(pDstData), outputImage.step[0], dstOffset, dstSize, pSpec, pBuffer.data());
-    }
-    else {
-        std::cerr << "Error: Unsupported image type" << std::endl;
-        ippFree(pSpec);
-        return result;
-    }
-
-    if (status != ippStsNoErr) {
-        std::cerr << "Error: ippiResizeNearest_8u failed with status code " << status << std::endl;
-        ippFree(pSpec);
-        return result;
-    }    
+    ImageProcessorIPP IPIPP;
+    cv::Mat outputImage = IPIPP.zoom(inputImage, newWidth, newHeight, 0, 0, 1);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "zoom", "IPP", elapsedTimeMs);
-
-    // 메모리 해제
-    ippFree(pSpec);
 
     return result;
 }
@@ -663,95 +554,13 @@ ImageProcessor::ProcessingResult ImageProcessor::rotateIPP(cv::Mat& inputImage)
     ProcessingResult result;
     double startTime = cv::getTickCount();
 
-    // 입력 이미지의 크기
-    IppiSize srcSize = { inputImage.cols, inputImage.rows };
-
-    // 출력 이미지의 크기 설정: 오른쪽으로 회전된 이미지의 크기와 같도록 설정
-    IppiSize dstSize = { inputImage.rows, inputImage.cols };
-
-    // IPP에서 사용할 아핀 변환 계수
-    double angle = 270.0;  // 90도 시계 방향으로 회전
-    double xShift = static_cast<double>(srcSize.width);  // x 축 이동량: 이미지의 너비
-    double yShift = 0.0;  // y 축 이동량: 0
-
-    // 아핀 변환 계수 계산
-    double coeffs[2][3];
-    IppStatus status = ippiGetRotateTransform(angle, xShift, yShift, coeffs);
-    if (status != ippStsNoErr) {
-        std::cerr << "ippiGetRotateTransform error: " << status << std::endl;
-        return result;
-    }
-
-    // IPP를 위한 필요한 변수들
-    IppiWarpSpec* pSpec = nullptr;
-    Ipp8u* pBuffer = nullptr;
-    int specSize = 0, initSize = 0, bufSize = 0;
-    const Ipp32u numChannels = 3;
-    IppiBorderType borderType = ippBorderConst;
-    IppiWarpDirection direction = ippWarpForward;
-    Ipp64f pBorderValue[numChannels];
-    for (int i = 0; i < numChannels; ++i) pBorderValue[i] = 255.0;
-
-    // Spec 및 Init buffer 사이즈 설정
-    status = ippiWarpAffineGetSize(srcSize, dstSize, ipp8u, coeffs, ippLinear, direction, borderType, &specSize, &initSize);
-    if (status != ippStsNoErr) {
-        std::cerr << "ippiWarpAffineGetSize error: " << status << std::endl;
-        return result;
-    }
-
-    // Memory allocation
-    pSpec = (IppiWarpSpec*)ippsMalloc_8u(specSize);
-    if (pSpec == nullptr) {
-        std::cerr << "Memory allocation error for pSpec" << std::endl;
-        return result;
-    }
-
-    // Filter initialization
-    status = ippiWarpAffineLinearInit(srcSize, dstSize, ipp8u, coeffs, direction, numChannels, borderType, pBorderValue, 0, pSpec);
-    if (status != ippStsNoErr) {
-        std::cerr << "ippiWarpAffineLinearInit error: " << status << std::endl;
-        ippsFree(pSpec);
-        return result;
-    }
-
-    // work buffer size
-    status = ippiWarpGetBufferSize(pSpec, dstSize, &bufSize);
-    if (status != ippStsNoErr) {
-        std::cerr << "ippiWarpGetBufferSize error: " << status << std::endl;
-        ippsFree(pSpec);
-        return result;
-    }
-
-    pBuffer = ippsMalloc_8u(bufSize);
-    if (pBuffer == nullptr) {
-        std::cerr << "Memory allocation error for pBuffer" << std::endl;
-        ippsFree(pSpec);
-        return result;
-    }
-
-    // 회전된 이미지를 저장할 Mat 생성
-    cv::Mat outputImage(dstSize.width, dstSize.height, inputImage.type());
-
-    // dstOffset 정의 (오른쪽으로 90도 회전 시)
-    IppiPoint dstOffset = { 0, 0 };
-
-    // IPP를 이용하여 이미지 회전
-    status = ippiWarpAffineLinear_8u_C3R(inputImage.data, srcSize.width * 3, outputImage.data, dstSize.width * 3, dstOffset, dstSize, pSpec, pBuffer);
-    if (status != ippStsNoErr) {
-        std::cerr << "ippiWarpAffineLinear_8u_C3R error: " << status << std::endl;
-        ippsFree(pSpec);
-        ippsFree(pBuffer);
-        return result;
-    }   
+    ImageProcessorIPP IPIPP;
+    cv::Mat outputImage = IPIPP.rotate(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "rotate", "IPP", elapsedTimeMs);
-
-    // 메모리 해제
-    ippsFree(pSpec);
-    ippsFree(pBuffer);
 
     return result;
 }
@@ -900,91 +709,14 @@ ImageProcessor::ProcessingResult ImageProcessor::gaussianBlurIPP(cv::Mat& inputI
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    // 입력 이미지가 3채널 BGR 이미지인지 확인하고, 아닌 경우 변환
-    cv::Mat bgrImage;
-    if (inputImage.channels() != 3 || inputImage.type() != CV_8UC3) {
-        //std::cerr << "Warning: Input image is not a 3-channel BGR image. Converting to BGR." << std::endl;
-        if (inputImage.channels() == 1) {
-            cv::cvtColor(inputImage, bgrImage, cv::COLOR_GRAY2BGR);
-        }
-        else {
-            std::cerr << "Error: Unsupported image format." << std::endl;
-            return result;
-        }
-    }
-    else {
-        bgrImage = inputImage.clone(); // 이미 BGR인 경우 그대로 사용
-    }
-
-    // 출력 이미지를 16비트 3채널(CV_16UC3)로 선언
-    cv::Mat outputImage(bgrImage.size(), CV_16UC3);
-
-    // IPP 함수에 전달할 포인터들
-    Ipp16u* pSrc = reinterpret_cast<Ipp16u*>(bgrImage.data);
-    Ipp16u* pDst = reinterpret_cast<Ipp16u*>(outputImage.data);
-
-    // ROI 크기 설정
-    IppiSize roiSize = { bgrImage.cols, bgrImage.rows };
-
-    // 필터링을 위한 버퍼 및 스펙트럼 크기 계산
-    int specSize, bufferSize;
-    IppStatus status = ippiFilterGaussianGetBufferSize(roiSize, kernelSize, ipp16u, 3, &specSize, &bufferSize);
-    if (status != ippStsNoErr) {
-        std::cerr << "Error: ippiFilterGaussianGetBufferSize failed with status " << status << std::endl;
-        return result; // 빈 결과 반환
-    }
-
-    // 외부 버퍼 할당
-    Ipp8u* pBuffer = ippsMalloc_8u(bufferSize);
-    if (pBuffer == nullptr) {
-        std::cerr << "Error: Failed to allocate buffer." << std::endl;
-        return result; // 빈 결과 반환
-    }
-
-    // 가우시안 필터 스펙트럼 구조체 메모리 할당
-    IppFilterGaussianSpec* pSpec = reinterpret_cast<IppFilterGaussianSpec*>(ippsMalloc_8u(specSize));
-    if (pSpec == nullptr) {
-        std::cerr << "Error: Failed to allocate spec structure." << std::endl;
-        ippsFree(pBuffer);
-        return result; // 빈 결과 반환
-    }
-
-    // 가우시안 필터 초기화 (표준 편차는 예시로 1.5로 설정)
-    float sigma = 1.5f;
-    status = ippiFilterGaussianInit(roiSize, kernelSize, sigma, ippBorderRepl, ipp16u, 3, pSpec, pBuffer);
-    if (status != ippStsNoErr) {
-        std::cerr << "Error: ippiFilterGaussianInit failed with status " << status << std::endl;
-        ippsFree(pBuffer);
-        ippsFree(pSpec);
-        return result; // 빈 결과 반환
-    }
-
-    // 가우시안 필터 적용
-    int srcStep = bgrImage.cols * sizeof(Ipp16u) * 3;
-    int dstStep = outputImage.cols * sizeof(Ipp16u) * 3;
-    Ipp16u borderValue[3] = { 0, 0, 0 }; // 가우시안 필터 적용 시 사용할 보더 값
-    status = ippiFilterGaussianBorder_16u_C3R(pSrc, srcStep, pDst, dstStep, roiSize, borderValue, pSpec, pBuffer);
-    if (status != ippStsNoErr) {
-        std::cerr << "Error: ippiFilterGaussianBorder_16u_C3R failed with status " << status << std::endl;
-        ippsFree(pBuffer);
-        ippsFree(pSpec);
-        return result; // 빈 결과 반환
-    }
+    ImageProcessorIPP IPIPP;
+    cv::Mat outputImage = IPIPP.gaussianBlur(inputImage, kernelSize);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    // 8비트 이미지로 변환
-    cv::Mat finalOutputImage;
-    outputImage.convertTo(finalOutputImage, CV_8UC3, 1.0 / 256.0);
-
-    // 결과 설정
-    result = setResult(result, inputImage, finalOutputImage, "gaussianBlur", "IPP", elapsedTimeMs);
-
-    // 메모리 해제
-    ippsFree(pBuffer);
-    ippsFree(pSpec);
-
+    result = setResult(result, inputImage, outputImage, "gaussianBlur", "IPP", elapsedTimeMs);
+    
     return result;
 }
 
@@ -1112,63 +844,13 @@ ImageProcessor::ProcessingResult ImageProcessor::cannyEdgesIPP(cv::Mat& inputIma
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::Mat grayImage;
-    if (inputImage.channels() == 3) {
-        grayImage = convertToGrayIPP(inputImage);
-    } else {
-        grayImage = inputImage.clone();
-    }    
-
-    // IPP를 사용하여 Canny 엣지 감지 수행
-    IppiSize roiSize = { grayImage.cols, grayImage.rows };
-    int srcStep = grayImage.step;
-    int dstStep = grayImage.cols;
-    Ipp8u* srcData = grayImage.data;
-    Ipp8u* dstData = ippsMalloc_8u(roiSize.width * roiSize.height); // 출력 이미지 메모리 할당
-
-    if (!dstData) {
-        std::cerr << "Memory allocation error: Failed to allocate dstData" << std::endl;
-        return result; // 메모리 할당 오류 처리 중단
-    }
-
-    // IPP Canny 처리를 위한 임시 버퍼 크기 계산
-    int bufferSize;
-    IppStatus status = ippiCannyBorderGetSize(roiSize, ippFilterSobel, ippMskSize3x3, ipp8u, &bufferSize);
-    if (status != ippStsNoErr) {
-        std::cerr << "IPP error: Failed to calculate buffer size for Canny edge detection (" << status << ")";
-        ippsFree(dstData); // 할당된 메모리 해제
-        return result; // 오류 발생 시 처리 중단
-    }
-
-    // 임시 버퍼 할당
-    Ipp8u* pBuffer = ippsMalloc_8u(bufferSize);
-    if (!pBuffer) {
-        std::cerr << "Memory allocation error: Failed to allocate dstData" << std::endl;
-        ippsFree(dstData); // 이미 할당된 dstData 메모리도 해제
-        return result; // 메모리 할당 오류 처리 중단
-    }
-
-    // IPP Canny 엣지 감지 수행
-    status = ippiCannyBorder_8u_C1R(srcData, srcStep, dstData, dstStep, roiSize, ippFilterSobel, ippMskSize3x3, ippBorderRepl, 0, 50.0f, 150.0f, ippNormL2, pBuffer);
-    if (status != ippStsNoErr) {
-        std::cerr << "IPP error: Failed to perform Canny edge detection (" << status << ")";
-        ippsFree(pBuffer); // 할당된 메모리 해제
-        ippsFree(dstData); // 할당된 메모리 해제
-        return result; // 오류 발생 시 처리 중단
-    }
-
-
-    // 결과를 OpenCV Mat 형식으로 변환
-    cv::Mat outputImage(grayImage.rows, grayImage.cols, CV_8UC1, dstData);
+    ImageProcessorIPP IPIPP;
+    cv::Mat outputImage = IPIPP.cannyEdges(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 경과 시간 계산
 
     result = setResult(result, inputImage, outputImage, "cannyEdges", "IPP", elapsedTimeMs);
-
-    // 할당된 메모리 해제
-    ippsFree(pBuffer);
-    ippsFree(dstData);
 
     return result;
 }
@@ -1335,41 +1017,13 @@ ImageProcessor::ProcessingResult ImageProcessor::medianFilterIPP(cv::Mat& inputI
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    // IPP 미디언 필터 적용
-    IppiSize roiSize = { inputImage.cols, inputImage.rows };
-    IppiSize kernelSize = { 5, 5 }; // 5x5 커널 크기
-    int bufferSize = 0;
-
-    // IPP 초기화
-    ippInit();
-
-    // 버퍼 크기 계산
-    IppStatus status = ippiFilterMedianBorderGetBufferSize(roiSize, kernelSize, ipp8u, 1, &bufferSize);
-    if (status != ippStsNoErr) {
-        // 오류 처리
-        return result;
-    }
-
-    Ipp8u* pBuffer = ippsMalloc_8u(bufferSize);
-
-    // 출력 이미지 초기화
-    cv::Mat outputImage = cv::Mat::zeros(inputImage.size(), inputImage.type());
-
-    // 미디언 필터 적용
-    status = ippiFilterMedianBorder_8u_C1R(matToIpp8u(inputImage), inputImage.step[0], matToIpp8u(outputImage), outputImage.step[0], roiSize, kernelSize, ippBorderRepl, 0, pBuffer);
-    if (status != ippStsNoErr) {
-        // 오류 처리
-        ippsFree(pBuffer);
-        return result;
-    }
+    ImageProcessorIPP IPIPP;
+    cv::Mat outputImage = IPIPP.medianFilter(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "medianFilter", "IPP", elapsedTimeMs);
-
-    // 메모리 해제
-    ippsFree(pBuffer);
 
     return result;
 }
@@ -1503,40 +1157,8 @@ ImageProcessor::ProcessingResult ImageProcessor::laplacianFilterIPP(cv::Mat& inp
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    // 입력 이미지를 IPP 형식으로 변환
-    IppiSize roiSize = { inputImage.cols, inputImage.rows };
-    int step = inputImage.step;
-    Ipp8u* pSrc = inputImage.data;
-
-    // 출력 이미지 준비
-    cv::Mat outputImage(inputImage.size(), CV_16S); // 16비트 정수형으로 변경
-    Ipp16s* pDst = reinterpret_cast<Ipp16s*>(outputImage.data); // 포인터 형변환
-    int dstStep = outputImage.step;
-
-    // 필요한 버퍼 크기 계산
-    int bufferSize = 0;
-    IppStatus status = ippiFilterLaplacianGetBufferSize_8u16s_C1R(roiSize, ippMskSize3x3, &bufferSize);
-    if (status != ippStsNoErr) {
-        std::cerr << "Failed to get buffer size with status: " << status << std::endl;
-        return result;
-    }
-
-    Ipp8u* pBuffer = ippsMalloc_8u(bufferSize);
-
-    // 필터 적용
-    status = ippiFilterLaplacianBorder_8u16s_C1R(
-        pSrc, step, pDst, dstStep, roiSize, ippMskSize3x3, ippBorderRepl, 0, pBuffer);
-
-    ippsFree(pBuffer);
-
-    if (status != ippStsNoErr) {
-        std::cerr << "IPP Laplacian filter failed with status: " << status << std::endl;
-        return result; // 에러 처리
-    }
-
-    // 결과를 8비트 이미지로 변환
-    cv::Mat finalOutputImage;
-    outputImage.convertTo(finalOutputImage, CV_8U);
+    ImageProcessorIPP IPIPP;
+    cv::Mat outputImage = IPIPP.laplacianFilter(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -1559,22 +1181,26 @@ ImageProcessor::ProcessingResult ImageProcessor::laplacianFilterCUDA(cv::Mat& in
 
     // 입력 이미지 타입 확인 및 채널 수 변환
     int inputType = d_inputImage.type();
-    int scn = d_inputImage.channels();
+    int depth = CV_MAT_DEPTH(inputType);
 
     // CUDA Laplacian 필터를 적용할 수 있는 데이터 타입으로 변환
     cv::cuda::GpuMat d_grayImage;
-    if (inputType != CV_8U && inputType != CV_16U && inputType != CV_32F) {
+    if (depth != CV_8U && depth != CV_16U && depth != CV_32F) {
         d_inputImage.convertTo(d_grayImage, CV_32F);  // 입력 이미지를 CV_32F로 변환
+    }
+    else if (d_inputImage.channels() == 3) {
+        cv::cuda::cvtColor(d_inputImage, d_grayImage, cv::COLOR_BGR2GRAY); // RGB 이미지를 grayscale로 변환
     }
     else {
         d_grayImage = d_inputImage.clone();  // 이미 적절한 타입인 경우 그대로 사용
     }
 
-    // 출력 이미지 메모리 할당
-    cv::cuda::GpuMat d_outputImage(d_grayImage.size(), CV_32F);
+    // Laplacian 필터를 생성할 때 입력 및 출력 이미지 타입을 동일하게 설정
+    int srcType = d_grayImage.type();
+    cv::Ptr<cv::cuda::Filter> laplacianFilter = cv::cuda::createLaplacianFilter(srcType, srcType, 3);
 
-    // CUDA Laplacian 필터 생성
-    cv::Ptr<cv::cuda::Filter> laplacianFilter = cv::cuda::createLaplacianFilter(CV_32F, CV_32F, 3);
+    // 출력 이미지 메모리 할당
+    cv::cuda::GpuMat d_outputImage(d_grayImage.size(), srcType);
 
     // Laplacian 필터 적용
     laplacianFilter->apply(d_grayImage, d_outputImage);
@@ -1690,111 +1316,16 @@ ImageProcessor::ProcessingResult ImageProcessor::bilateralFilterOpenCV(cv::Mat& 
 
 ImageProcessor::ProcessingResult ImageProcessor::bilateralFilterIPP(cv::Mat& inputImage)
 {
-    // NPP
-    /* 
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    // 입력 이미지를 GPU 메모리로 복사
-    Npp8u* d_inputImage;
-    size_t inputImagePitch;
-    cudaMallocPitch((void**)&d_inputImage, &inputImagePitch, inputImage.cols * sizeof(Npp8u) * inputImage.channels(), inputImage.rows);
-    cudaMemcpy2D(d_inputImage, inputImagePitch, inputImage.data, inputImage.step, inputImage.cols * sizeof(Npp8u) * inputImage.channels(), inputImage.rows, cudaMemcpyHostToDevice);
-
-    // 출력 이미지를 GPU 메모리로 할당
-    cv::Mat outputImage(inputImage.size(), inputImage.type());
-    Npp8u* d_outputImage;
-    size_t outputImagePitch;
-    cudaMallocPitch((void**)&d_outputImage, &outputImagePitch, outputImage.cols * sizeof(Npp8u) * outputImage.channels(), outputImage.rows);
-
-    // 양방향 필터 파라미터 설정
-    NppiSize oSrcSize = { inputImage.cols, inputImage.rows };
-    NppiPoint oSrcOffset = { 0, 0 };
-    Npp32f nValSquareSigma = 75.0f;
-    Npp32f nPosSquareSigma = 75.0f;
-    int nRadius = 9;
-    NppiBorderType eBorderType = NPP_BORDER_REPLICATE;
-
-    // 이미지 채널 수에 따라 함수 선택
-    if (inputImage.channels() == 1) {
-        NppStatus status = nppiFilterBilateralGaussBorder_8u_C1R(d_inputImage, static_cast<int>(inputImagePitch), oSrcSize, oSrcOffset,
-            d_outputImage, static_cast<int>(outputImagePitch), oSrcSize,
-            nRadius, 1, nValSquareSigma, nPosSquareSigma, eBorderType);
-        if (status != NPP_SUCCESS) {
-            std::cerr << "Error applying bilateral filter: " << status << std::endl;
-        }
-    }
-    else if (inputImage.channels() == 3) {
-        NppStatus status = nppiFilterBilateralGaussBorder_8u_C3R(d_inputImage, static_cast<int>(inputImagePitch), oSrcSize, oSrcOffset,
-            d_outputImage, static_cast<int>(outputImagePitch), oSrcSize,
-            nRadius, 3, nValSquareSigma, nPosSquareSigma, eBorderType);
-        if (status != NPP_SUCCESS) {
-            std::cerr << "Error applying bilateral filter: " << status << std::endl;
-        }
-    }
-    else {
-        std::cerr << "Unsupported number of channels: " << inputImage.channels() << std::endl;
-    }
-
-    // 처리된 이미지를 호스트로 복사
-    cudaMemcpy2D(outputImage.data, outputImage.step, d_outputImage, outputImagePitch, outputImage.cols * sizeof(Npp8u) * outputImage.channels(), outputImage.rows, cudaMemcpyDeviceToHost);
-
-    double endTime = cv::getTickCount(); // 종료 시간 측정
-    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
-
-    result = setResult(result, inputImage, outputImage, "bilateralFilter", "NPP", elapsedTimeMs);
-
-    // 메모리 해제
-    cudaFree(d_inputImage);
-    cudaFree(d_outputImage);
-
-    return result;
-    */
-
-    // IPP
-    ProcessingResult result;
-    double startTime = cv::getTickCount(); // 시작 시간 측정
-
-    // IPP 구조체와 버퍼 크기 계산
-    IppiSize roiSize = {inputImage.cols, inputImage.rows};
-    int kernelSize = 9; // 필터 크기
-    IppDataType dataType = ipp8u; // 데이터 타입 (8비트 무채색 이미지)
-    int numChannels = 3; // 채널 수
-    IppiDistanceMethodType distMethod = ippDistNormL2; // 거리 방법
-    int specSize = 0, bufferSize = 0;
-
-    ippiFilterBilateralGetBufferSize(ippiFilterBilateralGauss, roiSize, kernelSize, dataType, numChannels, distMethod, &specSize, &bufferSize);
-
-    // 메모리 할당
-    IppiFilterBilateralSpec* pSpec = (IppiFilterBilateralSpec*)ippMalloc(specSize);
-    Ipp8u* pBuffer = (Ipp8u*)ippMalloc(bufferSize);
-
-    // 필터 초기화
-    IppStatus status = ippiFilterBilateralInit(ippiFilterBilateralGauss, roiSize, kernelSize, dataType, numChannels, distMethod, 75, 75, pSpec);
-    if (status != ippStsNoErr) {
-        std::cerr << "Error initializing bilateral filter: " << status << std::endl;
-        ippFree(pSpec);
-        ippFree(pBuffer);
-        return result;
-    }
-
-    // 출력 이미지 버퍼 할당
-    cv::Mat outputImage(inputImage.size(), inputImage.type());
-
-    // 양방향 필터 적용
-    status = ippiFilterBilateral_8u_C3R(inputImage.ptr<Ipp8u>(), inputImage.step, outputImage.ptr<Ipp8u>(), outputImage.step, roiSize, ippBorderRepl, NULL, pSpec, pBuffer);
-    if (status != ippStsNoErr) {
-        std::cerr << "Error applying bilateral filter: " << status << std::endl;
-    }
+    ImageProcessorIPP IPIPP;
+    cv::Mat outputImage = IPIPP.bilateralFilter(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "bilateralFilter", "IPP", elapsedTimeMs);
-
-    // 메모리 해제
-    ippFree(pSpec);
-    ippFree(pBuffer);
 
     return result;
 }
@@ -1902,66 +1433,13 @@ ImageProcessor::ProcessingResult ImageProcessor::sobelFilterIPP(cv::Mat& inputIm
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    // Convert input image to grayscale if it is not
-    cv::Mat grayImage;
-    if (inputImage.channels() > 1) {
-        grayImage = convertToGrayOpenCV(inputImage);  // Use OpenCV for conversion
-    }
-    else {
-        grayImage = inputImage.clone();  // If already grayscale, make a copy
-    }
-
-    // Prepare destination image
-    cv::Mat outputImage = cv::Mat::zeros(grayImage.size(), CV_16SC1);
-
-    // IPP specific variables
-    IppiSize roiSize = { grayImage.cols, grayImage.rows };
-    IppiMaskSize mask = ippMskSize3x3; // Using 3x3 Sobel kernel
-    IppNormType normType = ippNormL1;
-    int bufferSize = 0;
-    IppStatus status;
-
-    // Calculate buffer size
-    status = ippiFilterSobelGetBufferSize(roiSize, mask, normType, ipp8u, ipp16s, 1, &bufferSize);
-    if (status != ippStsNoErr) {
-        std::cerr << "Error calculating buffer size: " << status << std::endl;
-        return result;
-    }
-
-    // Allocate buffer
-    Ipp8u* pBuffer = ippsMalloc_8u(bufferSize);
-    if (!pBuffer) {
-        std::cerr << "Error allocating buffer." << std::endl;
-        return result;
-    }
-
-    // Apply Sobel filter
-    status = ippiFilterSobel_8u16s_C1R(
-        grayImage.data,
-        static_cast<int>(grayImage.step),
-        reinterpret_cast<Ipp16s*>(outputImage.data),
-        static_cast<int>(outputImage.step),
-        roiSize,
-        mask,
-        normType,
-        ippBorderRepl,
-        0,
-        pBuffer
-    );
-
-    if (status != ippStsNoErr) {
-        std::cerr << "Error applying Sobel filter: " << status << std::endl;
-        ippsFree(pBuffer);
-        return result;
-    }
+    ImageProcessorIPP IPIPP;
+    cv::Mat outputImage = IPIPP.sobelFilter(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "sobelFilter", "IPP", elapsedTimeMs);
-
-    // Free the buffer
-    ippsFree(pBuffer);
 
     return result;
 }

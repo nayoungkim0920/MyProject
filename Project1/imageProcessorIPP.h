@@ -36,16 +36,16 @@ public:
         , int newHeight
         , double x, double y
         , int interpolation);
-    cv::Mat gaussianBlur(cv::Mat& inputImage
-        , int kernelSize
-        , int sigmaX
-        , int sigmaY
-        , int borderType);
+    cv::Mat gaussianBlur(cv::Mat& inputImage, int kernelSize);
     cv::Mat cannyEdges(cv::Mat& inputImage);
     cv::Mat medianFilter(cv::Mat& inputImage);
     cv::Mat laplacianFilter(cv::Mat& inputImage);
     cv::Mat bilateralFilter(cv::Mat& inputImage);
     cv::Mat sobelFilter(cv::Mat& inputImage);
+
+private:
+    // 유틸리티 함수 선언
+    Ipp8u* matToIpp8u(cv::Mat& mat);
 };
 
 #endif // IMAGEPROCESSORIPP_H
