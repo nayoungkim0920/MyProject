@@ -122,7 +122,7 @@ cv::Mat ImageProcessorIPP::grayScale(cv::Mat& inputImage)
     return outputImage;
 }
 
-cv::Mat ImageProcessorIPP::zoom(cv::Mat& inputImage, int newWidth, int newHeight, double x, double y, int interpolation)
+cv::Mat ImageProcessorIPP::zoom(cv::Mat& inputImage, int newWidth, int newHeight)
 {
     // IPP 변수들 선언
     IppStatus status;
@@ -235,11 +235,10 @@ cv::Mat ImageProcessorIPP::zoom(cv::Mat& inputImage, int newWidth, int newHeight
 cv::Mat ImageProcessorIPP::gaussianBlur(cv::Mat& inputImage, int kernelSize)
 {
     // 입력 이미지가 3채널 BGR 이미지인지 확인하고, 아닌 경우 변환
-    cv::Mat bgrImage;
+    cv::Mat bgrInputImage;
     if (inputImage.channels() != 3 || inputImage.type() != CV_8UC3) {
-        //std::cerr << "Warning: Input image is not a 3-channel BGR image. Converting to BGR." << std::endl;
         if (inputImage.channels() == 1) {
-            cv::cvtColor(inputImage, bgrImage, cv::COLOR_GRAY2BGR);
+            cv::cvtColor(inputImage, bgrInputImage, cv::COLOR_GRAY2BGR);
         }
         else {
             std::cerr << "Error: Unsupported image format." << std::endl;
@@ -247,18 +246,18 @@ cv::Mat ImageProcessorIPP::gaussianBlur(cv::Mat& inputImage, int kernelSize)
         }
     }
     else {
-        bgrImage = inputImage.clone(); // 이미 BGR인 경우 그대로 사용
+        bgrInputImage = inputImage.clone(); // 이미 BGR인 경우 그대로 사용
     }
 
     // 출력 이미지를 16비트 3채널(CV_16UC3)로 선언
-    cv::Mat outputImage(bgrImage.size(), CV_16UC3);
+    cv::Mat tempOutputImage(bgrInputImage.size(), CV_16UC3);
 
     // IPP 함수에 전달할 포인터들
-    Ipp16u* pSrc = reinterpret_cast<Ipp16u*>(bgrImage.data);
-    Ipp16u* pDst = reinterpret_cast<Ipp16u*>(outputImage.data);
+    Ipp16u* pSrc = reinterpret_cast<Ipp16u*>(bgrInputImage.data);
+    Ipp16u* pDst = reinterpret_cast<Ipp16u*>(tempOutputImage.data);
 
     // ROI 크기 설정
-    IppiSize roiSize = { bgrImage.cols, bgrImage.rows };
+    IppiSize roiSize = { bgrInputImage.cols, bgrInputImage.rows };
 
     // 필터링을 위한 버퍼 및 스펙트럼 크기 계산
     int specSize, bufferSize;
@@ -294,8 +293,8 @@ cv::Mat ImageProcessorIPP::gaussianBlur(cv::Mat& inputImage, int kernelSize)
     }
 
     // 가우시안 필터 적용
-    int srcStep = bgrImage.cols * sizeof(Ipp16u) * 3;
-    int dstStep = outputImage.cols * sizeof(Ipp16u) * 3;
+    int srcStep = bgrInputImage.cols * sizeof(Ipp16u) * 3;
+    int dstStep = tempOutputImage.cols * sizeof(Ipp16u) * 3;
     Ipp16u borderValue[3] = { 0, 0, 0 }; // 가우시안 필터 적용 시 사용할 보더 값
     status = ippiFilterGaussianBorder_16u_C3R(pSrc, srcStep, pDst, dstStep, roiSize, borderValue, pSpec, pBuffer);
     if (status != ippStsNoErr) {
@@ -305,12 +304,13 @@ cv::Mat ImageProcessorIPP::gaussianBlur(cv::Mat& inputImage, int kernelSize)
         return cv::Mat(); // 빈 결과 반환
     }
 
-    // 8비트 이미지로 변환
-    outputImage.convertTo(outputImage, CV_8UC3, 1.0 / 256.0);
-
     // 메모리 해제
     ippsFree(pBuffer);
     ippsFree(pSpec);
+
+    // 8비트 이미지로 변환
+    cv::Mat outputImage;
+    tempOutputImage.convertTo(outputImage, CV_8UC3, 1.0 / 256.0);
 
     return outputImage;
 }
@@ -378,8 +378,12 @@ Ipp8u* ImageProcessorIPP::matToIpp8u(cv::Mat& mat)
     return mat.ptr<Ipp8u>();
 }
 
+
 cv::Mat ImageProcessorIPP::medianFilter(cv::Mat& inputImage)
 {
+    // 입력 이미지가 그레이스케일인지 확인
+    bool isGrayScale = (inputImage.channels() == 1);
+
     // IPP 미디언 필터 적용
     IppiSize roiSize = { inputImage.cols, inputImage.rows };
     IppiSize kernelSize = { 5, 5 }; // 5x5 커널 크기
@@ -389,10 +393,17 @@ cv::Mat ImageProcessorIPP::medianFilter(cv::Mat& inputImage)
     ippInit();
 
     // 버퍼 크기 계산
-    IppStatus status = ippiFilterMedianBorderGetBufferSize(roiSize, kernelSize, ipp8u, 1, &bufferSize);
+    IppStatus status;
+    if (isGrayScale) {
+        status = ippiFilterMedianBorderGetBufferSize(roiSize, kernelSize, ipp8u, 1, &bufferSize);
+    }
+    else {
+        status = ippiFilterMedianBorderGetBufferSize(roiSize, kernelSize, ipp8u, 3, &bufferSize);
+    }
+
     if (status != ippStsNoErr) {
-        // 오류 처리
-        return cv::Mat();
+        std::cerr << "Error: ippiFilterMedianBorderGetBufferSize failed with status " << status << std::endl;
+        return cv::Mat(); // 빈 결과 반환
     }
 
     Ipp8u* pBuffer = ippsMalloc_8u(bufferSize);
@@ -401,11 +412,17 @@ cv::Mat ImageProcessorIPP::medianFilter(cv::Mat& inputImage)
     cv::Mat outputImage = cv::Mat::zeros(inputImage.size(), inputImage.type());
 
     // 미디언 필터 적용
-    status = ippiFilterMedianBorder_8u_C1R(matToIpp8u(inputImage), inputImage.step[0], matToIpp8u(outputImage), outputImage.step[0], roiSize, kernelSize, ippBorderRepl, 0, pBuffer);
+    if (isGrayScale) {
+        status = ippiFilterMedianBorder_8u_C1R(matToIpp8u(inputImage), inputImage.step[0], matToIpp8u(outputImage), outputImage.step[0], roiSize, kernelSize, ippBorderRepl, 0, pBuffer);
+    }
+    else {
+        status = ippiFilterMedianBorder_8u_C3R(reinterpret_cast<Ipp8u*>(inputImage.data), inputImage.step[0], reinterpret_cast<Ipp8u*>(outputImage.data), outputImage.step[0], roiSize, kernelSize, ippBorderRepl, 0, pBuffer);
+    }
+
     if (status != ippStsNoErr) {
-        // 오류 처리
+        std::cerr << "Error: ippiFilterMedianBorder_8u_C1R or _8u_C3R failed with status " << status << std::endl;
         ippsFree(pBuffer);
-        return cv::Mat();
+        return cv::Mat(); // 빈 결과 반환
     }
 
     // 메모리 해제

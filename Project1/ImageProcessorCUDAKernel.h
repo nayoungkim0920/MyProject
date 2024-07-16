@@ -20,11 +20,7 @@ public:
 
     cv::Mat rotate(cv::Mat& inputImage);
     cv::Mat grayScale(cv::Mat& inputImage);
-    cv::Mat zoom(cv::Mat& inputImage
-        , int newWidth
-        , int newHeight
-        , double x, double y
-        , int interpolation);
+    cv::Mat zoom(cv::Mat& inputImage, int newWidth, int newHeight);
     cv::Mat gaussianBlur(cv::Mat& inputImage, int kernelSize);
     cv::Mat cannyEdges(cv::Mat& inputImage);
     cv::Mat medianFilter(cv::Mat& inputImage);

@@ -323,40 +323,44 @@ void MainWindow::handleImageProcessed(QVector<ImageProcessor::ProcessingResult> 
         if (i == 0) {
             currentImageOpenCV = result.processedImage.clone();
             displayImage(result.processedImage, ui->label_opencv);
-            ui->label_opencv_title->setText(QString("%1 %2 %3ms %4 %5")
+            ui->label_opencv_title->setText(QString("%1 %2 %3ms %4 %5 %6")
                 .arg(result.processName)
                 .arg(result.functionName)
                 .arg(result.processingTime)
+                .arg(result.argInfo)
                 .arg(result.inputInfo)
                 .arg(result.outputInfo));
         }
         else if (i == 1) {
             currentImageIPP = result.processedImage;
             displayImage(result.processedImage, ui->label_ipp);
-            ui->label_ipp_title->setText(QString("%1 %2 %3ms %4 %5")
+            ui->label_ipp_title->setText(QString("%1 %2 %3ms %4 %5 %6")
                 .arg(result.processName)
                 .arg(result.functionName)
                 .arg(result.processingTime)
+                .arg(result.argInfo)
                 .arg(result.inputInfo)
                 .arg(result.outputInfo));
         }
         else if (i == 2) {
             currentImageCUDA= result.processedImage;
             displayImage(result.processedImage, ui->label_cuda);
-            ui->label_cuda_title->setText(QString("%1 %2 %3ms %4 %5")
+            ui->label_cuda_title->setText(QString("%1 %2 %3ms %4 %5 %6")
                 .arg(result.processName)
                 .arg(result.functionName)
                 .arg(result.processingTime)
+                .arg(result.argInfo)
                 .arg(result.inputInfo)
                 .arg(result.outputInfo));
         }
         else if (i == 3) {
             currentImageCUDAKernel = result.processedImage;
             displayImage(result.processedImage, ui->label_cudakernel);
-            ui->label_cudakernel_title->setText(QString("%1 %2 %3ms %4 %5")
+            ui->label_cudakernel_title->setText(QString("%1 %2 %3ms %4 %5 %6")
                 .arg(result.processName)
                 .arg(result.functionName)
                 .arg(result.processingTime)
+                .arg(result.argInfo)
                 .arg(result.inputInfo)
                 .arg(result.outputInfo));
         }

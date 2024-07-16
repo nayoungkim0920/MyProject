@@ -316,7 +316,7 @@ ImageProcessor::ProcessingResult ImageProcessor::grayScaleOpenCV(cv::Mat& inputI
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "grayScale", "OpenCV", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "grayScale", "OpenCV", elapsedTimeMs, "");
 
     return result;
 }
@@ -332,7 +332,7 @@ ImageProcessor::ProcessingResult ImageProcessor::grayScaleIPP(cv::Mat& inputImag
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산   
 
-    result = setResult(result, inputImage, outputImage, "grayScale", "IPP", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "grayScale", "IPP", elapsedTimeMs, "");
 
     return result;
 }
@@ -348,7 +348,7 @@ ImageProcessor::ProcessingResult ImageProcessor::grayScaleCUDA(cv::Mat& inputIma
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "grayScale", "CUDA", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "grayScale", "CUDA", elapsedTimeMs, "");
 
     return result;
 }
@@ -364,7 +364,7 @@ ImageProcessor::ProcessingResult ImageProcessor::grayScaleCUDAKernel(cv::Mat& in
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "grayScale", "CUDAKernel", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "grayScale", "CUDAKernel", elapsedTimeMs, "");
 
     return result;
 }
@@ -381,7 +381,8 @@ ImageProcessor::ProcessingResult ImageProcessor::zoomOpenCV(cv::Mat& inputImage,
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "zoom", "OpenCV", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "zoom", "OpenCV", elapsedTimeMs
+        , QString("w:%1, h:%2, 0, 0, cv::INTER_LINEAR").arg(newWidth).arg(newHeight));
 
     return result;
 }
@@ -392,12 +393,13 @@ ImageProcessor::ProcessingResult ImageProcessor::zoomIPP(cv::Mat& inputImage, do
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
     ImageProcessorIPP IPIPP;
-    cv::Mat outputImage = IPIPP.zoom(inputImage, newWidth, newHeight, 0, 0, 1);
+    cv::Mat outputImage = IPIPP.zoom(inputImage, newWidth, newHeight);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "zoom", "IPP", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "zoom", "IPP", elapsedTimeMs
+    ,QString("w:%1, h:%2").arg(newWidth).arg(newHeight));
 
     return result;
 }
@@ -408,12 +410,13 @@ ImageProcessor::ProcessingResult ImageProcessor::zoomCUDA(cv::Mat& inputImage, d
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
     ImageProcessorCUDA IPCUDA;
-    cv::Mat outputImage = IPCUDA.zoom(inputImage, newWidth, newHeight, 0, 0, 1);
+    cv::Mat outputImage = IPCUDA.zoom(inputImage, newWidth, newHeight);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "zoom", "CUDA", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "zoom", "CUDA", elapsedTimeMs
+    , QString("w:%1, h:%2").arg(newWidth).arg(newHeight));
 
     return result;
 }
@@ -424,12 +427,13 @@ ImageProcessor::ProcessingResult ImageProcessor::zoomCUDAKernel(cv::Mat& inputIm
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
     ImageProcessorCUDAKernel IPCUDAK;
-    cv::Mat outputImage = IPCUDAK.zoom(inputImage, newWidth, newHeight, 0, 0, 1);
+    cv::Mat outputImage = IPCUDAK.zoom(inputImage, newWidth, newHeight);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "zoom", "CUDAKernel", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "zoom", "CUDAKernel", elapsedTimeMs
+    , QString("w:%1, h:%2").arg(newWidth).arg(newHeight));
 
     return result;
 }
@@ -440,12 +444,12 @@ ImageProcessor::ProcessingResult ImageProcessor::rotateOpenCV(cv::Mat& inputImag
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
     ImageProcessorOpenCV IPOpenCV;
-    cv::Mat outputImage = IPOpenCV.rotate(inputImage);
+    cv::Mat outputImage = IPOpenCV.rotate(inputImage, cv::ROTATE_90_CLOCKWISE);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "rotate", "OpenCV", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "rotate", "OpenCV", elapsedTimeMs, "cv::ROTATE_90_CLOCKWISE");
 
     return result;
 }
@@ -461,7 +465,8 @@ ImageProcessor::ProcessingResult ImageProcessor::rotateIPP(cv::Mat& inputImage)
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "rotate", "IPP", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "rotate", "IPP", elapsedTimeMs
+    , "");
 
     return result;
 }
@@ -478,7 +483,8 @@ ImageProcessor::ProcessingResult ImageProcessor::rotateCUDA(cv::Mat& inputImage)
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "rotate", "CUDA", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "rotate", "CUDA", elapsedTimeMs
+    ,"");
 
     return result;
 }
@@ -494,7 +500,8 @@ ImageProcessor::ProcessingResult ImageProcessor::rotateCUDAKernel(cv::Mat& input
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "rotate", "CUDAKernel", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "rotate", "CUDAKernel", elapsedTimeMs
+    , "");
 
     return result;
 }
@@ -582,7 +589,8 @@ ImageProcessor::ProcessingResult ImageProcessor::gaussianBlurOpenCV(cv::Mat& inp
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "gaussianBlur", "OpenCV", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "gaussianBlur", "OpenCV", elapsedTimeMs
+    , QString("kSize:%1, 0, 0, 1 ").arg(kernelSize));
 
     return result;
 }
@@ -598,7 +606,8 @@ ImageProcessor::ProcessingResult ImageProcessor::gaussianBlurIPP(cv::Mat& inputI
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "gaussianBlur", "IPP", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "gaussianBlur", "IPP", elapsedTimeMs
+        , QString("kSize:%1").arg(kernelSize));
     
     return result;
 }
@@ -614,7 +623,8 @@ ImageProcessor::ProcessingResult ImageProcessor::gaussianBlurCUDA(cv::Mat& input
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "gaussianBlur", "CUDA", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "gaussianBlur", "CUDA", elapsedTimeMs
+        , QString("kSize:%1").arg(kernelSize));
 
     return result;
 
@@ -631,7 +641,8 @@ ImageProcessor::ProcessingResult ImageProcessor::gaussianBlurCUDAKernel(cv::Mat&
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "gaussianBlur", "CUDAKernel", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "gaussianBlur", "CUDAKernel", elapsedTimeMs
+        , QString("kSize:%1").arg(kernelSize));
 
     return result;
 }
@@ -706,7 +717,8 @@ ImageProcessor::ProcessingResult ImageProcessor::cannyEdgesOpenCV(cv::Mat& input
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "cannyEdges", "OpenCV", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "cannyEdges", "OpenCV", elapsedTimeMs
+        , "");
 
     return result;
 }
@@ -721,7 +733,8 @@ ImageProcessor::ProcessingResult ImageProcessor::cannyEdgesIPP(cv::Mat& inputIma
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 경과 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "cannyEdges", "IPP", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "cannyEdges", "IPP", elapsedTimeMs
+        , "");
 
     return result;
 }
@@ -737,7 +750,8 @@ ImageProcessor::ProcessingResult ImageProcessor::cannyEdgesCUDA(cv::Mat& inputIm
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "cannyEdges", "CUDA", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "cannyEdges", "CUDA", elapsedTimeMs
+        , "");
 
     return result;
 }
@@ -753,7 +767,8 @@ ImageProcessor::ProcessingResult ImageProcessor::cannyEdgesCUDAKernel(cv::Mat& i
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "cannyEdges", "CUDAKernel", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "cannyEdges", "CUDAKernel", elapsedTimeMs
+    , "");
 
     return result;
 }
@@ -829,7 +844,8 @@ ImageProcessor::ProcessingResult ImageProcessor::medianFilterOpenCV(cv::Mat& inp
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "medianFilter", "OpenCV", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "medianFilter", "OpenCV", elapsedTimeMs
+    , "");
 
     return result;
 }
@@ -845,7 +861,8 @@ ImageProcessor::ProcessingResult ImageProcessor::medianFilterIPP(cv::Mat& inputI
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "medianFilter", "IPP", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "medianFilter", "IPP", elapsedTimeMs
+    , "");
 
     return result;
 }
@@ -861,7 +878,8 @@ ImageProcessor::ProcessingResult ImageProcessor::medianFilterCUDA(cv::Mat& input
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "medianFilter", "CUDA", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "medianFilter", "CUDA", elapsedTimeMs
+    , "");
 
     return result;
 }
@@ -877,7 +895,8 @@ ImageProcessor::ProcessingResult ImageProcessor::medianFilterCUDAKernel(cv::Mat&
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "medianFilter", "OpenCV", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "medianFilter", "OpenCV", elapsedTimeMs
+    , "");
 
     return result;
 }
@@ -954,7 +973,8 @@ ImageProcessor::ProcessingResult ImageProcessor::laplacianFilterOpenCV(cv::Mat& 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "laplacianFilter", "OpenCV", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "laplacianFilter", "OpenCV", elapsedTimeMs
+    , "");
 
     return result;
 }
@@ -972,7 +992,8 @@ ImageProcessor::ProcessingResult ImageProcessor::laplacianFilterIPP(cv::Mat& inp
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "laplacianFilter", "IPP", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "laplacianFilter", "IPP", elapsedTimeMs
+    , "");
 
     return result;
 }
@@ -990,7 +1011,8 @@ ImageProcessor::ProcessingResult ImageProcessor::laplacianFilterCUDA(cv::Mat& in
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "laplacianFilter", "CUDA", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "laplacianFilter", "CUDA", elapsedTimeMs
+    , "");
 
     return result;
 }
@@ -1008,7 +1030,8 @@ ImageProcessor::ProcessingResult ImageProcessor::laplacianFilterCUDAKernel(cv::M
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "laplacianFilter", "CUDAKernel", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "laplacianFilter", "CUDAKernel", elapsedTimeMs
+    , "");
 
     return result;
 }
@@ -1084,7 +1107,8 @@ ImageProcessor::ProcessingResult ImageProcessor::bilateralFilterOpenCV(cv::Mat& 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "bilateralFilter", "OpenCV", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "bilateralFilter", "OpenCV", elapsedTimeMs
+    , "");
 
     return result;
 }
@@ -1100,7 +1124,8 @@ ImageProcessor::ProcessingResult ImageProcessor::bilateralFilterIPP(cv::Mat& inp
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "bilateralFilter", "IPP", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "bilateralFilter", "IPP", elapsedTimeMs
+    , "");
 
     return result;
 }
@@ -1116,7 +1141,8 @@ ImageProcessor::ProcessingResult ImageProcessor::bilateralFilterCUDA(cv::Mat& in
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "bilateralFilter", "CUDA", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "bilateralFilter", "CUDA", elapsedTimeMs
+    , "");
 
     return result;
 }
@@ -1132,7 +1158,8 @@ ImageProcessor::ProcessingResult ImageProcessor::bilateralFilterCUDAKernel(cv::M
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "bilateralFilter", "CUDAKernel", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "bilateralFilter", "CUDAKernel", elapsedTimeMs
+    , "");
 
     return result;
 }
@@ -1197,7 +1224,8 @@ ImageProcessor::ProcessingResult ImageProcessor::sobelFilterOpenCV(cv::Mat& inpu
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "sobelFilter", "OpenCV", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "sobelFilter", "OpenCV", elapsedTimeMs
+    , "");
 
     return result;
 }
@@ -1213,7 +1241,8 @@ ImageProcessor::ProcessingResult ImageProcessor::sobelFilterIPP(cv::Mat& inputIm
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "sobelFilter", "IPP", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "sobelFilter", "IPP", elapsedTimeMs
+    , "");
 
     return result;
 }
@@ -1229,7 +1258,8 @@ ImageProcessor::ProcessingResult ImageProcessor::sobelFilterCUDA(cv::Mat& inputI
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "sobelFilter", "CUDA", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "sobelFilter", "CUDA", elapsedTimeMs
+    , "");
 
     return result;
 }
@@ -1245,7 +1275,8 @@ ImageProcessor::ProcessingResult ImageProcessor::sobelFilterCUDAKernel(cv::Mat& 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "sobelFilter", "CUDAKernel", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "sobelFilter", "CUDAKernel", elapsedTimeMs
+    , "");
 
     return result;
 }
@@ -1492,7 +1523,9 @@ void ImageProcessor::pushToRedoStackCUDAKernel(const cv::Mat& image)
     redoStackCUDAKernel.push(image.clone());
 }
 
-ImageProcessor::ProcessingResult ImageProcessor::setResult(ProcessingResult& result, cv::Mat& inputImage, cv::Mat& outputImage, QString functionName, QString processName, double processingTime)
+ImageProcessor::ProcessingResult ImageProcessor::setResult(ProcessingResult& result
+    , cv::Mat& inputImage, cv::Mat& outputImage, QString functionName
+    , QString processName, double processingTime, QString argInfo)
 {
     result.functionName = functionName;
     result.processName = processName;
@@ -1506,6 +1539,7 @@ ImageProcessor::ProcessingResult ImageProcessor::setResult(ProcessingResult& res
         + ", type: " + QString::number(outputImage.type())
         + "(" + ImageTypeConverter::getImageTypeString(outputImage.type()) + ")"
         + ", depth: " + QString::number(outputImage.depth());
+    result.argInfo = argInfo;
 
     return result;
 }

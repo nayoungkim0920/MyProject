@@ -65,10 +65,11 @@ public:
         double processingTime;
         QString inputInfo;
         QString outputInfo;
+        QString argInfo;
 
         ProcessingResult() = default;
-        ProcessingResult(const QString& functionName, const QString& processName, const cv::Mat& processedImage, double processingTime, const QString& inputInfo, const QString& outputInfo)
-            : functionName(functionName), processName(processName), processedImage(processedImage), processingTime(processingTime), inputInfo(inputInfo), outputInfo(outputInfo) {}
+        ProcessingResult(const QString& functionName, const QString& processName, const cv::Mat& processedImage, double processingTime, const QString& inputInfo, const QString& outputInfo, const QString& argInfo = "")
+            : functionName(functionName), processName(processName), processedImage(processedImage), processingTime(processingTime), inputInfo(inputInfo), outputInfo(outputInfo), argInfo(argInfo) {}
     };
 
     bool openImage(const std::string& fileName, cv::Mat& image);
@@ -135,7 +136,8 @@ private:
     void pushToRedoStackCUDAKernel(const cv::Mat& image);
 
     ProcessingResult setResult(ProcessingResult& result, cv::Mat& inputImage
-        , cv::Mat& outputImage, QString functionName, QString processName, double processingTime);
+        , cv::Mat& outputImage, QString functionName, QString processName
+        , double processingTime, QString arginfo);
 
     //bool grayScaleCUDA(cv::Mat& image);
 

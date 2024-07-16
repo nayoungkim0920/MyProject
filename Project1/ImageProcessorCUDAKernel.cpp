@@ -24,7 +24,7 @@ cv::Mat ImageProcessorCUDAKernel::grayScale(cv::Mat& inputImage)
     return outputImage;
 }
 
-cv::Mat ImageProcessorCUDAKernel::zoom(cv::Mat& inputImage, int newWidth, int newHeight, double x, double y, int interpolation)
+cv::Mat ImageProcessorCUDAKernel::zoom(cv::Mat& inputImage, int newWidth, int newHeight)
 {
     cv::Mat outputImage;
     callZoomImageCUDA(inputImage, outputImage, newWidth, newHeight);

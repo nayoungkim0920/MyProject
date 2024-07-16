@@ -48,7 +48,7 @@ cv::Mat ImageProcessorCUDA::grayScale(cv::Mat& inputImage)
     return outputImage;
 }
 
-cv::Mat ImageProcessorCUDA::zoom(cv::Mat& inputImage, int newWidth, int newHeight, double x, double y, int interpolation)
+cv::Mat ImageProcessorCUDA::zoom(cv::Mat& inputImage, int newWidth, int newHeight)
 {
     // GPU 메모리로 이미지 업로드
     cv::cuda::GpuMat d_image;
