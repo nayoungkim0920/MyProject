@@ -28,17 +28,6 @@
 
 #include <omp.h>
 
-#include <npp.h>
-#include <nppi.h>
-#include <nppi_filtering_functions.h>
-
-#include <ipp.h>
-#include <ipp/ippcore.h>
-#include <ipp/ippi.h>
-#include <ipp/ippcc.h>
-#include <ipp/ipps.h>
-#include <ipp/ippcv.h>
-
 #include "ImageTypeConverter.h"
 
 #include "ImageProcessorOpenCV.h"
@@ -85,7 +74,7 @@ public:
     QFuture<bool> cannyEdges(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
     QFuture<bool> medianFilter(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
     QFuture<bool> laplacianFilter(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
-    QFuture<bool> bilateralFilter(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, cv::Mat& imageNPP);
+    QFuture<bool> bilateralFilter(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, cv::Mat& imageNPP, cv::Mat& imageGStreamer);
     QFuture<bool> sobelFilter(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
 
     bool canUndoOpenCV() const;
@@ -104,6 +93,7 @@ public:
     const cv::Mat& getLastProcessedImageCUDA() const;
     const cv::Mat& getLastProcessedImageCUDAKernel() const;
     const cv::Mat& getLastProcessedImageNPP() const;
+    const cv::Mat& getLastProcessedImageGStreamer() const;
 
 signals: //이벤트 발생을 알림
     void imageProcessed(QVector<ImageProcessor::ProcessingResult> results);
@@ -116,6 +106,7 @@ private:
     cv::Mat lastProcessedImageCUDA;
     cv::Mat lastProcessedImageCUDAKernel;
     cv::Mat lastProcessedImageNPP;
+    cv::Mat lastProcessedImageGStreamer;
 
     QMutex mutex;
 
@@ -124,24 +115,28 @@ private:
     std::stack<cv::Mat> undoStackCUDA;
     std::stack<cv::Mat> undoStackCUDAKernel;
     std::stack<cv::Mat> undoStackNPP;
+    std::stack<cv::Mat> undoStackGStreamer;
 
     std::stack<cv::Mat> redoStackOpenCV;
     std::stack<cv::Mat> redoStackIPP;
     std::stack<cv::Mat> redoStackCUDA;
     std::stack<cv::Mat> redoStackCUDAKernel;
     std::stack<cv::Mat> redoStackNPP;
+    std::stack<cv::Mat> redoStackGStreamer;
 
     void pushToUndoStackOpenCV(const cv::Mat& image);
     void pushToUndoStackIPP(const cv::Mat& image);
     void pushToUndoStackCUDA(const cv::Mat& image);
     void pushToUndoStackCUDAKernel(const cv::Mat& image);
     void pushToUndoStackNPP(const cv::Mat& image);
+    void pushToUndoStackGStreamer(const cv::Mat& image);
 
     void pushToRedoStackOpenCV(const cv::Mat& image);
     void pushToRedoStackIPP(const cv::Mat& image);
     void pushToRedoStackCUDA(const cv::Mat& image);
     void pushToRedoStackCUDAKernel(const cv::Mat& image);
     void pushToRedoStackNPP(const cv::Mat& image);
+    void pushToRedoStackGStreamer(const cv::Mat& image);
 
     ProcessingResult setResult(ProcessingResult& result, cv::Mat& inputImage
         , cv::Mat& outputImage, QString functionName, QString processName
@@ -187,6 +182,7 @@ private:
     ProcessingResult bilateralFilterCUDA(cv::Mat& inputImage);
     ProcessingResult bilateralFilterCUDAKernel(cv::Mat& inputImage);
     ProcessingResult bilateralFilterNPP(cv::Mat& inputImage);
+    ProcessingResult bilateralFilterGStreamer(cv::Mat& inputImage);
 
     ProcessingResult sobelFilterOpenCV(cv::Mat& inputImage);
     ProcessingResult sobelFilterIPP(cv::Mat& inputImage);

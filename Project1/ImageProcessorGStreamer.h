@@ -2,8 +2,9 @@
 #define IMAGEPROCESSORGSTREAMER_H
 
 #include <gst/gst.h>
+#include <gst/app/gstappsrc.h>
 #include <gst/app/gstappsink.h>
-#include <opencv2/core.hpp>
+#include <opencv2/opencv.hpp>
 #include <iostream>
 
 class ImageProcessorGStreamer {

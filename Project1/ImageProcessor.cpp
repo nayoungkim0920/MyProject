@@ -1041,7 +1041,8 @@ QFuture<bool> ImageProcessor::bilateralFilter(cv::Mat& imageOpenCV
                                             , cv::Mat& imageIPP
                                             , cv::Mat& imageCUDA
                                             , cv::Mat& imageCUDAKernel
-                                            , cv::Mat& imageNPP)
+                                            , cv::Mat& imageNPP
+                                            , cv::Mat& imageGStreamer)
 {
     //함수 이름을 문자열로 저장
     const char* functionName = __func__;
@@ -1052,6 +1053,7 @@ QFuture<bool> ImageProcessor::bilateralFilter(cv::Mat& imageOpenCV
         , &imageCUDA
         , &imageCUDAKernel
         , &imageNPP
+        , &imageGStreamer
         , functionName]() -> bool {
 
         QMutexLocker locker(&mutex);
@@ -1068,6 +1070,7 @@ QFuture<bool> ImageProcessor::bilateralFilter(cv::Mat& imageOpenCV
             pushToUndoStackCUDA(imageCUDA.clone());
             pushToUndoStackCUDAKernel(imageCUDAKernel.clone());
             pushToUndoStackNPP(imageNPP.clone());
+            pushToUndoStackGStreamer(imageGStreamer.clone());
 
             QVector<ProcessingResult> results;
 
@@ -1090,6 +1093,10 @@ QFuture<bool> ImageProcessor::bilateralFilter(cv::Mat& imageOpenCV
             ProcessingResult outputNPP = bilateralFilterNPP(imageNPP);
             lastProcessedImageNPP = outputNPP.processedImage.clone();
             results.append(outputNPP);
+
+            ProcessingResult outputGStreamer = bilateralFilterGStreamer(imageGStreamer);
+            lastProcessedImageGStreamer = outputGStreamer.processedImage.clone();
+            results.append(outputGStreamer);
 
             emit imageProcessed(results);
 
@@ -1183,6 +1190,23 @@ ImageProcessor::ProcessingResult ImageProcessor::bilateralFilterNPP(cv::Mat& inp
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "bilateralFilter", "NPP", elapsedTimeMs
+        , "");
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::bilateralFilterGStreamer(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    ImageProcessorGStreamer IPGStreamer;
+    cv::Mat outputImage = IPGStreamer.bilateralFilter(inputImage);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "bilateralFilter", "GStreamer", elapsedTimeMs
         , "");
 
     return result;
@@ -1335,6 +1359,7 @@ void ImageProcessor::undo()
         redoStackCUDA.push(lastProcessedImageCUDA.clone());
         redoStackCUDAKernel.push(lastProcessedImageCUDAKernel.clone());
         redoStackNPP.push(lastProcessedImageNPP.clone());
+        redoStackGStreamer.push(lastProcessedImageGStreamer.clone());
 
         // undo 스택에서 이미지 복원
         lastProcessedImageOpenCV = undoStackOpenCV.top().clone();
@@ -1342,6 +1367,7 @@ void ImageProcessor::undo()
         lastProcessedImageCUDA = undoStackCUDA.top().clone();
         lastProcessedImageCUDAKernel = undoStackCUDAKernel.top().clone();
         lastProcessedImageNPP = undoStackNPP.top().clone();
+        lastProcessedImageGStreamer = undoStackGStreamer.top().clone();
 
         // undo 스택에서 이미지 제거
         undoStackOpenCV.pop();
@@ -1349,6 +1375,7 @@ void ImageProcessor::undo()
         undoStackCUDA.pop();
         undoStackCUDAKernel.pop();
         undoStackNPP.pop();
+        undoStackGStreamer.pop();
 
         QString outputInfoOpenCV = "(Output) Channels: " + QString::number(lastProcessedImageOpenCV.channels())
             + ", type: " + QString::number(lastProcessedImageOpenCV.type())
@@ -1365,6 +1392,9 @@ void ImageProcessor::undo()
         QString outputInfoNPP = "(Output) Channels: " + QString::number(lastProcessedImageNPP.channels())
             + ", type: " + QString::number(lastProcessedImageNPP.type())
             + ", depth: " + QString::number(lastProcessedImageNPP.depth());
+        QString outputInfoGStreamer = "(Output) Channels: " + QString::number(lastProcessedImageGStreamer.channels())
+            + ", type: " + QString::number(lastProcessedImageGStreamer.type())
+            + ", depth: " + QString::number(lastProcessedImageGStreamer.depth());
 
         double endTime = cv::getTickCount(); // 종료 시간 측정
         double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -1375,6 +1405,7 @@ void ImageProcessor::undo()
         results.append(ProcessingResult(functionName, "CUDA", lastProcessedImageCUDA.clone(), elapsedTimeMs, "", outputInfoCUDA));
         results.append(ProcessingResult(functionName, "CUDAKernel", lastProcessedImageCUDAKernel.clone(), elapsedTimeMs, "", outputInfoCUDAKernel));
         results.append(ProcessingResult(functionName, "NPP", lastProcessedImageNPP.clone(), elapsedTimeMs, "", outputInfoNPP));
+        results.append(ProcessingResult(functionName, "GStreamer", lastProcessedImageGStreamer.clone(), elapsedTimeMs, "", outputInfoGStreamer));
 
         emit imageProcessed(results);
     }
@@ -1403,6 +1434,7 @@ void ImageProcessor::redo()
         undoStackCUDA.push(lastProcessedImageCUDA.clone());
         undoStackCUDAKernel.push(lastProcessedImageCUDAKernel.clone());
         undoStackNPP.push(lastProcessedImageNPP.clone());
+        undoStackGStreamer.push(lastProcessedImageGStreamer.clone());
 
         // redo 스택에서 이미지 복원
         lastProcessedImageOpenCV = redoStackOpenCV.top().clone();
@@ -1410,6 +1442,7 @@ void ImageProcessor::redo()
         lastProcessedImageCUDA = redoStackCUDA.top().clone();
         lastProcessedImageCUDAKernel = redoStackCUDAKernel.top().clone();
         lastProcessedImageNPP = redoStackNPP.top().clone();
+        lastProcessedImageGStreamer = redoStackGStreamer.top().clone();
 
         // redo 스택에서 이미지 제거
         redoStackOpenCV.pop();
@@ -1417,6 +1450,7 @@ void ImageProcessor::redo()
         redoStackCUDA.pop();
         redoStackCUDAKernel.pop();
         redoStackNPP.pop();
+        redoStackGStreamer.pop();
 
         QString outputInfoOpenCV = "(Output) Channels: " + QString::number(lastProcessedImageOpenCV.channels())
             + ", type: " + QString::number(lastProcessedImageOpenCV.type())
@@ -1433,6 +1467,9 @@ void ImageProcessor::redo()
         QString outputInfoNPP = "(Output) Channels: " + QString::number(lastProcessedImageNPP.channels())
             + ", type: " + QString::number(lastProcessedImageNPP.type())
             + ", depth: " + QString::number(lastProcessedImageNPP.depth());
+        QString outputInfoGStreamer = "(Output) Channels: " + QString::number(lastProcessedImageGStreamer.channels())
+            + ", type: " + QString::number(lastProcessedImageGStreamer.type())
+            + ", depth: " + QString::number(lastProcessedImageGStreamer.depth());
 
         double endTime = cv::getTickCount(); // 종료 시간 측정
         double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -1443,7 +1480,8 @@ void ImageProcessor::redo()
         results.append(ProcessingResult(functionName, "CUDA", lastProcessedImageCUDA.clone(), elapsedTimeMs, "", outputInfoCUDA));
         results.append(ProcessingResult(functionName, "CUDAKernel", lastProcessedImageCUDAKernel.clone(), elapsedTimeMs, "", outputInfoCUDAKernel));
         results.append(ProcessingResult(functionName, "NPP", lastProcessedImageNPP.clone(), elapsedTimeMs, "", outputInfoNPP));
-
+        results.append(ProcessingResult(functionName, "GStreamer", lastProcessedImageGStreamer.clone(), elapsedTimeMs, "", outputInfoGStreamer));
+        
         emit imageProcessed(results);
     }
     catch (const std::exception& e) {
@@ -1475,6 +1513,10 @@ void ImageProcessor::cleanUndoStack()
     while (!undoStackNPP.empty()) {
         undoStackNPP.pop();
     }
+
+    while (!undoStackGStreamer.empty()) {
+        undoStackGStreamer.pop();
+    }
 }
 
 void ImageProcessor::cleanRedoStack()
@@ -1498,6 +1540,10 @@ void ImageProcessor::cleanRedoStack()
 
     while (!redoStackNPP.empty()) {
         redoStackNPP.pop();
+    }
+
+    while (!redoStackGStreamer.empty()) {
+        redoStackGStreamer.pop();
     }
 }
 
@@ -1534,6 +1580,11 @@ const cv::Mat& ImageProcessor::getLastProcessedImageNPP() const
     return lastProcessedImageNPP;
 }
 
+const cv::Mat& ImageProcessor::getLastProcessedImageGStreamer() const
+{
+    return lastProcessedImageGStreamer;
+}
+
 void ImageProcessor::pushToUndoStackOpenCV(const cv::Mat& image)
 {
     undoStackOpenCV.push(image.clone());
@@ -1559,6 +1610,11 @@ void ImageProcessor::pushToUndoStackNPP(const cv::Mat& image)
     undoStackNPP.push(image.clone());
 }
 
+void ImageProcessor::pushToUndoStackGStreamer(const cv::Mat& image)
+{
+    undoStackGStreamer.push(image.clone());
+}
+
 void ImageProcessor::pushToRedoStackOpenCV(const cv::Mat& image)
 {
     redoStackOpenCV.push(image.clone());
@@ -1582,6 +1638,11 @@ void ImageProcessor::pushToRedoStackCUDAKernel(const cv::Mat& image)
 void ImageProcessor::pushToRedoStackNPP(const cv::Mat& image)
 {
     redoStackNPP.push(image.clone());
+}
+
+void ImageProcessor::pushToRedoStackGStreamer(const cv::Mat& image)
+{
+    redoStackGStreamer.push(image.clone());
 }
 
 ImageProcessor::ProcessingResult ImageProcessor::setResult(ProcessingResult& result

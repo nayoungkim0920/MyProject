@@ -71,7 +71,7 @@ set(generated_file_path "C:/myLab/Project1/Project1/build/CMakeFiles/image_proce
 set(generated_file_internal "C:/myLab/Project1/Project1/build/CMakeFiles/image_processing.dir//$(Configuration)/image_processing_generated_imageProcessing.cu.obj") # path
 set(generated_cubin_file_internal "C:/myLab/Project1/Project1/build/CMakeFiles/image_processing.dir//$(Configuration)/image_processing_generated_imageProcessing.cu.obj.cubin.txt") # path
 
-set(CUDA_NVCC_EXECUTABLE "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.5/bin/nvcc.exe") # path
+set(CUDA_NVCC_EXECUTABLE "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.1/bin/nvcc.exe") # path
 set(CUDA_NVCC_FLAGS -std=c++14;--expt-relaxed-constexpr;-gencode;arch=compute_86,code=sm_86 ;; ) # list
 # Build specific configuration flags
 set(CUDA_NVCC_FLAGS_DEBUG  ; )
@@ -79,7 +79,7 @@ set(CUDA_NVCC_FLAGS_RELEASE  ; )
 set(CUDA_NVCC_FLAGS_MINSIZEREL  ; )
 set(CUDA_NVCC_FLAGS_RELWITHDEBINFO  ; )
 set(nvcc_flags -m64) # list
-set(CUDA_NVCC_INCLUDE_DIRS [==[C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.5/include;$<TARGET_PROPERTY:image_processing,INCLUDE_DIRECTORIES>]==]) # list (needs to be in lua quotes to address backslashes)
+set(CUDA_NVCC_INCLUDE_DIRS [==[C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.1/include;$<TARGET_PROPERTY:image_processing,INCLUDE_DIRECTORIES>]==]) # list (needs to be in lua quotes to address backslashes)
 string(REPLACE "\\" "/" CUDA_NVCC_INCLUDE_DIRS "${CUDA_NVCC_INCLUDE_DIRS}")
 set(CUDA_NVCC_COMPILE_DEFINITIONS [==[$<TARGET_PROPERTY:image_processing,COMPILE_DEFINITIONS>]==]) # list (needs to be in lua quotes see #16510 ).
 set(format_flag "-c") # string

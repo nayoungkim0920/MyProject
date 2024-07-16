@@ -9,7 +9,6 @@ find_package(CUDA REQUIRED)
 
 # CUDA 경로 설정
 set(CUDA_TOOLKIT_ROOT_DIR "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.5")
-find_package(CUDA REQUIRED)
 
 # IPP 설정
 set(IPP_ROOT "C:/Program Files (x86)/Intel/oneAPI/ipp/2021.11")  # IPP 라이브러리 설치 경로
@@ -32,7 +31,8 @@ include_directories(
     ${OpenCV_INCLUDE_DIRS}
     "${CUDA_TOOLKIT_ROOT_DIR}/include"  # CUDA Toolkit include 폴더 추가
     ${IPP_ROOT}/include  # IPP include 폴더 추가
-    "${GSTREAMER_ROOT}/include"  # GStreamer include 폴더 추가
+    "${GSTREAMER_ROOT}/include/gstreamer-1.0"  # GStreamer include 폴더 추가
+    "${GSTREAMER_ROOT}/lib/gstreamer-1.0/include"  # GStreamer의 다른 include 폴더 추가
 )
 
 # CUDA 파일 설정
@@ -69,6 +69,15 @@ target_link_libraries(image_processing
     npps
 )
 
+# GStreamer 라이브러리 추가
+list(APPEND GSTREAMER_LIBRARIES
+    gstreamer-1.0.lib
+    gobject-2.0.lib
+    glib-2.0.lib
+    gstapp-1.0.lib  # 필요한 GStreamer 모듈 추가
+    gstbase-1.0.lib
+)
+
 # 실행 파일 추가
 add_executable(Project1
     main.cpp
@@ -80,13 +89,6 @@ add_executable(Project1
     ${MOC_FILES}
 )
 
-# GStreamer 라이브러리 추가
-list(APPEND GSTREAMER_LIBRARIES
-    gstreamer-1.0.lib
-    gobject-2.0.lib
-    glib-2.0.lib
-)
-
 # 라이브러리 링크
 target_link_libraries(Project1
     Qt6::Widgets
@@ -96,9 +98,7 @@ target_link_libraries(Project1
     image_processing
     ${CUDA_LIBRARIES}
     ${CUDNN_LIBRARIES}
-    "${GSTREAMER_ROOT}/lib/gstreamer-1.0.lib"
-    "${GSTREAMER_ROOT}/lib/gobject-2.0.lib"
-    "${GSTREAMER_ROOT}/lib/glib-2.0.lib"
+    ${GSTREAMER_LIBRARIES}  # GStreamer 라이브러리 추가
 )
 
 # 실행 파일 출력 디렉토리 설정

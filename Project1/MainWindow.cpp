@@ -200,7 +200,7 @@ void MainWindow::laplacianFilter()
 void MainWindow::bilateralFilter()
 {
     QtConcurrent::run([this]() {
-            imageProcessor->bilateralFilter(currentImageOpenCV, currentImageIPP, currentImageCUDA, currentImageCUDAKernel, currentImageNPP);
+            imageProcessor->bilateralFilter(currentImageOpenCV, currentImageIPP, currentImageCUDA, currentImageCUDAKernel, currentImageNPP, currentImageGStreamer);
         });
     //applyImageProcessing(&ImageProcessor::bilateralFilter, currentImage);
 }
@@ -258,6 +258,8 @@ void MainWindow::displayImage(cv::Mat image, QLabel* label)
 {
     // 이미지 타입에 따라 QImage를 생성합니다.
     QImage qImage;
+
+    qDebug() << "displayImage() called with image type:" << image.type();
 
     // OpenCV의 Mat 이미지 타입에 따라 다른 QImage 형식을 사용합니다.
     if (image.type() == CV_8UC1) {
@@ -322,6 +324,7 @@ void MainWindow::displayImage(cv::Mat image, QLabel* label)
     label->setPixmap(pixmap);
     label->setScaledContents(false); // 이미지를 Label 크기에 맞게 조정
     label->adjustSize(); // Label 크기 조정
+    qDebug() << "displayImage() finished";
 }
 
 
@@ -384,6 +387,18 @@ void MainWindow::handleImageProcessed(QVector<ImageProcessor::ProcessingResult> 
                 .arg(result.inputInfo)
                 .arg(result.outputInfo));
         }
+        else if (i == 5) {
+            currentImageGStreamer = result.processedImage;
+            displayImage(result.processedImage, ui->label_gstreamer);
+            ui->label_gstreamer_title->setText(QString("%1 %2 %3ms %4 %5 %6")
+                .arg(result.processName)
+                .arg(result.functionName)
+                .arg(result.processingTime)
+                .arg(result.argInfo)
+                .arg(result.inputInfo)
+                .arg(result.outputInfo));
+        }
+
             
     }
 
