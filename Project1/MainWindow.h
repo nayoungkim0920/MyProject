@@ -54,6 +54,8 @@ private:
     cv::Mat currentImageIPP;
     cv::Mat currentImageCUDA;
     cv::Mat currentImageCUDAKernel;
+    cv::Mat currentImageNPP;
+    cv::Mat currentImageGStreamer;
 
     ImageProcessor* imageProcessor;
 
@@ -63,11 +65,15 @@ private:
     cv::Mat initialImageIPP;
     cv::Mat initialImageCUDA;
     cv::Mat initialImageCUDAKernel;
+    cv::Mat initialImageNPP;
+    cv::Mat initialImageGStreamer;
 
     cv::Mat previousImageOpenCV;
     cv::Mat previousImageIPP;
     cv::Mat previousImageCUDA;
     cv::Mat previousImageCUDAKernel;
+    cv::Mat previousImageNPP;
+    cv::Mat previousImageGStreamer;
 
     void connectActions();
     void connectImageProcessor();

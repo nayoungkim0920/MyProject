@@ -1,4 +1,8 @@
 -IC:/Program Files (x86)/Intel/oneAPI/ipp/2021.11/include
+-IC:/gstreamer/1.0/msvc_x86_64/include/gstreamer-1.0
+-IC:/gstreamer/1.0/msvc_x86_64/include/glib-2.0
+-IC:/gstreamer/1.0/msvc_x86_64/lib/glib-2.0/include
+-IC:/gstreamer/1.0/msvc_x86_64/include/gobject
 -IC:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.5/include
 -IC:/opencv/build
 -IC:/opencv/sources/include
@@ -69,6 +73,7 @@
 -IC:/opencv_contrib/modules/videostab/include
 -IC:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.5/include
 -IC:/Program Files (x86)/Intel/oneAPI/ipp/2021.11/include
+-IC:/gstreamer/1.0/msvc_x86_64/include
 -DWIN32
 --compiler-flavor=msvc
 -o

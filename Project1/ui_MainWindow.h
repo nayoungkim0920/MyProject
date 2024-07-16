@@ -53,15 +53,19 @@ public:
     QHBoxLayout *horizontalLayout_row1;
     QLabel *label_opencv;
     QLabel *label_ipp;
+    QLabel *label_npp;
     QHBoxLayout *horizontalLayout_row2;
     QLabel *label_opencv_title;
     QLabel *label_ipp_title;
+    QLabel *label_npp_title;
     QHBoxLayout *horizontalLayout_row3;
     QLabel *label_cuda;
     QLabel *label_cudakernel;
+    QLabel *label_gstreamer;
     QHBoxLayout *horizontalLayout_row4;
     QLabel *label_cuda_title;
     QLabel *label_cudakernel_title;
+    QLabel *label_gstreamer_title;
     QMenuBar *menubar;
     QMenu *menuFile;
     QMenu *menuEdit;
@@ -143,6 +147,13 @@ public:
 
         horizontalLayout_row1->addWidget(label_ipp);
 
+        label_npp = new QLabel(scrollAreaWidgetContents);
+        label_npp->setObjectName("label_npp");
+        label_npp->setAlignment(Qt::AlignCenter);
+        label_npp->setScaledContents(true);
+
+        horizontalLayout_row1->addWidget(label_npp);
+
 
         verticalLayout_images_and_times->addLayout(horizontalLayout_row1);
 
@@ -152,14 +163,23 @@ public:
         label_opencv_title = new QLabel(scrollAreaWidgetContents);
         label_opencv_title->setObjectName("label_opencv_title");
         label_opencv_title->setAlignment(Qt::AlignLeft);
+        label_opencv_title->setTextInteractionFlags(Qt::TextSelectableByMouse);
 
         horizontalLayout_row2->addWidget(label_opencv_title);
 
         label_ipp_title = new QLabel(scrollAreaWidgetContents);
         label_ipp_title->setObjectName("label_ipp_title");
         label_ipp_title->setAlignment(Qt::AlignLeft);
+        label_ipp_title->setTextInteractionFlags(Qt::TextSelectableByMouse);
 
         horizontalLayout_row2->addWidget(label_ipp_title);
+
+        label_npp_title = new QLabel(scrollAreaWidgetContents);
+        label_npp_title->setObjectName("label_npp_title");
+        label_npp_title->setAlignment(Qt::AlignLeft);
+        label_npp_title->setTextInteractionFlags(Qt::TextSelectableByMouse);
+
+        horizontalLayout_row2->addWidget(label_npp_title);
 
 
         verticalLayout_images_and_times->addLayout(horizontalLayout_row2);
@@ -181,6 +201,13 @@ public:
 
         horizontalLayout_row3->addWidget(label_cudakernel);
 
+        label_gstreamer = new QLabel(scrollAreaWidgetContents);
+        label_gstreamer->setObjectName("label_gstreamer");
+        label_gstreamer->setAlignment(Qt::AlignCenter);
+        label_gstreamer->setScaledContents(true);
+
+        horizontalLayout_row3->addWidget(label_gstreamer);
+
 
         verticalLayout_images_and_times->addLayout(horizontalLayout_row3);
 
@@ -190,14 +217,23 @@ public:
         label_cuda_title = new QLabel(scrollAreaWidgetContents);
         label_cuda_title->setObjectName("label_cuda_title");
         label_cuda_title->setAlignment(Qt::AlignLeft);
+        label_cuda_title->setTextInteractionFlags(Qt::TextSelectableByMouse);
 
         horizontalLayout_row4->addWidget(label_cuda_title);
 
         label_cudakernel_title = new QLabel(scrollAreaWidgetContents);
         label_cudakernel_title->setObjectName("label_cudakernel_title");
         label_cudakernel_title->setAlignment(Qt::AlignLeft);
+        label_cudakernel_title->setTextInteractionFlags(Qt::TextSelectableByMouse);
 
         horizontalLayout_row4->addWidget(label_cudakernel_title);
+
+        label_gstreamer_title = new QLabel(scrollAreaWidgetContents);
+        label_gstreamer_title->setObjectName("label_gstreamer_title");
+        label_gstreamer_title->setAlignment(Qt::AlignLeft);
+        label_gstreamer_title->setTextInteractionFlags(Qt::TextSelectableByMouse);
+
+        horizontalLayout_row4->addWidget(label_gstreamer_title);
 
 
         verticalLayout_images_and_times->addLayout(horizontalLayout_row4);
@@ -294,12 +330,16 @@ public:
         actionBilateralFilter->setText(QCoreApplication::translate("MainWindow", "&Bilateral Filter", nullptr));
         label_opencv->setText(QCoreApplication::translate("MainWindow", "label_opencv", nullptr));
         label_ipp->setText(QCoreApplication::translate("MainWindow", "label_ipp", nullptr));
+        label_npp->setText(QCoreApplication::translate("MainWindow", "label_npp", nullptr));
         label_opencv_title->setText(QCoreApplication::translate("MainWindow", "Processing Time:", nullptr));
         label_ipp_title->setText(QCoreApplication::translate("MainWindow", "Processing Time:", nullptr));
+        label_npp_title->setText(QCoreApplication::translate("MainWindow", "Processing Time:", nullptr));
         label_cuda->setText(QCoreApplication::translate("MainWindow", "label_cuda", nullptr));
         label_cudakernel->setText(QCoreApplication::translate("MainWindow", "label_cudakernel", nullptr));
+        label_gstreamer->setText(QCoreApplication::translate("MainWindow", "label_gstreamer", nullptr));
         label_cuda_title->setText(QCoreApplication::translate("MainWindow", "Processing Time:", nullptr));
         label_cudakernel_title->setText(QCoreApplication::translate("MainWindow", "Processing Time:", nullptr));
+        label_gstreamer_title->setText(QCoreApplication::translate("MainWindow", "Processing Time:", nullptr));
         menuFile->setTitle(QCoreApplication::translate("MainWindow", "File", nullptr));
         menuEdit->setTitle(QCoreApplication::translate("MainWindow", "Edit", nullptr));
         menuFilters->setTitle(QCoreApplication::translate("MainWindow", "Filters", nullptr));

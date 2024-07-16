@@ -16,19 +16,25 @@
     <ClCompile Include="C:\myLab\Project1\Project1\build\moc_ImageProcessor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\ImageTypeConverter.cpp">
+    <ClCompile Include="..\ImageProcessorCUDA.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\ImageProcessorOpenCV.cpp">
+    <ClCompile Include="..\ImageProcessorCUDAKernel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ImageProcessorGStreamer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\ImageProcessorIPP.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\ImageProcessorCUDA.cpp">
+    <ClCompile Include="..\ImageProcessorNPP.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\ImageProcessorCUDAKernel.cpp">
+    <ClCompile Include="..\ImageProcessorOpenCV.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ImageTypeConverter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -39,19 +45,25 @@
     <ClInclude Include="C:\myLab\Project1\Project1\ImageProcessor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\ImageTypeConverter.h">
+    <ClInclude Include="..\ImageProcessorCUDA.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\ImageProcessorOpenCV.h">
+    <ClInclude Include="..\ImageProcessorCUDAKernel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ImageProcessorGStreamer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\imageProcessorIPP.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\ImageProcessorCUDA.h">
+    <ClInclude Include="..\ImageProcessorNPP.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\ImageProcessorCUDAKernel.h">
+    <ClInclude Include="..\ImageProcessorOpenCV.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ImageTypeConverter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -49,6 +49,19 @@
               </property>
              </widget>
             </item>
+            <item>
+             <widget class="QLabel" name="label_npp">
+              <property name="text">
+               <string>label_npp</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+              <property name="scaledContents">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
            </layout>
           </item>
           <item>
@@ -61,6 +74,9 @@
               <property name="alignment">
                <set>Qt::AlignLeft</set>
               </property>
+              <property name="textInteractionFlags">
+               <set>Qt::TextSelectableByMouse</set>
+              </property>
              </widget>
             </item>
             <item>
@@ -70,6 +86,22 @@
               </property>
               <property name="alignment">
                <set>Qt::AlignLeft</set>
+              </property>
+              <property name="textInteractionFlags">
+               <set>Qt::TextSelectableByMouse</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_npp_title">
+              <property name="text">
+               <string>Processing Time:</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignLeft</set>
+              </property>
+              <property name="textInteractionFlags">
+               <set>Qt::TextSelectableByMouse</set>
               </property>
              </widget>
             </item>
@@ -103,6 +135,19 @@
               </property>
              </widget>
             </item>
+            <item>
+             <widget class="QLabel" name="label_gstreamer">
+              <property name="text">
+               <string>label_gstreamer</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+              <property name="scaledContents">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
            </layout>
           </item>
           <item>
@@ -115,6 +160,9 @@
               <property name="alignment">
                <set>Qt::AlignLeft</set>
               </property>
+              <property name="textInteractionFlags">
+               <set>Qt::TextSelectableByMouse</set>
+              </property>
              </widget>
             </item>
             <item>
@@ -124,6 +172,22 @@
               </property>
               <property name="alignment">
                <set>Qt::AlignLeft</set>
+              </property>
+              <property name="textInteractionFlags">
+               <set>Qt::TextSelectableByMouse</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_gstreamer_title">
+              <property name="text">
+               <string>Processing Time:</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignLeft</set>
+              </property>
+              <property name="textInteractionFlags">
+               <set>Qt::TextSelectableByMouse</set>
               </property>
              </widget>
             </item>

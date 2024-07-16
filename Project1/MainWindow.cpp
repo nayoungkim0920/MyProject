@@ -11,8 +11,11 @@ MainWindow::MainWindow(QWidget* parent)
 
     ui->label_opencv_title->setText(QString("OpenCV"));
     ui->label_ipp_title->setText(QString("IPP"));
+    ui->label_npp_title->setText(QString("NPP"));
     ui->label_cuda_title->setText(QString("CUDA"));
     ui->label_cudakernel_title->setText(QString("CUDA Kernel"));
+    ui->label_gstreamer_title->setText(QString("GStreamer"));
+    
 
     connectActions();
 
@@ -44,16 +47,22 @@ void MainWindow::openFile()
             currentImageIPP = loadedImage.clone();
             currentImageCUDA = loadedImage.clone();
             currentImageCUDAKernel = loadedImage.clone();
+            currentImageNPP = loadedImage.clone();
+            currentImageGStreamer = loadedImage.clone();
 
             initialImageOpenCV = currentImageOpenCV.clone();
             initialImageIPP = currentImageIPP.clone();
             initialImageCUDA = currentImageCUDA.clone();
             initialImageCUDAKernel = currentImageCUDAKernel.clone();
+            initialImageNPP = currentImageNPP.clone();
+            initialImageGStreamer = currentImageGStreamer.clone();
 
             displayImage(initialImageOpenCV, ui->label_opencv);
             displayImage(initialImageIPP, ui->label_ipp);
             displayImage(initialImageCUDA, ui->label_cuda);
             displayImage(initialImageCUDAKernel, ui->label_cudakernel);
+            displayImage(initialImageNPP, ui->label_npp);
+            displayImage(initialImageGStreamer, ui->label_gstreamer);
         }
         else {
             QMessageBox::critical(this, tr("Error"), tr("Failed to open image file"));
@@ -191,7 +200,7 @@ void MainWindow::laplacianFilter()
 void MainWindow::bilateralFilter()
 {
     QtConcurrent::run([this]() {
-            imageProcessor->bilateralFilter(currentImageOpenCV, currentImageIPP, currentImageCUDA, currentImageCUDAKernel);
+            imageProcessor->bilateralFilter(currentImageOpenCV, currentImageIPP, currentImageCUDA, currentImageCUDAKernel, currentImageNPP);
         });
     //applyImageProcessing(&ImageProcessor::bilateralFilter, currentImage);
 }
@@ -357,6 +366,17 @@ void MainWindow::handleImageProcessed(QVector<ImageProcessor::ProcessingResult> 
             currentImageCUDAKernel = result.processedImage;
             displayImage(result.processedImage, ui->label_cudakernel);
             ui->label_cudakernel_title->setText(QString("%1 %2 %3ms %4 %5 %6")
+                .arg(result.processName)
+                .arg(result.functionName)
+                .arg(result.processingTime)
+                .arg(result.argInfo)
+                .arg(result.inputInfo)
+                .arg(result.outputInfo));
+        }
+        else if (i == 4) {
+            currentImageNPP = result.processedImage;
+            displayImage(result.processedImage, ui->label_npp);
+            ui->label_npp_title->setText(QString("%1 %2 %3ms %4 %5 %6")
                 .arg(result.processName)
                 .arg(result.functionName)
                 .arg(result.processingTime)
