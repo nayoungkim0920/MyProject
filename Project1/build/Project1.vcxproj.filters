@@ -25,6 +25,12 @@
     <ClCompile Include="..\ImageProcessorIPP.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\ImageProcessorCUDA.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ImageProcessorCUDAKernel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="C:\myLab\Project1\Project1\MainWindow.h">
@@ -40,6 +46,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\imageProcessorIPP.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ImageProcessorCUDA.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ImageProcessorCUDAKernel.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

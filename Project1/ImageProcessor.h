@@ -39,12 +39,12 @@
 #include <ipp/ipps.h>
 #include <ipp/ippcv.h>
 
-#include "imageProcessing.cuh"
 #include "ImageTypeConverter.h"
+
 #include "ImageProcessorOpenCV.h"
 #include "ImageProcessorIPP.h"
-
-
+#include "ImageProcessorCUDA.h"
+#include "ImageProcessorCUDAKernel.h"
 
 #ifndef MAX_NUM_THREADS
 #define MAX_NUM_THREADS 8 // 예시로 임의로 설정
@@ -164,11 +164,6 @@ private:
     ProcessingResult cannyEdgesCUDA(cv::Mat& inputImage);
     ProcessingResult cannyEdgesCUDAKernel(cv::Mat& inputImage);
 
-    cv::Mat convertToGrayOpenCV(const cv::Mat& inputImage);
-    cv::Mat convertToGrayIPP(const cv::Mat& inputImage);
-    cv::cuda::GpuMat convertToGrayCUDA(const cv::cuda::GpuMat& inputImage);
-    cv::Mat convertToGrayCUDAKernel(cv::Mat& inputImage);
-
     ProcessingResult medianFilterOpenCV(cv::Mat& inputImage);
     ProcessingResult medianFilterIPP(cv::Mat& inputImage);
     ProcessingResult medianFilterCUDA(cv::Mat& inputImage);
@@ -190,8 +185,6 @@ private:
     ProcessingResult sobelFilterCUDAKernel(cv::Mat& inputImage);
 
     double getCurrentTimeMs();
-    // 유틸리티 함수 선언
-    Ipp8u* matToIpp8u(cv::Mat& mat);
 };
 
 #endif // IMAGEPROCESSOR_H

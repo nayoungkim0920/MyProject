@@ -305,42 +305,6 @@ QFuture<bool> ImageProcessor::grayScale(cv::Mat& imageOpenCV
         });
 }
 
-/*bool ImageProcessor::grayScaleCUDA(cv::Mat& image)
-{
-    try {
-
-        // CUDA 장치 설정
-        cv::cuda::setDevice(0);
-
-        // 입력 이미지를 CUDA GpuMat으로 업로드
-        cv::cuda::GpuMat d_input;
-        d_input.upload(image);
-
-        // CUDA를 사용하여 그레이스케일로 변환
-        cv::cuda::GpuMat d_output;
-        cv::cuda::cvtColor(d_input, d_output, cv::COLOR_BGR2GRAY);
-
-        // CUDA에서 호스트로 이미지 다운로드
-        cv::Mat output;
-        d_output.download(output);
-
-        if (output.empty() || output.type() != CV_8UC1) {
-            qDebug() << "Output image is empty or not in expected format after CUDA processing.";
-            return false;
-        }
-
-        // 원본 이미지를 그레이스케일 이미지로 업데이트
-        image = output.clone(); // 변환된 그레이스케일 이미지로 업데이트
-        lastProcessedImage = image.clone(); // 마지막 처리된 이미지 업데이트
-
-        return true;
-    }
-    catch (const cv::Exception& e) {
-        qDebug() << "Exception occurred while converting to grayscale using CUDA:" << e.what();
-        return false;
-    }
-}*/
-
 ImageProcessor::ProcessingResult ImageProcessor::grayScaleOpenCV(cv::Mat& inputImage)
 {
     ProcessingResult result;
@@ -373,66 +337,13 @@ ImageProcessor::ProcessingResult ImageProcessor::grayScaleIPP(cv::Mat& inputImag
     return result;
 }
 
-cv::Mat ImageProcessor::convertToGrayOpenCV(const cv::Mat& inputImage)
-{
-    cv::Mat grayImage;
-    cv::cvtColor(inputImage, grayImage, cv::COLOR_BGR2GRAY);
-
-    return grayImage;
-}
-
-cv::Mat ImageProcessor::convertToGrayIPP(const cv::Mat& inputImage)
-{
-    // IPP 초기화
-    ippInit();
-
-    // 입력 이미지의 크기 및 스텝 설정
-    IppiSize roiSize = { inputImage.cols, inputImage.rows };
-    int srcStep = inputImage.step;
-    int dstStep = inputImage.cols;
-    Ipp8u* srcData = inputImage.data;
-
-    // 출력 이미지 생성 및 IPP 메모리 할당
-    cv::Mat grayImage(inputImage.rows, inputImage.cols, CV_8UC1);
-    Ipp8u* dstData = grayImage.data;
-
-    // IPP RGB to Gray 변환 수행
-    IppStatus status = ippiRGBToGray_8u_C3C1R(srcData, srcStep, dstData, dstStep, roiSize);
-    if (status != ippStsNoErr) {
-        std::cerr << "IPP 오류: " << status << std::endl;
-        return cv::Mat(); // 오류 발생 시 빈 Mat 반환
-    }
-
-    return grayImage;
-}
-
-cv::cuda::GpuMat ImageProcessor::convertToGrayCUDA(const cv::cuda::GpuMat& inputImage)
-{
-    cv::cuda::GpuMat grayImage;
-    cv::cuda::cvtColor(inputImage, grayImage, cv::COLOR_BGR2GRAY);
-
-    return grayImage;
-}
-
-cv::Mat ImageProcessor::convertToGrayCUDAKernel(cv::Mat& inputImage)
-{
-    cv::Mat grayImage;
-    callGrayScaleImageCUDA(inputImage, grayImage);
-
-    return grayImage;
-}
-
 ImageProcessor::ProcessingResult ImageProcessor::grayScaleCUDA(cv::Mat& inputImage)
 {    
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::cuda::GpuMat d_inputImage;
-    d_inputImage.upload(inputImage);
-
-    cv::Mat outputImage;
-    cv::cuda::GpuMat d_outputImage = convertToGrayCUDA(d_inputImage);
-    d_outputImage.download(outputImage);
+    ImageProcessorCUDA IPCUDA;
+    cv::Mat outputImage = IPCUDA.grayScale(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -447,7 +358,8 @@ ImageProcessor::ProcessingResult ImageProcessor::grayScaleCUDAKernel(cv::Mat& in
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::Mat outputImage = convertToGrayCUDAKernel(inputImage);
+    ImageProcessorCUDAKernel IPCUDAK;
+    cv::Mat outputImage = IPCUDAK.grayScale(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -495,19 +407,8 @@ ImageProcessor::ProcessingResult ImageProcessor::zoomCUDA(cv::Mat& inputImage, d
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    // GPU 메모리로 이미지 업로드
-    cv::cuda::GpuMat d_image;
-    d_image.upload(inputImage);
-
-    // 결과 이미지를 저장할 GPU 메모리 할당
-    cv::cuda::GpuMat d_zoomInImage;
-
-    // 이미지 크기 조정
-    cv::cuda::resize(d_image, d_zoomInImage, cv::Size(static_cast<int>(newWidth), static_cast<int>(newHeight)), 0, 0, cv::INTER_LINEAR);
-
-    // CPU 메모리로 결과 이미지 다운로드
-    cv::Mat outputImage;
-    d_zoomInImage.download(outputImage);
+    ImageProcessorCUDA IPCUDA;
+    cv::Mat outputImage = IPCUDA.zoom(inputImage, newWidth, newHeight, 0, 0, 1);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -522,8 +423,8 @@ ImageProcessor::ProcessingResult ImageProcessor::zoomCUDAKernel(cv::Mat& inputIm
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::Mat outputImage;
-    callZoomImageCUDA(inputImage, outputImage, newWidth, newHeight);
+    ImageProcessorCUDAKernel IPCUDAK;
+    cv::Mat outputImage = IPCUDAK.zoom(inputImage, newWidth, newHeight, 0, 0, 1);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -571,26 +472,8 @@ ImageProcessor::ProcessingResult ImageProcessor::rotateCUDA(cv::Mat& inputImage)
 
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    // #include <opencv2/cudawarping.hpp>
-    double angle = 90.0; // 회전할 각도 (예: 90도)
-
-    // 이미지를 GPU 메모리에 업로드
-    cv::cuda::GpuMat gpuImage;
-    gpuImage.upload(inputImage);
-
-    // 회전 중심을 이미지의 중앙으로 설정
-    cv::Point2f center(gpuImage.cols / 2.0f, gpuImage.rows / 2.0f);
-
-    // 회전 매트릭스 계산
-    cv::Mat rotationMatrix = cv::getRotationMatrix2D(center, angle, 1.0);
-
-    // GPU에서 회전 수행
-    cv::cuda::GpuMat gpuRotatedImage;
-    cv::cuda::warpAffine(gpuImage, gpuRotatedImage, rotationMatrix, gpuImage.size());
-
-    // 결과 이미지를 CPU 메모리로 다운로드
-    cv::Mat outputImage;
-    gpuRotatedImage.download(outputImage);
+    ImageProcessorCUDA IPCUDA;
+    cv::Mat outputImage = IPCUDA.rotate(inputImage);    
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -605,8 +488,8 @@ ImageProcessor::ProcessingResult ImageProcessor::rotateCUDAKernel(cv::Mat& input
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::Mat outputImage;
-    callRotateImageCUDA(inputImage, outputImage);
+    ImageProcessorCUDAKernel IPCUDAK;
+    cv::Mat outputImage = IPCUDAK.rotate(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -725,20 +608,8 @@ ImageProcessor::ProcessingResult ImageProcessor::gaussianBlurCUDA(cv::Mat& input
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::cuda::GpuMat gpuImage;
-    gpuImage.upload(inputImage);
-
-    cv::Ptr<cv::cuda::Filter> gaussianFilter =
-    cv::cuda::createGaussianFilter(gpuImage.type()
-        , gpuImage.type()
-        , cv::Size(kernelSize, kernelSize)
-        , 0);
-
-    cv::cuda::GpuMat blurredGpuImage;
-    gaussianFilter->apply(gpuImage, blurredGpuImage);
-
-    cv::Mat outputImage;
-    blurredGpuImage.download(outputImage);
+    ImageProcessorCUDA IPCUDA;
+    cv::Mat outputImage = IPCUDA.gaussianBlur(inputImage, kernelSize);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -754,8 +625,8 @@ ImageProcessor::ProcessingResult ImageProcessor::gaussianBlurCUDAKernel(cv::Mat&
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::Mat outputImage;
-    callGaussianBlurCUDA(inputImage, outputImage, kernelSize);
+    ImageProcessorCUDAKernel IPCUDAK;
+    cv::Mat outputImage = IPCUDAK.gaussianBlur(inputImage, kernelSize);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -860,49 +731,13 @@ ImageProcessor::ProcessingResult ImageProcessor::cannyEdgesCUDA(cv::Mat& inputIm
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::Mat grayImage;
-    if (inputImage.channels() == 3) {
-        //grayImage = convertToGrayCUDA(inputImage);
-        cv::cuda::GpuMat d_inputImage;
-        d_inputImage.upload(inputImage);
-        cv::cuda::GpuMat d_outputImage;
-        d_outputImage = convertToGrayCUDA(d_inputImage);
-        d_outputImage.download(grayImage);
-    }
-    else {
-        grayImage = inputImage.clone();
-    }
-
-    // GPU에서 캐니 엣지 감지기 생성
-    cv::cuda::GpuMat d_gray;
-    d_gray.upload(grayImage);
-
-    cv::cuda::GpuMat d_cannyEdges;
-    cv::Ptr<cv::cuda::CannyEdgeDetector> cannyDetector = cv::cuda::createCannyEdgeDetector(50, 150);
-    cannyDetector->detect(d_gray, d_cannyEdges);
-
-    // 결과를 CPU 메모리로 복사
-    cv::Mat edges;
-    d_cannyEdges.download(edges);
-
-    // 출력 이미지에 초록색 엣지 표시
-    cv::Mat outputImage = cv::Mat::zeros(inputImage.size(), CV_8UC3); // 3-channel BGR image
-    cv::Mat mask(edges.size(), CV_8UC1, cv::Scalar(0)); // Mask for green edges
-    mask.setTo(cv::Scalar(255), edges); // Set pixels to 255 (white) where edges are detected
-    cv::Mat channels[3];
-    cv::split(outputImage, channels);
-    //channels[1] = mask; // Green channel is set by mask
-    channels[0] = mask; // Blue channel is set by mask
-    channels[1] = mask; // Green channel is set by mask
-    channels[2] = mask; // Red channel is set by mask
-    cv::merge(channels, 3, outputImage); // Merge channels to get green edges
+    ImageProcessorCUDA IPCUDA;
+    cv::Mat outputImage = IPCUDA.cannyEdges(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "cannyEdges", "CUDA", elapsedTimeMs);
-
-    // GPU 메모리 해제는 GpuMat 객체가 스코프를 벗어날 때 자동으로 처리됩니다.
 
     return result;
 }
@@ -912,21 +747,13 @@ ImageProcessor::ProcessingResult ImageProcessor::cannyEdgesCUDAKernel(cv::Mat& i
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::Mat grayImage;
-    if (inputImage.channels() == 3) {
-        grayImage = convertToGrayCUDAKernel(inputImage);
-    }
-    else {
-        grayImage = inputImage.clone();
-    }
-
-    cv::Mat outputImage;
-    callCannyEdgesCUDA(grayImage, outputImage);
+    ImageProcessorCUDAKernel IPCUDAK;
+    cv::Mat outputImage = IPCUDAK.cannyEdges(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, grayImage, outputImage, "cannyEdges", "CUDAKernel", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "cannyEdges", "CUDAKernel", elapsedTimeMs);
 
     return result;
 }
@@ -1007,11 +834,6 @@ ImageProcessor::ProcessingResult ImageProcessor::medianFilterOpenCV(cv::Mat& inp
     return result;
 }
 
-Ipp8u* ImageProcessor::matToIpp8u(cv::Mat& mat)
-{
-    return mat.ptr<Ipp8u>();
-}
-
 ImageProcessor::ProcessingResult ImageProcessor::medianFilterIPP(cv::Mat& inputImage)
 {
     ProcessingResult result;
@@ -1033,21 +855,8 @@ ImageProcessor::ProcessingResult ImageProcessor::medianFilterCUDA(cv::Mat& input
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    // Upload image to GPU
-    cv::cuda::GpuMat gpuImage;
-    gpuImage.upload(inputImage);
-
-    // Create median filter
-    cv::Ptr<cv::cuda::Filter> medianFilter =
-        cv::cuda::createMedianFilter(gpuImage.type(), 5);
-
-    // Apply median filter on GPU
-    cv::cuda::GpuMat medianedGpuImage;
-    medianFilter->apply(gpuImage, medianedGpuImage);
-
-    // Download the result back to CPU
-    cv::Mat outputImage;
-    medianedGpuImage.download(outputImage);
+    ImageProcessorCUDA IPCUDA;
+    cv::Mat outputImage = IPCUDA.medianFilter(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -1062,8 +871,8 @@ ImageProcessor::ProcessingResult ImageProcessor::medianFilterCUDAKernel(cv::Mat&
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::Mat outputImage;
-    callMedianFilterCUDA(inputImage, outputImage);
+    ImageProcessorCUDAKernel IPCUDAK;
+    cv::Mat outputImage = IPCUDAK.medianFilter(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -1175,39 +984,8 @@ ImageProcessor::ProcessingResult ImageProcessor::laplacianFilterCUDA(cv::Mat& in
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    // 입력 이미지를 GPU 메모리로 업로드
-    cv::cuda::GpuMat d_inputImage;
-    d_inputImage.upload(inputImage);
-
-    // 입력 이미지 타입 확인 및 채널 수 변환
-    int inputType = d_inputImage.type();
-    int depth = CV_MAT_DEPTH(inputType);
-
-    // CUDA Laplacian 필터를 적용할 수 있는 데이터 타입으로 변환
-    cv::cuda::GpuMat d_grayImage;
-    if (depth != CV_8U && depth != CV_16U && depth != CV_32F) {
-        d_inputImage.convertTo(d_grayImage, CV_32F);  // 입력 이미지를 CV_32F로 변환
-    }
-    else if (d_inputImage.channels() == 3) {
-        cv::cuda::cvtColor(d_inputImage, d_grayImage, cv::COLOR_BGR2GRAY); // RGB 이미지를 grayscale로 변환
-    }
-    else {
-        d_grayImage = d_inputImage.clone();  // 이미 적절한 타입인 경우 그대로 사용
-    }
-
-    // Laplacian 필터를 생성할 때 입력 및 출력 이미지 타입을 동일하게 설정
-    int srcType = d_grayImage.type();
-    cv::Ptr<cv::cuda::Filter> laplacianFilter = cv::cuda::createLaplacianFilter(srcType, srcType, 3);
-
-    // 출력 이미지 메모리 할당
-    cv::cuda::GpuMat d_outputImage(d_grayImage.size(), srcType);
-
-    // Laplacian 필터 적용
-    laplacianFilter->apply(d_grayImage, d_outputImage);
-
-    // GPU에서 CPU로 결과 이미지 다운로드
-    cv::Mat outputImage;
-    d_outputImage.download(outputImage);
+    ImageProcessorCUDA IPCUDA;
+    cv::Mat outputImage = IPCUDA.laplacianFilter(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -1224,11 +1002,8 @@ ImageProcessor::ProcessingResult ImageProcessor::laplacianFilterCUDAKernel(cv::M
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::Mat outputImage;
-    callLaplacianFilterCUDA(inputImage, outputImage);     
-    // outputImage를 출력하여 내용 확인
-    //std::cout << "Output Image:" << std::endl;
-    //std::cout << outputImage << std::endl;
+    ImageProcessorCUDAKernel IPCUDAK;
+    cv::Mat outputImage = IPCUDAK.laplacianFilter(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -1335,14 +1110,13 @@ ImageProcessor::ProcessingResult ImageProcessor::bilateralFilterCUDA(cv::Mat& in
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    //cv::cuda 에서 createBilateralFilter 지원하지 않아 CUDA Kernel로 해야함
-    cv::Mat outputImage;
-    callBilateralFilterCUDA(inputImage, outputImage, 9, 75, 75);
+    ImageProcessorCUDA IPCUDA;
+    cv::Mat outputImage = IPCUDA.bilateralFilter(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "bilateralFilter", "CUDA-not support", elapsedTimeMs);
+    result = setResult(result, inputImage, outputImage, "bilateralFilter", "CUDA", elapsedTimeMs);
 
     return result;
 }
@@ -1352,8 +1126,8 @@ ImageProcessor::ProcessingResult ImageProcessor::bilateralFilterCUDAKernel(cv::M
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::Mat outputImage;
-    callBilateralFilterCUDA(inputImage, outputImage, 9, 75, 75);
+    ImageProcessorCUDAKernel IPCUDAK;
+    cv::Mat outputImage = IPCUDAK.bilateralFilter(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -1449,39 +1223,8 @@ ImageProcessor::ProcessingResult ImageProcessor::sobelFilterCUDA(cv::Mat& inputI
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::Mat outputImage;
-
-    // Convert input image to grayscale if necessary
-    cv::Mat grayImage;
-    if (inputImage.channels() > 1) {
-        cv::cuda::GpuMat d_inputImage;
-        d_inputImage.upload(inputImage);
-        cv::cuda::GpuMat d_outputImage;
-        d_outputImage = convertToGrayCUDA(d_inputImage);
-        d_outputImage.download(grayImage);
-    }
-    else {
-        grayImage = inputImage;
-    }
-
-    // Transfer input image to GPU
-    cv::cuda::GpuMat d_inputImage(grayImage);
-    cv::cuda::GpuMat d_outputImage;
-
-    // Create Sobel filter on GPU
-    cv::Ptr<cv::cuda::Filter> sobelFilter = cv::cuda::createSobelFilter(
-        d_inputImage.type(),   // srcType
-        CV_16SC1,              // dstType
-        1,                     // dx (order of derivative in x)
-        0,                     // dy (order of derivative in y)
-        3                      // ksize (kernel size, 3x3 Sobel)
-    );
-
-    // Apply Sobel filter on GPU
-    sobelFilter->apply(d_inputImage, d_outputImage);
-
-    // Transfer result back to CPU
-    d_outputImage.download(outputImage);
+    ImageProcessorCUDA IPCUDA;
+    cv::Mat outputImage = IPCUDA.sobelFilter(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
@@ -1496,8 +1239,8 @@ ImageProcessor::ProcessingResult ImageProcessor::sobelFilterCUDAKernel(cv::Mat& 
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    cv::Mat outputImage = convertToGrayCUDAKernel(inputImage);
-    callSobelFilterCUDA(inputImage, outputImage);
+    ImageProcessorCUDAKernel IPCUDAK;
+    cv::Mat outputImage = IPCUDAK.sobelFilter(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
