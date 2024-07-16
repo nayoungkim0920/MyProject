@@ -8,43 +8,64 @@ ImageProcessorIPP::~ImageProcessorIPP()
 {
 }
 
-cv::Mat ImageProcessorIPP::rotate(cv::Mat& inputImage)
+cv::Mat ImageProcessorIPP::rotate(cv::Mat& inputImage, double angle)
 {
-    // 입력 이미지의 크기
+    std::cout << "Input image size: " << inputImage.cols << " x " << inputImage.rows << std::endl;
+
+    // Input image size
     IppiSize srcSize = { inputImage.cols, inputImage.rows };
 
-    // 출력 이미지의 크기 설정: 오른쪽으로 회전된 이미지의 크기와 같도록 설정
-    IppiSize dstSize = { inputImage.rows, inputImage.cols };
+    // Convert rotation angle to radians
+    double angleRadians = angle * CV_PI / 180.0;
+    std::cout << "Rotation angle (radians): " << angleRadians << std::endl;
 
-    // IPP에서 사용할 아핀 변환 계수
-    double angle = 270.0;  // 90도 시계 방향으로 회전
-    double xShift = static_cast<double>(srcSize.width);  // x 축 이동량: 이미지의 너비
-    double yShift = 0.0;  // y 축 이동량: 0
+    // Set the size of the output image after rotation
+    double cosAngle = std::abs(std::cos(angleRadians));
+    double sinAngle = std::abs(std::sin(angleRadians));
+    int dstWidth = static_cast<int>(srcSize.width * cosAngle + srcSize.height * sinAngle);
+    int dstHeight = static_cast<int>(srcSize.width * sinAngle + srcSize.height * cosAngle);
+    IppiSize dstSize = { dstWidth, dstHeight };
+    std::cout << "Output image size after rotation: " << dstWidth << " x " << dstHeight << std::endl;
 
-    // 아핀 변환 계수 계산
+    // Create an output image that can contain the entire rotated image
+    cv::Mat outputImage(dstSize.height, dstSize.width, inputImage.type());
+    std::cout << "Output image created" << std::endl;
+
+    // Affine transform coefficients for IPP
+    double xShift = static_cast<double>(srcSize.width) / 2.0;  // x shift: half the width of the image
+    double yShift = static_cast<double>(srcSize.height) / 2.0; // y shift: half the height of the image
+    std::cout << "xShift: " << xShift << ", yShift: " << yShift << std::endl;
+
+    // Calculate the affine transform coefficients based on direction
     double coeffs[2][3];
-    IppStatus status = ippiGetRotateTransform(angle, xShift, yShift, coeffs);
-    if (status != ippStsNoErr) {
-        std::cerr << "ippiGetRotateTransform error: " << status << std::endl;
-        return cv::Mat();
-    }
+    coeffs[0][0] = std::cos(angleRadians);
+    coeffs[0][1] = -std::sin(angleRadians);
+    coeffs[0][2] = xShift - xShift * std::cos(angleRadians) + yShift * std::sin(angleRadians) + (dstWidth - srcSize.width) / 2.0;
+    coeffs[1][0] = std::sin(angleRadians);
+    coeffs[1][1] = std::cos(angleRadians);
+    coeffs[1][2] = yShift - xShift * std::sin(angleRadians) - yShift * std::cos(angleRadians) + (dstHeight - srcSize.height) / 2.0;
+    
+    std::cout << "Affine transform coefficients calculated" << std::endl;
 
-    // IPP를 위한 필요한 변수들
+    // Variables needed for IPP
     IppiWarpSpec* pSpec = nullptr;
     Ipp8u* pBuffer = nullptr;
     int specSize = 0, initSize = 0, bufSize = 0;
-    const Ipp32u numChannels = 3;
+    const Ipp32u numChannels = 3; // Number of channels in the input image (BGR)
     IppiBorderType borderType = ippBorderConst;
-    IppiWarpDirection direction = ippWarpForward;
     Ipp64f pBorderValue[numChannels];
     for (int i = 0; i < numChannels; ++i) pBorderValue[i] = 255.0;
+    std::cout << "pBorderValue set" << std::endl;
 
-    // Spec 및 Init buffer 사이즈 설정
-    status = ippiWarpAffineGetSize(srcSize, dstSize, ipp8u, coeffs, ippLinear, direction, borderType, &specSize, &initSize);
+    // Set the sizes of the spec and init buffers
+    IppStatus status;
+    status = ippiWarpAffineGetSize(srcSize, dstSize, ipp8u, coeffs, ippLinear, ippWarpForward, borderType, &specSize, &initSize);
+    
     if (status != ippStsNoErr) {
         std::cerr << "ippiWarpAffineGetSize error: " << status << std::endl;
         return cv::Mat();
     }
+    std::cout << "ippiWarpAffineGetSize completed, specSize: " << specSize << ", initSize: " << initSize << std::endl;
 
     // Memory allocation
     pSpec = (IppiWarpSpec*)ippsMalloc_8u(specSize);
@@ -52,22 +73,27 @@ cv::Mat ImageProcessorIPP::rotate(cv::Mat& inputImage)
         std::cerr << "Memory allocation error for pSpec" << std::endl;
         return cv::Mat();
     }
+    std::cout << "pSpec memory allocation completed" << std::endl;
 
     // Filter initialization
-    status = ippiWarpAffineLinearInit(srcSize, dstSize, ipp8u, coeffs, direction, numChannels, borderType, pBorderValue, 0, pSpec);
-    if (status != ippStsNoErr) {
+    status = ippiWarpAffineLinearInit(srcSize, dstSize, ipp8u, coeffs, ippWarpForward, numChannels, borderType, pBorderValue, 0, pSpec);
+    
+    if (status != ippStsNoErr)
+    {
         std::cerr << "ippiWarpAffineLinearInit error: " << status << std::endl;
         ippsFree(pSpec);
         return cv::Mat();
     }
+    std::cout << "ippiWarpAffineLinearInit completed" << std::endl;
 
-    // work buffer size
+    // Get work buffer size
     status = ippiWarpGetBufferSize(pSpec, dstSize, &bufSize);
     if (status != ippStsNoErr) {
         std::cerr << "ippiWarpGetBufferSize error: " << status << std::endl;
         ippsFree(pSpec);
         return cv::Mat();
     }
+    std::cout << "ippiWarpGetBufferSize completed, bufSize: " << bufSize << std::endl;
 
     pBuffer = ippsMalloc_8u(bufSize);
     if (pBuffer == nullptr) {
@@ -75,25 +101,31 @@ cv::Mat ImageProcessorIPP::rotate(cv::Mat& inputImage)
         ippsFree(pSpec);
         return cv::Mat();
     }
+    std::cout << "pBuffer memory allocation completed" << std::endl;
 
-    // 회전된 이미지를 저장할 Mat 생성
-    cv::Mat outputImage(dstSize.width, dstSize.height, inputImage.type());
-
-    // dstOffset 정의 (오른쪽으로 90도 회전 시)
+    // Define dstOffset (ensure it's non-negative and within the image bounds)
     IppiPoint dstOffset = { 0, 0 };
+    std::cout << "dstOffset set, x: " << dstOffset.x << ", y: " << dstOffset.y << std::endl;
 
-    // IPP를 이용하여 이미지 회전
-    status = ippiWarpAffineLinear_8u_C3R(inputImage.data, srcSize.width * 3, outputImage.data, dstSize.width * 3, dstOffset, dstSize, pSpec, pBuffer);
+    // Rotate the image using IPP
+    status = ippiWarpAffineLinear_8u_C3R(inputImage.data, inputImage.step, outputImage.data, outputImage.step,
+            dstOffset, dstSize, pSpec, pBuffer);
+    
     if (status != ippStsNoErr) {
         std::cerr << "ippiWarpAffineLinear_8u_C3R error: " << status << std::endl;
         ippsFree(pSpec);
         ippsFree(pBuffer);
         return cv::Mat();
     }
+    std::cout << "Image rotation completed" << std::endl;
 
-    // 메모리 해제
+    // Output the size of the processed image
+    std::cout << "Output image size: " << outputImage.cols << " x " << outputImage.rows << std::endl;
+
+    // Free memory
     ippsFree(pSpec);
     ippsFree(pBuffer);
+    std::cout << "Memory freed" << std::endl;
 
     return outputImage;
 }

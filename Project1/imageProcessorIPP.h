@@ -29,7 +29,7 @@ public:
     ImageProcessorIPP();
     ~ImageProcessorIPP();
 
-    cv::Mat rotate(cv::Mat& inputImage);
+    cv::Mat rotate(cv::Mat& inputImage, double angle);
     cv::Mat grayScale(cv::Mat& inputImage);
     cv::Mat zoom(cv::Mat& inputImage, int newWidth, int newHeight);
     cv::Mat gaussianBlur(cv::Mat& inputImage, int kernelSize);

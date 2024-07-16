@@ -58,7 +58,7 @@ cv::Mat ImageProcessorGStreamer::bilateralFilter(cv::Mat& inputImage)
 
     // Apply bilateral filter
     cv::Mat filteredImage;
-    cv::bilateralFilter(inputImage, filteredImage, 15, 75, 75);
+    cv::bilateralFilter(inputImage, filteredImage, 9, 75, 75, cv::BORDER_DEFAULT);
 
     // Convert cv::Mat to GstBuffer
     GstBuffer* buffer = gst_buffer_new_allocate(nullptr, filteredImage.total() * filteredImage.elemSize(), nullptr);

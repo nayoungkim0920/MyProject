@@ -195,7 +195,7 @@ cv::Mat ImageProcessorCUDA::bilateralFilter(cv::Mat& inputImage)
     cv::cuda::GpuMat d_outputImage;
 
     // CUDA Bilateral 필터 설정 및 적용
-    int filterSize = 15;
+    int filterSize = 9;
     float sigmaColor = 75.0f;
     float sigmaSpace = 75.0f;
 

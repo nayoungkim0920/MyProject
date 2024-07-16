@@ -460,13 +460,13 @@ ImageProcessor::ProcessingResult ImageProcessor::rotateIPP(cv::Mat& inputImage)
     double startTime = cv::getTickCount();
 
     ImageProcessorIPP IPIPP;
-    cv::Mat outputImage = IPIPP.rotate(inputImage);
+    cv::Mat outputImage = IPIPP.rotate(inputImage, 90.0);//90.0 오른쪽, 270.0 왼쪽
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "rotate", "IPP", elapsedTimeMs
-    , "");
+    , "90.0");
 
     return result;
 }
@@ -1122,7 +1122,7 @@ ImageProcessor::ProcessingResult ImageProcessor::bilateralFilterOpenCV(cv::Mat& 
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "bilateralFilter", "OpenCV", elapsedTimeMs
-    , "");
+    , "9, 75, 75, cv::BORDER_DEFAULT");
 
     return result;
 }
@@ -1139,7 +1139,7 @@ ImageProcessor::ProcessingResult ImageProcessor::bilateralFilterIPP(cv::Mat& inp
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "bilateralFilter", "IPP", elapsedTimeMs
-    , "");
+    , "9, 75, 75");
 
     return result;
 }
@@ -1156,7 +1156,7 @@ ImageProcessor::ProcessingResult ImageProcessor::bilateralFilterCUDA(cv::Mat& in
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "bilateralFilter", "CUDA", elapsedTimeMs
-    , "");
+    , "9, 75, 75");
 
     return result;
 }
@@ -1173,7 +1173,7 @@ ImageProcessor::ProcessingResult ImageProcessor::bilateralFilterCUDAKernel(cv::M
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "bilateralFilter", "CUDAKernel", elapsedTimeMs
-    , "");
+    , "9, 75, 75");
 
     return result;
 }
@@ -1190,7 +1190,7 @@ ImageProcessor::ProcessingResult ImageProcessor::bilateralFilterNPP(cv::Mat& inp
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "bilateralFilter", "NPP", elapsedTimeMs
-        , "");
+        , "9, 75, 75, NPP_BORDER_REPLICATE");
 
     return result;
 }
@@ -1207,7 +1207,7 @@ ImageProcessor::ProcessingResult ImageProcessor::bilateralFilterGStreamer(cv::Ma
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "bilateralFilter", "GStreamer", elapsedTimeMs
-        , "");
+        , "9, 75, 75, cv::BORDER_DEFAULT");
 
     return result;
 }
