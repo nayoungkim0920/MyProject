@@ -46,6 +46,7 @@
 #include "ImageProcessorCUDA.h"
 #include "ImageProcessorCUDAKernel.h"
 #include "ImageProcessorNPP.h"
+#include "ImageProcessorGStreamer.h"
 
 #ifndef MAX_NUM_THREADS
 #define MAX_NUM_THREADS 8 // 예시로 임의로 설정

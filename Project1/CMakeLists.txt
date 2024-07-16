@@ -22,7 +22,6 @@ include_directories(
     "${GSTREAMER_ROOT}/include/gstreamer-1.0"
     "${GSTREAMER_ROOT}/include/glib-2.0"
     "${GSTREAMER_ROOT}/lib/glib-2.0/include"
-    "${GSTREAMER_ROOT}/include/gobject"
 )
 
 link_directories("${GSTREAMER_ROOT}/lib")
@@ -97,7 +96,9 @@ target_link_libraries(Project1
     image_processing
     ${CUDA_LIBRARIES}
     ${CUDNN_LIBRARIES}
-    ${GSTREAMER_LIBRARIES}  # GStreamer 라이브러리 추가
+    "${GSTREAMER_ROOT}/lib/gstreamer-1.0.lib"
+    "${GSTREAMER_ROOT}/lib/gobject-2.0.lib"
+    "${GSTREAMER_ROOT}/lib/glib-2.0.lib"
 )
 
 # 실행 파일 출력 디렉토리 설정
