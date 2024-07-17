@@ -1,6 +1,12 @@
 //imageProecssing.cu
 #include "imageProcessing.cuh"
 
+#define CUDA_CHECK_ERROR(err) \
+    if (err != cudaSuccess) { \
+        std::cerr << "CUDA error: " << cudaGetErrorString(err) << " at line " << __LINE__ << std::endl; \
+        return; \
+    }
+
 __device__ void rotatePixel(int x, int y, int cols, int rows, int channels, const unsigned char* input, unsigned char* output) {
     if (x < cols && y < rows) {
         for (int c = 0; c < channels; ++c) {
@@ -11,15 +17,6 @@ __device__ void rotatePixel(int x, int y, int cols, int rows, int channels, cons
 
 __device__ float gaussian(float x, float sigma) {
     return expf(-(x * x) / (2 * sigma * sigma));
-}
-
-__global__ void rotateImageKernel(const unsigned char* input, unsigned char* output, int cols, int rows, int channels) {
-    int x = blockIdx.x * blockDim.x + threadIdx.x;
-    int y = blockIdx.y * blockDim.y + threadIdx.y;
-
-    if (x < cols && y < rows) {
-        rotatePixel(x, y, cols, rows, channels, input, output);
-    }
 }
 
 __global__ void resizeImageKernel(const unsigned char* input, unsigned char* output, int oldWidth, int oldHeight, int newWidth, int newHeight, int channels) {
@@ -282,8 +279,19 @@ __global__ void sobelFilterKernel(const unsigned char* input, unsigned char* out
     }
 }
 
+__global__ void rotateImageKernelR(const unsigned char* input, unsigned char* output, int cols, int rows, int channels) {
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-void callRotateImageCUDA(cv::Mat& inputImage, cv::Mat& outputImage) {
+    if (x < cols && y < rows) {
+        for (int c = 0; c < channels; ++c) {
+            // 오른쪽으로 90도 회전
+            output[(x * rows + (rows - y - 1)) * channels + c] = input[(y * cols + x) * channels + c];
+        }
+    }
+}
+
+void callRotateImageCUDA_R(cv::Mat& inputImage, cv::Mat& outputImage) {
     int cols = inputImage.cols;
     int rows = inputImage.rows;
     int channels = inputImage.channels();
@@ -317,7 +325,7 @@ void callRotateImageCUDA(cv::Mat& inputImage, cv::Mat& outputImage) {
     dim3 threadsPerBlock(16, 16);
     dim3 numBlocks((cols + threadsPerBlock.x - 1) / threadsPerBlock.x, (rows + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
-    rotateImageKernel << <numBlocks, threadsPerBlock >> > (d_inputImage, d_outputImage, cols, rows, channels);
+    rotateImageKernelR << <numBlocks, threadsPerBlock >> > (d_inputImage, d_outputImage, cols, rows, channels);
 
     err = cudaGetLastError();
     if (err != cudaSuccess) {
@@ -329,12 +337,64 @@ void callRotateImageCUDA(cv::Mat& inputImage, cv::Mat& outputImage) {
 
     cudaDeviceSynchronize();
 
-    outputImage.create(rows, cols, inputImage.type());
+    // 회전된 이미지의 크기를 설정
+    outputImage.create(cols, rows, inputImage.type());
 
     err = cudaMemcpy(outputImage.data, d_outputImage, imageSize, cudaMemcpyDeviceToHost);
     if (err != cudaSuccess) {
         std::cerr << "CUDA memcpy error: " << cudaGetErrorString(err) << std::endl;
     }
+
+    cudaFree(d_inputImage);
+    cudaFree(d_outputImage);
+}
+
+__global__ void rotateImageKernelL(const unsigned char* input, unsigned char* output, int cols, int rows, int channels) {
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (x < cols && y < rows) {
+        for (int c = 0; c < channels; ++c) {
+            // 왼쪽으로 90도 회전
+            output[((cols - 1 - x) * rows + y) * channels + c] = input[(y * cols + x) * channels + c];
+        }
+    }
+}
+
+void callRotateImageCUDA_L(cv::Mat& inputImage, cv::Mat& outputImage) {
+    int cols = inputImage.cols;
+    int rows = inputImage.rows;
+    int channels = inputImage.channels();
+
+    uchar* d_inputImage = nullptr;
+    uchar* d_outputImage = nullptr;
+    size_t inputSize = cols * rows * channels * sizeof(uchar);
+    size_t outputSize = rows * cols * channels * sizeof(uchar); // 회전 후 이미지 크기
+
+    cudaError_t err;
+    err = cudaMalloc(&d_inputImage, inputSize);
+    CUDA_CHECK_ERROR(err);
+
+    err = cudaMalloc(&d_outputImage, outputSize);
+    CUDA_CHECK_ERROR(err);
+
+    err = cudaMemcpy(d_inputImage, inputImage.data, inputSize, cudaMemcpyHostToDevice);
+    CUDA_CHECK_ERROR(err);
+
+    dim3 threadsPerBlock(16, 16);
+    dim3 numBlocks((cols + threadsPerBlock.x - 1) / threadsPerBlock.x, (rows + threadsPerBlock.y - 1) / threadsPerBlock.y);
+
+    rotateImageKernelL << <numBlocks, threadsPerBlock >> > (d_inputImage, d_outputImage, cols, rows, channels);
+    err = cudaGetLastError();
+    CUDA_CHECK_ERROR(err);
+
+    cudaDeviceSynchronize();
+
+    // 회전된 이미지의 크기를 설정 (너비와 높이가 바뀜)
+    outputImage.create(cols, rows, inputImage.type());
+
+    err = cudaMemcpy(outputImage.data, d_outputImage, outputSize, cudaMemcpyDeviceToHost);
+    CUDA_CHECK_ERROR(err);
 
     cudaFree(d_inputImage);
     cudaFree(d_outputImage);

@@ -8,8 +8,15 @@ ImageProcessorOpenCV::~ImageProcessorOpenCV()
 {
 }
 
-cv::Mat ImageProcessorOpenCV::rotate(cv::Mat& inputImage, int rotateCode)
+cv::Mat ImageProcessorOpenCV::rotate(cv::Mat& inputImage, bool isRight)
 {
+    int rotateCode;
+
+    if (isRight)
+        rotateCode = cv::ROTATE_90_CLOCKWISE;
+    else
+        rotateCode = cv::ROTATE_90_COUNTERCLOCKWISE;
+
     cv::Mat outputImage;
     cv::rotate(inputImage, outputImage, rotateCode);
 

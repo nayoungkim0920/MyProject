@@ -31,7 +31,8 @@ bool ImageProcessor::saveImage(const std::string& fileName, const cv::Mat& image
 QFuture<bool> ImageProcessor::rotateImage(cv::Mat& imageOpenCV
                                         , cv::Mat& imageIPP
                                         , cv::Mat& imageCUDA
-                                        , cv::Mat& imageCUDAKernel)
+                                        , cv::Mat& imageCUDAKernel
+                                        , cv::Mat& imageNPP)
 {
     //함수 이름을 문자열로 저장
     const char* functionName = __func__;
@@ -41,6 +42,7 @@ QFuture<bool> ImageProcessor::rotateImage(cv::Mat& imageOpenCV
         , &imageIPP
         , &imageCUDA
         , &imageCUDAKernel
+        , &imageNPP
         , functionName]() -> bool {
 
         QMutexLocker locker(&mutex);
@@ -56,6 +58,7 @@ QFuture<bool> ImageProcessor::rotateImage(cv::Mat& imageOpenCV
             pushToUndoStackIPP(imageIPP.clone());
             pushToUndoStackCUDA(imageCUDA.clone());
             pushToUndoStackCUDAKernel(imageCUDAKernel.clone());
+            pushToUndoStackNPP(imageNPP.clone());
 
             QVector<ProcessingResult> results;
 
@@ -74,6 +77,10 @@ QFuture<bool> ImageProcessor::rotateImage(cv::Mat& imageOpenCV
             ProcessingResult outputCUDAKernel = rotateCUDAKernel(imageCUDAKernel);
             lastProcessedImageCUDAKernel = outputCUDAKernel.processedImage.clone();
             results.append(outputCUDAKernel);
+
+            ProcessingResult outputNPP = rotateNPP(imageNPP);
+            lastProcessedImageNPP = outputNPP.processedImage.clone();
+            results.append(outputNPP);
 
             // 이미지 업데이트 및 시그널 발생
             emit imageProcessed(results);
@@ -444,12 +451,13 @@ ImageProcessor::ProcessingResult ImageProcessor::rotateOpenCV(cv::Mat& inputImag
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
     ImageProcessorOpenCV IPOpenCV;
-    cv::Mat outputImage = IPOpenCV.rotate(inputImage, cv::ROTATE_90_CLOCKWISE);
+    cv::Mat outputImage = IPOpenCV.rotate(inputImage, true);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
-    result = setResult(result, inputImage, outputImage, "rotate", "OpenCV", elapsedTimeMs, "cv::ROTATE_90_CLOCKWISE");
+    result = setResult(result, inputImage, outputImage, "rotate", "OpenCV", elapsedTimeMs
+        , "angle: R 90");
 
     return result;
 }
@@ -460,13 +468,13 @@ ImageProcessor::ProcessingResult ImageProcessor::rotateIPP(cv::Mat& inputImage)
     double startTime = cv::getTickCount();
 
     ImageProcessorIPP IPIPP;
-    cv::Mat outputImage = IPIPP.rotate(inputImage, 90.0);//90.0 오른쪽, 270.0 왼쪽
+    cv::Mat outputImage = IPIPP.rotate(inputImage, true);//90.0 오른쪽, 270.0 왼쪽
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "rotate", "IPP", elapsedTimeMs
-    , "90.0");
+    , "angle: R 90");
 
     return result;
 }
@@ -478,13 +486,13 @@ ImageProcessor::ProcessingResult ImageProcessor::rotateCUDA(cv::Mat& inputImage)
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
     ImageProcessorCUDA IPCUDA;
-    cv::Mat outputImage = IPCUDA.rotate(inputImage);    
+    cv::Mat outputImage = IPCUDA.rotate(inputImage, true); // 270.0 : 오른쪽 90도, 90.0 : 왼쪽 90도   
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "rotate", "CUDA", elapsedTimeMs
-    ,"");
+    ,"angle: R 90");
 
     return result;
 }
@@ -495,13 +503,30 @@ ImageProcessor::ProcessingResult ImageProcessor::rotateCUDAKernel(cv::Mat& input
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
     ImageProcessorCUDAKernel IPCUDAK;
-    cv::Mat outputImage = IPCUDAK.rotate(inputImage);
+    cv::Mat outputImage = IPCUDAK.rotate(inputImage, true); //true:right, false:left
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "rotate", "CUDAKernel", elapsedTimeMs
-    , "");
+    , "angle: R 90");
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::rotateNPP(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    ImageProcessorNPP IPNPP;
+    cv::Mat outputImage = IPNPP.rotate(inputImage, true); //true:right, false:left
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "rotate", "NPP", elapsedTimeMs
+        , "angle: R 90");
 
     return result;
 }

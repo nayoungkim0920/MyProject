@@ -16,12 +16,14 @@
 #include <npp.h>
 #include <nppi.h>
 #include <nppi_filtering_functions.h>
+#include <nppi_geometry_transforms.h>
 
 class ImageProcessorNPP {
 public:
     ImageProcessorNPP();
     ~ImageProcessorNPP();
     
+    cv::Mat rotate(cv::Mat& inputImage, bool isRight);
     cv::Mat bilateralFilter(cv::Mat& inputImage);
 };
 

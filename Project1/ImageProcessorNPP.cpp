@@ -8,6 +8,66 @@ ImageProcessorNPP::~ImageProcessorNPP()
 {
 }
 
+cv::Mat ImageProcessorNPP::rotate(cv::Mat& inputImage, bool isRight) {
+    // 입력 이미지 크기
+    int srcWidth = inputImage.cols;
+    int srcHeight = inputImage.rows;
+
+    // 회전 후 이미지 크기 설정
+    int dstWidth = srcHeight;
+    int dstHeight = srcWidth;
+
+    // 출력 이미지를 위한 메모리 할당 (회전 후 크기)
+    cv::Mat outputImage(dstWidth, dstHeight, inputImage.type());
+
+    // OpenCV Mat을 NPP 호환 형식으로 변환
+    Npp8u* pSrc = inputImage.data;
+    Npp8u* pDst = outputImage.data;
+    NppiSize oSrcSize = { srcWidth, srcHeight };
+    NppiRect oSrcROI = { 0, 0, srcWidth, srcHeight };
+    int nSrcStep = srcWidth * inputImage.elemSize();
+    int nDstStep = dstWidth * outputImage.elemSize();
+
+    // 회전 각도 설정 (90도, 시계 방향 또는 반시계 방향)
+    double angleInRadians = isRight ? -CV_PI / 2.0 : CV_PI / 2.0;
+
+    // 출력 이미지의 ROI를 설정 (가로와 세로가 바뀜에 주의)
+    NppiRect oDstROI = { 0, 0, dstWidth, dstHeight };
+
+    // GPU 메모리 할당
+    Npp8u* d_src = nullptr;
+    Npp8u* d_dst = nullptr;
+    cudaMalloc((void**)&d_src, srcWidth * srcHeight * inputImage.elemSize());
+    cudaMalloc((void**)&d_dst, dstWidth * dstHeight * outputImage.elemSize());
+
+    // 입력 이미지 데이터를 GPU 메모리로 복사
+    cudaMemcpy(d_src, pSrc, srcWidth * srcHeight * inputImage.elemSize(), cudaMemcpyHostToDevice);
+
+    // NPP를 사용하여 회전 수행
+    NppStatus status = nppiRotate_8u_C3R(d_src, oSrcSize, nSrcStep, oSrcROI,
+        d_dst, nDstStep, oDstROI, angleInRadians,
+        srcWidth / 2.0, srcHeight / 2.0, NPPI_INTER_LINEAR);
+
+    if (status != NPP_SUCCESS) {
+        std::cerr << "nppiRotate_8u_C3R error: " << status << std::endl;
+        // GPU 메모리 해제
+        cudaFree(d_src);
+        cudaFree(d_dst);
+        return cv::Mat();
+    }
+
+    // 회전 후 GPU에서 CPU로 데이터 복사
+    cudaMemcpy(pDst, d_dst, dstWidth * dstHeight * outputImage.elemSize(), cudaMemcpyDeviceToHost);
+
+    // GPU 메모리 해제
+    cudaFree(d_src);
+    cudaFree(d_dst);
+
+    return outputImage;
+}
+
+
+
 cv::Mat ImageProcessorNPP::bilateralFilter(cv::Mat& inputImage)
 {
     // 입력 이미지를 GPU 메모리로 복사

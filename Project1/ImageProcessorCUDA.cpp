@@ -8,14 +8,18 @@ ImageProcessorCUDA::~ImageProcessorCUDA()
 {
 }
 
-cv::Mat ImageProcessorCUDA::rotate(cv::Mat& inputImage)
+cv::Mat ImageProcessorCUDA::rotate(cv::Mat& inputImage, bool isRight)
 {
+    double angle; // 270.0 : 오른쪽 90도, 90.0 : 왼쪽 90도   
+
+    if (isRight)
+        angle = 270.0;
+    else
+        angle = 90.0;
+
     // 이미지를 GPU 메모리에 업로드
     cv::cuda::GpuMat gpuImage;
     gpuImage.upload(inputImage);
-
-    // #include <opencv2/cudawarping.hpp>
-    double angle = 270.0; // 회전할 각도 (예: 90:왼쪽으로90도, 270:오른쪽90도)
 
     // 회전 중심을 이미지의 중앙으로 설정
     cv::Point2f center(gpuImage.cols / 2.0f, gpuImage.rows / 2.0f);
@@ -23,9 +27,25 @@ cv::Mat ImageProcessorCUDA::rotate(cv::Mat& inputImage)
     // 회전 매트릭스 계산
     cv::Mat rotationMatrix = cv::getRotationMatrix2D(center, angle, 1.0);
 
-    // GPU에서 회전 수행
+    // 회전된 이미지의 크기를 구하기 위해 bounding box 계산
+    std::vector<cv::Point2f> corners(4);
+    corners[0] = cv::Point2f(0, 0);
+    corners[1] = cv::Point2f(static_cast<float>(gpuImage.cols), 0);
+    corners[2] = cv::Point2f(static_cast<float>(gpuImage.cols), static_cast<float>(gpuImage.rows));
+    corners[3] = cv::Point2f(0, static_cast<float>(gpuImage.rows));
+
+    std::vector<cv::Point2f> rotatedCorners(4);
+    cv::transform(corners, rotatedCorners, rotationMatrix);
+
+    cv::Rect bbox = cv::boundingRect(rotatedCorners);
+
+    // 회전 매트릭스에 변환 추가 (이미지를 가운데 맞춤)
+    rotationMatrix.at<double>(0, 2) += bbox.width / 2.0 - center.x;
+    rotationMatrix.at<double>(1, 2) += bbox.height / 2.0 - center.y;
+
+    // GPU에서 회전 수행 (보더 타입을 cv::BORDER_REPLICATE로 설정)
     cv::cuda::GpuMat gpuRotatedImage;
-    cv::cuda::warpAffine(gpuImage, gpuRotatedImage, rotationMatrix, gpuImage.size());
+    cv::cuda::warpAffine(gpuImage, gpuRotatedImage, rotationMatrix, bbox.size(), cv::INTER_NEAREST, cv::BORDER_REPLICATE);
 
     // 결과 이미지를 CPU 메모리로 다운로드
     cv::Mat outputImage;

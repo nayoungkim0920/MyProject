@@ -16,7 +16,7 @@ public:
     ImageProcessorOpenCV();
     ~ImageProcessorOpenCV();
 
-    cv::Mat rotate(cv::Mat& inputImage, int rotateCode);
+    cv::Mat rotate(cv::Mat& inputImage, bool isRight);
     cv::Mat grayScale(cv::Mat& inputImage);
     cv::Mat zoom(cv::Mat& inputImage, int newWidth, int newHeight, double x, double y, int interpolation);
     cv::Mat gaussianBlur(cv::Mat& inputImage

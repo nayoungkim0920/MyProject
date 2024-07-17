@@ -8,9 +8,16 @@ ImageProcessorIPP::~ImageProcessorIPP()
 {
 }
 
-cv::Mat ImageProcessorIPP::rotate(cv::Mat& inputImage, double angle)
+cv::Mat ImageProcessorIPP::rotate(cv::Mat& inputImage, bool isRight)
 {
     std::cout << "Input image size: " << inputImage.cols << " x " << inputImage.rows << std::endl;
+
+    double angle; //90.0 ¿À¸¥ÂÊ, 270.0 ¿ÞÂÊ
+
+    if (isRight)
+        angle = 90.0;
+    else
+        angle = 270.0;
 
     // Input image size
     IppiSize srcSize = { inputImage.cols, inputImage.rows };

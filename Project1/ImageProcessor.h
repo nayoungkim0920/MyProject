@@ -66,7 +66,7 @@ public:
     bool openImage(const std::string& fileName, cv::Mat& image);
     bool saveImage(const std::string& fileName, const cv::Mat& image);
 
-    QFuture<bool> rotateImage(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
+    QFuture<bool> rotateImage(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, cv::Mat& imageNPP);
     QFuture<bool> zoomInImage(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, double scaleFactor);
     QFuture<bool> zoomOutImage(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, double scaleFactor);
     QFuture<bool> grayScale(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
@@ -156,6 +156,7 @@ private:
     ProcessingResult rotateIPP(cv::Mat& inputImage);
     ProcessingResult rotateCUDA(cv::Mat& inputImage);
     ProcessingResult rotateCUDAKernel(cv::Mat& inputImage);
+    ProcessingResult rotateNPP(cv::Mat& inputImage);
 
     ProcessingResult gaussianBlurOpenCV(cv::Mat& inputImage, int kernelSize);
     ProcessingResult gaussianBlurIPP(cv::Mat& inputImage, int kernelSize);

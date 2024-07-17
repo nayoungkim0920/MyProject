@@ -9,7 +9,8 @@
 #include <iostream>
 
 // CUDA 함수 호출 선언
-void callRotateImageCUDA(cv::Mat& inputImage, cv::Mat& outputImage);
+void callRotateImageCUDA_R(cv::Mat& inputImage, cv::Mat& outputImage);
+void callRotateImageCUDA_L(cv::Mat& inputImage, cv::Mat& outputImage);
 void callZoomImageCUDA(cv::Mat& inputImage, cv::Mat& outputImage, int newWidth, int newHeight);
 void callGrayScaleImageCUDA(cv::Mat& inputImage, cv::Mat& outputImage);
 void callCannyEdgesCUDA(cv::Mat& inputImage, cv::Mat& outputImage);

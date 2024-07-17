@@ -18,7 +18,7 @@ public:
     ImageProcessorCUDAKernel();
     ~ImageProcessorCUDAKernel();
 
-    cv::Mat rotate(cv::Mat& inputImage);
+    cv::Mat rotate(cv::Mat& inputImage, bool isRight);
     cv::Mat grayScale(cv::Mat& inputImage);
     cv::Mat zoom(cv::Mat& inputImage, int newWidth, int newHeight);
     cv::Mat gaussianBlur(cv::Mat& inputImage, int kernelSize);

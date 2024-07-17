@@ -92,7 +92,8 @@ void MainWindow::rotateImage()
             imageProcessor->rotateImage(currentImageOpenCV
                 , currentImageIPP
                 , currentImageCUDA
-                , currentImageCUDAKernel);
+                , currentImageCUDAKernel
+                , currentImageNPP);
         }
         });
     ////applyImageProcessing(&ImageProcessor::rotateImage, currentImage);

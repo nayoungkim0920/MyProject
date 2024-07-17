@@ -8,10 +8,13 @@ ImageProcessorCUDAKernel::~ImageProcessorCUDAKernel()
 {
 }
 
-cv::Mat ImageProcessorCUDAKernel::rotate(cv::Mat& inputImage)
+cv::Mat ImageProcessorCUDAKernel::rotate(cv::Mat& inputImage, bool isRight)
 {
     cv::Mat outputImage;
-    callRotateImageCUDA(inputImage, outputImage);
+    if (isRight)
+        callRotateImageCUDA_R(inputImage, outputImage);
+    else
+        callRotateImageCUDA_L(inputImage, outputImage);
 
     return outputImage;
 }
