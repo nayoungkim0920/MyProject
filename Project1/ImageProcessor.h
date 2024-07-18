@@ -66,11 +66,11 @@ public:
     bool openImage(const std::string& fileName, cv::Mat& image);
     bool saveImage(const std::string& fileName, const cv::Mat& image);
 
-    QFuture<bool> rotateImage(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, cv::Mat& imageNPP);
+    QFuture<bool> rotateImage(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, cv::Mat& imageNPP, cv::Mat& imageGStreamer);
     QFuture<bool> zoomInImage(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, double scaleFactor);
     QFuture<bool> zoomOutImage(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, double scaleFactor);
-    QFuture<bool> grayScale(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
-    QFuture<bool> gaussianBlur(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, int kernelSize);
+    QFuture<bool> grayScale(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, cv::Mat& imageNPP, cv::Mat& imageGStreamer);
+    QFuture<bool> gaussianBlur(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, cv::Mat& NPP, cv::Mat& imageGStreamer, int kernelSize);
     QFuture<bool> cannyEdges(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
     QFuture<bool> medianFilter(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
     QFuture<bool> laplacianFilter(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
@@ -146,6 +146,8 @@ private:
     ProcessingResult grayScaleIPP(cv::Mat& inputImage);
     ProcessingResult grayScaleCUDA(cv::Mat& inputImage);
     ProcessingResult grayScaleCUDAKernel(cv::Mat& inputImage);
+    ProcessingResult grayScaleNPP(cv::Mat& inputImage);
+    ProcessingResult grayScaleGStreamer(cv::Mat& inputImage);
 
     ProcessingResult zoomOpenCV(cv::Mat& inputImage, double newWidth, double newHeight);
     ProcessingResult zoomIPP(cv::Mat& inputImage, double newWidth, double newHeight);
@@ -157,11 +159,14 @@ private:
     ProcessingResult rotateCUDA(cv::Mat& inputImage);
     ProcessingResult rotateCUDAKernel(cv::Mat& inputImage);
     ProcessingResult rotateNPP(cv::Mat& inputImage);
+    ProcessingResult rotateGStreamer(cv::Mat& inputImage);
 
     ProcessingResult gaussianBlurOpenCV(cv::Mat& inputImage, int kernelSize);
     ProcessingResult gaussianBlurIPP(cv::Mat& inputImage, int kernelSize);
     ProcessingResult gaussianBlurCUDA(cv::Mat& inputImage, int kernelSize);
     ProcessingResult gaussianBlurCUDAKernel(cv::Mat& inputImage, int kernelSize);
+    ProcessingResult gaussianBlurNPP(cv::Mat& inputImage, int kernelSize);
+    ProcessingResult gaussianBlurGStreamer(cv::Mat& inputImage, int kernelSize);
 
     ProcessingResult cannyEdgesOpenCV(cv::Mat& inputImage);
     ProcessingResult cannyEdgesIPP(cv::Mat& inputImage);

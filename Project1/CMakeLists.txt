@@ -76,6 +76,7 @@ list(APPEND GSTREAMER_LIBRARIES
     glib-2.0.lib
     gstapp-1.0.lib  # 필요한 GStreamer 모듈 추가
     gstbase-1.0.lib
+    gstvideo-1.0.lib
 )
 
 # 실행 파일 추가

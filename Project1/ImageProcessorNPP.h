@@ -23,7 +23,9 @@ public:
     ImageProcessorNPP();
     ~ImageProcessorNPP();
     
+    cv::Mat grayScale(cv::Mat& inputImage);
     cv::Mat rotate(cv::Mat& inputImage, bool isRight);
+    cv::Mat gaussianBlur(cv::Mat& inputImage, int kernelSize);
     cv::Mat bilateralFilter(cv::Mat& inputImage);
 };
 

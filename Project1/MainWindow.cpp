@@ -14,6 +14,7 @@ MainWindow::MainWindow(QWidget* parent)
     ui->label_npp_title->setText(QString("NPP"));
     ui->label_cuda_title->setText(QString("CUDA"));
     ui->label_cudakernel_title->setText(QString("CUDA Kernel"));
+    ui->label_npp_title->setText(QString("NPP"));
     ui->label_gstreamer_title->setText(QString("GStreamer"));
     
 
@@ -93,7 +94,8 @@ void MainWindow::rotateImage()
                 , currentImageIPP
                 , currentImageCUDA
                 , currentImageCUDAKernel
-                , currentImageNPP);
+                , currentImageNPP
+                , currentImageGStreamer);
         }
         });
     ////applyImageProcessing(&ImageProcessor::rotateImage, currentImage);
@@ -134,7 +136,9 @@ void MainWindow::grayScale()
         imageProcessor->grayScale(currentImageOpenCV
         , currentImageIPP
         , currentImageCUDA
-        , currentImageCUDAKernel);
+        , currentImageCUDAKernel
+        , currentImageNPP
+        , currentImageGStreamer);
 
         });
 
@@ -167,7 +171,13 @@ void MainWindow::gaussianBlur()
     if (inputDialog.exec() == QDialog::Accepted) {
         int kernelSize = inputDialog.intValue();
         QtConcurrent::run([this, kernelSize]() {
-            imageProcessor->gaussianBlur(currentImageOpenCV, currentImageIPP, currentImageCUDA, currentImageCUDAKernel, kernelSize);
+            imageProcessor->gaussianBlur(currentImageOpenCV
+                , currentImageIPP
+                , currentImageCUDA
+                , currentImageCUDAKernel
+                , currentImageNPP
+                , currentImageGStreamer
+                , kernelSize);
             });
     }
 }

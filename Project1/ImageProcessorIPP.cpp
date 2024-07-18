@@ -8,8 +8,7 @@ ImageProcessorIPP::~ImageProcessorIPP()
 {
 }
 
-cv::Mat ImageProcessorIPP::rotate(cv::Mat& inputImage, bool isRight)
-{
+cv::Mat ImageProcessorIPP::rotate(cv::Mat& inputImage, bool isRight) {
     std::cout << "Input image size: " << inputImage.cols << " x " << inputImage.rows << std::endl;
 
     double angle; //90.0 오른쪽, 270.0 왼쪽
@@ -51,80 +50,139 @@ cv::Mat ImageProcessorIPP::rotate(cv::Mat& inputImage, bool isRight)
     coeffs[1][0] = std::sin(angleRadians);
     coeffs[1][1] = std::cos(angleRadians);
     coeffs[1][2] = yShift - xShift * std::sin(angleRadians) - yShift * std::cos(angleRadians) + (dstHeight - srcSize.height) / 2.0;
-    
+
     std::cout << "Affine transform coefficients calculated" << std::endl;
 
     // Variables needed for IPP
     IppiWarpSpec* pSpec = nullptr;
     Ipp8u* pBuffer = nullptr;
     int specSize = 0, initSize = 0, bufSize = 0;
-    const Ipp32u numChannels = 3; // Number of channels in the input image (BGR)
     IppiBorderType borderType = ippBorderConst;
-    Ipp64f pBorderValue[numChannels];
-    for (int i = 0; i < numChannels; ++i) pBorderValue[i] = 255.0;
+    Ipp64f pBorderValue[4]; // 4 for up to 4 channels (RGBA)
+    for (int i = 0; i < 4; ++i) pBorderValue[i] = 255.0;
     std::cout << "pBorderValue set" << std::endl;
 
     // Set the sizes of the spec and init buffers
     IppStatus status;
-    status = ippiWarpAffineGetSize(srcSize, dstSize, ipp8u, coeffs, ippLinear, ippWarpForward, borderType, &specSize, &initSize);
-    
-    if (status != ippStsNoErr) {
-        std::cerr << "ippiWarpAffineGetSize error: " << status << std::endl;
+    int numChannels = inputImage.channels();
+    if (numChannels == 3) {
+        // For color image (BGR)
+        status = ippiWarpAffineGetSize(srcSize, dstSize, ipp8u, coeffs, ippLinear, ippWarpForward, borderType, &specSize, &initSize);
+
+        if (status != ippStsNoErr) {
+            std::cerr << "ippiWarpAffineGetSize error: " << status << std::endl;
+            return cv::Mat();
+        }
+        std::cout << "ippiWarpAffineGetSize completed, specSize: " << specSize << ", initSize: " << initSize << std::endl;
+
+        // Memory allocation
+        pSpec = (IppiWarpSpec*)ippsMalloc_8u(specSize);
+        if (pSpec == nullptr) {
+            std::cerr << "Memory allocation error for pSpec" << std::endl;
+            return cv::Mat();
+        }
+        std::cout << "pSpec memory allocation completed" << std::endl;
+
+        // Filter initialization
+        status = ippiWarpAffineLinearInit(srcSize, dstSize, ipp8u, coeffs, ippWarpForward, numChannels, borderType, pBorderValue, 0, pSpec);
+
+        if (status != ippStsNoErr) {
+            std::cerr << "ippiWarpAffineLinearInit error: " << status << std::endl;
+            ippsFree(pSpec);
+            return cv::Mat();
+        }
+        std::cout << "ippiWarpAffineLinearInit completed" << std::endl;
+
+        // Get work buffer size
+        status = ippiWarpGetBufferSize(pSpec, dstSize, &bufSize);
+        if (status != ippStsNoErr) {
+            std::cerr << "ippiWarpGetBufferSize error: " << status << std::endl;
+            ippsFree(pSpec);
+            return cv::Mat();
+        }
+        std::cout << "ippiWarpGetBufferSize completed, bufSize: " << bufSize << std::endl;
+
+        pBuffer = ippsMalloc_8u(bufSize);
+        if (pBuffer == nullptr) {
+            std::cerr << "Memory allocation error for pBuffer" << std::endl;
+            ippsFree(pSpec);
+            return cv::Mat();
+        }
+        std::cout << "pBuffer memory allocation completed" << std::endl;
+
+        // Rotate the image using IPP
+        status = ippiWarpAffineLinear_8u_C3R(inputImage.data, inputImage.step, outputImage.data, outputImage.step,
+            IppiPoint{ 0, 0 }, dstSize, pSpec, pBuffer);
+
+        if (status != ippStsNoErr) {
+            std::cerr << "ippiWarpAffineLinear_8u_C3R error: " << status << std::endl;
+            ippsFree(pSpec);
+            ippsFree(pBuffer);
+            return cv::Mat();
+        }
+        std::cout << "Color image rotation completed" << std::endl;
+    }
+    else if (numChannels == 1) {
+        // For grayscale image
+        status = ippiWarpAffineGetSize(srcSize, dstSize, ipp8u, coeffs, ippLinear, ippWarpForward, borderType, &specSize, &initSize);
+
+        if (status != ippStsNoErr) {
+            std::cerr << "ippiWarpAffineGetSize error: " << status << std::endl;
+            return cv::Mat();
+        }
+        std::cout << "ippiWarpAffineGetSize completed, specSize: " << specSize << ", initSize: " << initSize << std::endl;
+
+        // Memory allocation
+        pSpec = (IppiWarpSpec*)ippsMalloc_8u(specSize);
+        if (pSpec == nullptr) {
+            std::cerr << "Memory allocation error for pSpec" << std::endl;
+            return cv::Mat();
+        }
+        std::cout << "pSpec memory allocation completed" << std::endl;
+
+        // Filter initialization
+        status = ippiWarpAffineLinearInit(srcSize, dstSize, ipp8u, coeffs, ippWarpForward, numChannels, borderType, pBorderValue, 0, pSpec);
+
+        if (status != ippStsNoErr) {
+            std::cerr << "ippiWarpAffineLinearInit error: " << status << std::endl;
+            ippsFree(pSpec);
+            return cv::Mat();
+        }
+        std::cout << "ippiWarpAffineLinearInit completed" << std::endl;
+
+        // Get work buffer size
+        status = ippiWarpGetBufferSize(pSpec, dstSize, &bufSize);
+        if (status != ippStsNoErr) {
+            std::cerr << "ippiWarpGetBufferSize error: " << status << std::endl;
+            ippsFree(pSpec);
+            return cv::Mat();
+        }
+        std::cout << "ippiWarpGetBufferSize completed, bufSize: " << bufSize << std::endl;
+
+        pBuffer = ippsMalloc_8u(bufSize);
+        if (pBuffer == nullptr) {
+            std::cerr << "Memory allocation error for pBuffer" << std::endl;
+            ippsFree(pSpec);
+            return cv::Mat();
+        }
+        std::cout << "pBuffer memory allocation completed" << std::endl;
+
+        // Rotate the image using IPP
+        status = ippiWarpAffineLinear_8u_C1R(inputImage.data, inputImage.step, outputImage.data, outputImage.step,
+            IppiPoint{ 0, 0 }, dstSize, pSpec, pBuffer);
+
+        if (status != ippStsNoErr) {
+            std::cerr << "ippiWarpAffineLinear_8u_C1R error: " << status << std::endl;
+            ippsFree(pSpec);
+            ippsFree(pBuffer);
+            return cv::Mat();
+        }
+        std::cout << "Grayscale image rotation completed" << std::endl;
+    }
+    else {
+        std::cerr << "Unsupported image format." << std::endl;
         return cv::Mat();
     }
-    std::cout << "ippiWarpAffineGetSize completed, specSize: " << specSize << ", initSize: " << initSize << std::endl;
-
-    // Memory allocation
-    pSpec = (IppiWarpSpec*)ippsMalloc_8u(specSize);
-    if (pSpec == nullptr) {
-        std::cerr << "Memory allocation error for pSpec" << std::endl;
-        return cv::Mat();
-    }
-    std::cout << "pSpec memory allocation completed" << std::endl;
-
-    // Filter initialization
-    status = ippiWarpAffineLinearInit(srcSize, dstSize, ipp8u, coeffs, ippWarpForward, numChannels, borderType, pBorderValue, 0, pSpec);
-    
-    if (status != ippStsNoErr)
-    {
-        std::cerr << "ippiWarpAffineLinearInit error: " << status << std::endl;
-        ippsFree(pSpec);
-        return cv::Mat();
-    }
-    std::cout << "ippiWarpAffineLinearInit completed" << std::endl;
-
-    // Get work buffer size
-    status = ippiWarpGetBufferSize(pSpec, dstSize, &bufSize);
-    if (status != ippStsNoErr) {
-        std::cerr << "ippiWarpGetBufferSize error: " << status << std::endl;
-        ippsFree(pSpec);
-        return cv::Mat();
-    }
-    std::cout << "ippiWarpGetBufferSize completed, bufSize: " << bufSize << std::endl;
-
-    pBuffer = ippsMalloc_8u(bufSize);
-    if (pBuffer == nullptr) {
-        std::cerr << "Memory allocation error for pBuffer" << std::endl;
-        ippsFree(pSpec);
-        return cv::Mat();
-    }
-    std::cout << "pBuffer memory allocation completed" << std::endl;
-
-    // Define dstOffset (ensure it's non-negative and within the image bounds)
-    IppiPoint dstOffset = { 0, 0 };
-    std::cout << "dstOffset set, x: " << dstOffset.x << ", y: " << dstOffset.y << std::endl;
-
-    // Rotate the image using IPP
-    status = ippiWarpAffineLinear_8u_C3R(inputImage.data, inputImage.step, outputImage.data, outputImage.step,
-            dstOffset, dstSize, pSpec, pBuffer);
-    
-    if (status != ippStsNoErr) {
-        std::cerr << "ippiWarpAffineLinear_8u_C3R error: " << status << std::endl;
-        ippsFree(pSpec);
-        ippsFree(pBuffer);
-        return cv::Mat();
-    }
-    std::cout << "Image rotation completed" << std::endl;
 
     // Output the size of the processed image
     std::cout << "Output image size: " << outputImage.cols << " x " << outputImage.rows << std::endl;
@@ -138,8 +196,23 @@ cv::Mat ImageProcessorIPP::rotate(cv::Mat& inputImage, bool isRight)
 }
 
 cv::Mat ImageProcessorIPP::grayScale(cv::Mat& inputImage)
-{    
+{
     ippInit();
+
+    // 입력 이미지의 채널 수 확인
+    int numChannels = inputImage.channels();
+
+    // 이미 그레이스케일 이미지인 경우
+    if (numChannels == 1) {
+        // 그레이스케일 이미지를 그대로 반환
+        return inputImage.clone();
+    }
+
+    // 입력 이미지가 컬러인 경우
+    if (numChannels != 3) {
+        std::cerr << "Unsupported image format for grayscale conversion." << std::endl;
+        return cv::Mat(); // 지원되지 않는 포맷인 경우 빈 Mat 반환
+    }
 
     // 입력 이미지의 크기 및 스텝 설정
     IppiSize roiSize = { inputImage.cols, inputImage.rows };
@@ -156,7 +229,7 @@ cv::Mat ImageProcessorIPP::grayScale(cv::Mat& inputImage)
     if (status != ippStsNoErr) {
         std::cerr << "IPP 오류: " << status << std::endl;
         return cv::Mat(); // 오류 발생 시 빈 Mat 반환
-    }    
+    }
 
     return outputImage;
 }
@@ -273,86 +346,120 @@ cv::Mat ImageProcessorIPP::zoom(cv::Mat& inputImage, int newWidth, int newHeight
 
 cv::Mat ImageProcessorIPP::gaussianBlur(cv::Mat& inputImage, int kernelSize)
 {
-    // 입력 이미지가 3채널 BGR 이미지인지 확인하고, 아닌 경우 변환
+    std::cout << "Starting Gaussian Blur Processing..." << std::endl;
+
+    // 입력 이미지가 BGR 포맷인지 확인
     cv::Mat bgrInputImage;
-    if (inputImage.channels() != 3 || inputImage.type() != CV_8UC3) {
-        if (inputImage.channels() == 1) {
-            cv::cvtColor(inputImage, bgrInputImage, cv::COLOR_GRAY2BGR);
-        }
-        else {
-            std::cerr << "Error: Unsupported image format." << std::endl;
-            return cv::Mat();
-        }
+    if (inputImage.channels() == 1) {
+        cv::cvtColor(inputImage, bgrInputImage, cv::COLOR_GRAY2BGR);
+        std::cout << "Converted grayscale image to BGR." << std::endl;
+    }
+    else if (inputImage.channels() == 3 && inputImage.type() == CV_8UC3) {
+        bgrInputImage = inputImage.clone();
     }
     else {
-        bgrInputImage = inputImage.clone(); // 이미 BGR인 경우 그대로 사용
+        std::cerr << "Error: Unsupported image format." << std::endl;
+        return cv::Mat();
     }
 
-    // 출력 이미지를 16비트 3채널(CV_16UC3)로 선언
-    cv::Mat tempOutputImage(bgrInputImage.size(), CV_16UC3);
+    std::cout << "Input Image Size: " << bgrInputImage.cols << "x" << bgrInputImage.rows << ", Channels: " << bgrInputImage.channels() << std::endl;
 
-    // IPP 함수에 전달할 포인터들
+    // 임시 출력 이미지를 16비트로 설정
+    cv::Mat tempOutputImage(bgrInputImage.size(), CV_16UC3);
+    std::cout << "Temporary Output Image Size: " << tempOutputImage.cols << "x" << tempOutputImage.rows << ", Type: " << tempOutputImage.type() << std::endl;
+
+    // IPP 데이터 타입 설정
     Ipp16u* pSrc = reinterpret_cast<Ipp16u*>(bgrInputImage.data);
     Ipp16u* pDst = reinterpret_cast<Ipp16u*>(tempOutputImage.data);
 
     // ROI 크기 설정
     IppiSize roiSize = { bgrInputImage.cols, bgrInputImage.rows };
+    std::cout << "ROI Size: " << roiSize.width << "x" << roiSize.height << std::endl;
 
-    // 필터링을 위한 버퍼 및 스펙트럼 크기 계산
-    int specSize, bufferSize;
+    // Gaussian 필터를 위한 버퍼 및 스펙 사이즈 계산
+    int specSize = 0, bufferSize = 0;
     IppStatus status = ippiFilterGaussianGetBufferSize(roiSize, kernelSize, ipp16u, 3, &specSize, &bufferSize);
+    std::cout << "Spec Size: " << specSize << ", Buffer Size: " << bufferSize << ", Status: " << status << std::endl;
     if (status != ippStsNoErr) {
         std::cerr << "Error: ippiFilterGaussianGetBufferSize failed with status " << status << std::endl;
-        return cv::Mat(); // 빈 결과 반환
+        return cv::Mat();
     }
 
-    // 외부 버퍼 할당
     Ipp8u* pBuffer = ippsMalloc_8u(bufferSize);
     if (pBuffer == nullptr) {
         std::cerr << "Error: Failed to allocate buffer." << std::endl;
-        return cv::Mat(); // 빈 결과 반환
+        return cv::Mat();
     }
+    std::cout << "Buffer allocated. Buffer Size: " << bufferSize << std::endl;
 
-    // 가우시안 필터 스펙트럼 구조체 메모리 할당
     IppFilterGaussianSpec* pSpec = reinterpret_cast<IppFilterGaussianSpec*>(ippsMalloc_8u(specSize));
     if (pSpec == nullptr) {
         std::cerr << "Error: Failed to allocate spec structure." << std::endl;
         ippsFree(pBuffer);
-        return cv::Mat(); // 빈 결과 반환
+        return cv::Mat();
     }
+    std::cout << "Spec structure allocated. Spec Size: " << specSize << std::endl;
 
-    // 가우시안 필터 초기화 (표준 편차는 예시로 1.5로 설정)
-    float sigma = 1.5f;
-    status = ippiFilterGaussianInit(roiSize, kernelSize, sigma, ippBorderRepl, ipp16u, 3, pSpec, pBuffer);
+    // Gaussian 필터 초기화
+    status = ippiFilterGaussianInit(roiSize, kernelSize, 1.5, ippBorderRepl, ipp16u, 3, pSpec, pBuffer);
+    std::cout << "Gaussian Filter Init Status: " << status << std::endl;
     if (status != ippStsNoErr) {
         std::cerr << "Error: ippiFilterGaussianInit failed with status " << status << std::endl;
         ippsFree(pBuffer);
         ippsFree(pSpec);
-        return cv::Mat(); // 빈 결과 반환
+        return cv::Mat();
     }
 
-    // 가우시안 필터 적용
+    // 소스와 목적지 이미지의 단계 계산
     int srcStep = bgrInputImage.cols * sizeof(Ipp16u) * 3;
     int dstStep = tempOutputImage.cols * sizeof(Ipp16u) * 3;
-    Ipp16u borderValue[3] = { 0, 0, 0 }; // 가우시안 필터 적용 시 사용할 보더 값
-    status = ippiFilterGaussianBorder_16u_C3R(pSrc, srcStep, pDst, dstStep, roiSize, borderValue, pSpec, pBuffer);
+    std::cout << "Src Step: " << srcStep << ", Dst Step: " << dstStep << std::endl;
+
+    // Gaussian 필터 적용
+    Ipp16u borderValue[3] = { 0, 0, 0 };
+    status = ippiFilterGaussian_16u_C3R(pSrc, srcStep, pDst, dstStep, roiSize, ippBorderRepl, borderValue, pSpec, pBuffer);
+    std::cout << "Gaussian Filter Border Status: " << status << std::endl;
     if (status != ippStsNoErr) {
-        std::cerr << "Error: ippiFilterGaussianBorder_16u_C3R failed with status " << status << std::endl;
+        std::cerr << "Error: ippiFilterGaussian_16u_C3R failed with status " << status << std::endl;
         ippsFree(pBuffer);
         ippsFree(pSpec);
-        return cv::Mat(); // 빈 결과 반환
+        return cv::Mat();
     }
 
     // 메모리 해제
     ippsFree(pBuffer);
     ippsFree(pSpec);
+    std::cout << "Buffer and Spec memory freed." << std::endl;
 
-    // 8비트 이미지로 변환
+    // 16비트 이미지를 8비트로 변환
     cv::Mat outputImage;
     tempOutputImage.convertTo(outputImage, CV_8UC3, 1.0 / 256.0);
 
+    std::cout << "Output Image Size: " << outputImage.cols << "x" << outputImage.rows << ", Type: " << outputImage.type() << std::endl;
+    std::cout << "Output Image Data Type: " << outputImage.depth() << ", Channels: " << outputImage.channels() << std::endl;
+
+    // 결과 이미지 저장 (디버깅용)
+    cv::imwrite("outputImage_debug.png", outputImage);
+
+    // 데이터가 여러 타일로 나오는 문제를 해결하기 위해 픽셀 데이터를 직접 출력
+    std::cout << "Inspecting first few pixels:" << std::endl;
+    for (int y = 0; y < 10; ++y) {
+        for (int x = 0; x < 10; ++x) {
+            cv::Vec3b color = outputImage.at<cv::Vec3b>(y, x);
+            std::cout << "Pixel (" << x << "," << y << "): ["
+                << static_cast<int>(color[0]) << ", "
+                << static_cast<int>(color[1]) << ", "
+                << static_cast<int>(color[2]) << "]" << std::endl;
+        }
+    }
+
+    // 원본 이미지와 처리된 이미지 비교
+    cv::imwrite("originalImage_debug.png", bgrInputImage);
+
     return outputImage;
 }
+
+
 
 cv::Mat ImageProcessorIPP::cannyEdges(cv::Mat& inputImage)
 {

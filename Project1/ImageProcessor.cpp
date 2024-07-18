@@ -32,7 +32,8 @@ QFuture<bool> ImageProcessor::rotateImage(cv::Mat& imageOpenCV
                                         , cv::Mat& imageIPP
                                         , cv::Mat& imageCUDA
                                         , cv::Mat& imageCUDAKernel
-                                        , cv::Mat& imageNPP)
+                                        , cv::Mat& imageNPP
+                                        , cv::Mat& imageGStreamer)
 {
     //함수 이름을 문자열로 저장
     const char* functionName = __func__;
@@ -43,6 +44,7 @@ QFuture<bool> ImageProcessor::rotateImage(cv::Mat& imageOpenCV
         , &imageCUDA
         , &imageCUDAKernel
         , &imageNPP
+        , &imageGStreamer
         , functionName]() -> bool {
 
         QMutexLocker locker(&mutex);
@@ -59,6 +61,7 @@ QFuture<bool> ImageProcessor::rotateImage(cv::Mat& imageOpenCV
             pushToUndoStackCUDA(imageCUDA.clone());
             pushToUndoStackCUDAKernel(imageCUDAKernel.clone());
             pushToUndoStackNPP(imageNPP.clone());
+            pushToUndoStackGStreamer(imageGStreamer.clone());
 
             QVector<ProcessingResult> results;
 
@@ -81,6 +84,10 @@ QFuture<bool> ImageProcessor::rotateImage(cv::Mat& imageOpenCV
             ProcessingResult outputNPP = rotateNPP(imageNPP);
             lastProcessedImageNPP = outputNPP.processedImage.clone();
             results.append(outputNPP);
+
+            ProcessingResult outputGStreamer = rotateGStreamer(imageGStreamer);
+            lastProcessedImageGStreamer = outputGStreamer.processedImage.clone();
+            results.append(outputGStreamer);
 
             // 이미지 업데이트 및 시그널 발생
             emit imageProcessed(results);
@@ -246,7 +253,9 @@ QDebug operator<<(QDebug dbg, const cv::Mat& mat) {
 QFuture<bool> ImageProcessor::grayScale(cv::Mat& imageOpenCV
                                         , cv::Mat& imageIPP
                                         , cv::Mat& imageCUDA
-                                        , cv::Mat& imageCUDAKernel)
+                                        , cv::Mat& imageCUDAKernel
+                                        , cv::Mat& imageNPP
+                                        , cv::Mat& imageGStreamer)
 {
     const char* functionName = __func__;
 
@@ -255,6 +264,8 @@ QFuture<bool> ImageProcessor::grayScale(cv::Mat& imageOpenCV
                             , &imageIPP
                             , &imageCUDA
                             , &imageCUDAKernel
+                            , &imageNPP
+                            , &imageGStreamer
                             , functionName]() -> bool {
         
         QMutexLocker locker(&mutex);
@@ -270,6 +281,8 @@ QFuture<bool> ImageProcessor::grayScale(cv::Mat& imageOpenCV
                 pushToUndoStackIPP(imageIPP.clone());
                 pushToUndoStackCUDA(imageCUDA.clone());
                 pushToUndoStackCUDAKernel(imageCUDAKernel.clone());
+                pushToUndoStackNPP(imageNPP.clone());
+                pushToUndoStackGStreamer(imageGStreamer.clone());
 
                 QVector<ProcessingResult> results;
 
@@ -289,6 +302,14 @@ QFuture<bool> ImageProcessor::grayScale(cv::Mat& imageOpenCV
                 lastProcessedImageCUDAKernel = outputCUDAKernel.processedImage.clone();
                 results.append(outputCUDAKernel);
 
+                ProcessingResult outputNPP = grayScaleNPP(imageNPP);
+                lastProcessedImageNPP = outputNPP.processedImage.clone();
+                results.append(outputNPP);
+
+                ProcessingResult outputGStreamer = grayScaleGStreamer(imageGStreamer);
+                lastProcessedImageGStreamer = outputGStreamer.processedImage.clone();
+                results.append(outputGStreamer);
+
                 emit imageProcessed(results);
             }
             else {
@@ -296,11 +317,15 @@ QFuture<bool> ImageProcessor::grayScale(cv::Mat& imageOpenCV
                 pushToUndoStackIPP(imageIPP.clone());
                 pushToUndoStackCUDA(imageCUDA.clone());
                 pushToUndoStackCUDAKernel(imageCUDAKernel.clone());
+                pushToUndoStackCUDAKernel(imageNPP.clone());
+                pushToUndoStackGStreamer(imageGStreamer.clone());
 
                 lastProcessedImageOpenCV = imageOpenCV.clone();
                 lastProcessedImageIPP = imageIPP.clone();
                 lastProcessedImageCUDA = imageCUDA.clone();
                 lastProcessedImageCUDAKernel = imageCUDAKernel.clone();
+                lastProcessedImageNPP = imageNPP.clone();
+                lastProcessedImageGStreamer = imageGStreamer.clone();
             }
 
             return true;
@@ -372,6 +397,40 @@ ImageProcessor::ProcessingResult ImageProcessor::grayScaleCUDAKernel(cv::Mat& in
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "grayScale", "CUDAKernel", elapsedTimeMs, "");
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::grayScaleNPP(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    ImageProcessorNPP IPNPP;
+    cv::Mat outputImage = IPNPP.grayScale(inputImage);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "grayScale", "NPP", elapsedTimeMs
+        , "");
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::grayScaleGStreamer(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    ImageProcessorGStreamer IPGStreamer;
+    cv::Mat outputImage = IPGStreamer.grayScale(inputImage);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "grayScale", "GStreamer", elapsedTimeMs
+        , "");
 
     return result;
 }
@@ -531,6 +590,23 @@ ImageProcessor::ProcessingResult ImageProcessor::rotateNPP(cv::Mat& inputImage)
     return result;
 }
 
+ImageProcessor::ProcessingResult ImageProcessor::rotateGStreamer(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    ImageProcessorGStreamer IPGStreamer;
+    cv::Mat outputImage = IPGStreamer.rotate(inputImage, true); //true:right, false:left
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "rotate", "GStreamer", elapsedTimeMs
+        , "angle: R 90");
+
+    return result;
+}
+
 double ImageProcessor::getCurrentTimeMs()
 {
     return std::chrono::duration_cast<std::chrono::milliseconds>
@@ -541,6 +617,8 @@ QFuture<bool> ImageProcessor::gaussianBlur(cv::Mat& imageOpenCV
                                             , cv::Mat& imageIPP
                                             , cv::Mat& imageCUDA
                                             , cv::Mat& imageCUDAKernel
+                                            , cv::Mat& imageNPP
+                                            , cv::Mat& imageGStreamer
                                             , int kernelSize)
 {
     //함수 이름을 문자열로 저장
@@ -551,6 +629,8 @@ QFuture<bool> ImageProcessor::gaussianBlur(cv::Mat& imageOpenCV
         , &imageIPP
         , &imageCUDA
         , &imageCUDAKernel
+        , &imageNPP
+        , &imageGStreamer
         , kernelSize
         , functionName]() -> bool {
 
@@ -572,6 +652,8 @@ QFuture<bool> ImageProcessor::gaussianBlur(cv::Mat& imageOpenCV
             pushToUndoStackIPP(imageIPP.clone());
             pushToUndoStackCUDA(imageCUDA.clone());
             pushToUndoStackCUDAKernel(imageCUDAKernel.clone());
+            pushToUndoStackNPP(imageNPP.clone());
+            pushToUndoStackCUDAKernel(imageGStreamer.clone());
 
             QVector<ProcessingResult> results;
 
@@ -590,6 +672,14 @@ QFuture<bool> ImageProcessor::gaussianBlur(cv::Mat& imageOpenCV
             ProcessingResult outputCUDAKernel = gaussianBlurCUDAKernel(imageCUDAKernel, kernelSize);
             lastProcessedImageCUDAKernel = outputCUDAKernel.processedImage.clone();
             results.append(outputCUDAKernel);
+
+            ProcessingResult outputNPP = gaussianBlurNPP(imageNPP, kernelSize);
+            lastProcessedImageNPP = outputNPP.processedImage.clone();
+            results.append(outputNPP);
+
+            ProcessingResult outputGStreamer = gaussianBlurGStreamer(imageGStreamer, kernelSize);
+            lastProcessedImageGStreamer = outputGStreamer.processedImage.clone();
+            results.append(outputGStreamer);
 
             emit imageProcessed(results);
 
@@ -667,6 +757,40 @@ ImageProcessor::ProcessingResult ImageProcessor::gaussianBlurCUDAKernel(cv::Mat&
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "gaussianBlur", "CUDAKernel", elapsedTimeMs
+        , QString("kSize:%1").arg(kernelSize));
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::gaussianBlurNPP(cv::Mat& inputImage, int kernelSize)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    ImageProcessorNPP IPNPP;
+    cv::Mat outputImage = IPNPP.gaussianBlur(inputImage, kernelSize);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "gaussianBlur", "NPP", elapsedTimeMs
+        , QString("kSize:%1").arg(kernelSize));
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::gaussianBlurGStreamer(cv::Mat& inputImage, int kernelSize)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    ImageProcessorGStreamer IPGStreamer;
+    cv::Mat outputImage = IPGStreamer.gaussianBlur(inputImage, kernelSize);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "gaussianBlur", "GStreamer", elapsedTimeMs
         , QString("kSize:%1").arg(kernelSize));
 
     return result;
