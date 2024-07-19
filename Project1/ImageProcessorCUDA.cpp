@@ -110,8 +110,10 @@ cv::Mat ImageProcessorCUDA::gaussianBlur(cv::Mat& inputImage, int kernelSize)
 cv::Mat ImageProcessorCUDA::cannyEdges(cv::Mat& inputImage)
 {
     cv::Mat grayImage;
+
+    // 컬러 이미지를 그레이 스케일로 변환
     if (inputImage.channels() == 3) {
-        grayImage = grayScale(inputImage);
+        cv::cvtColor(inputImage, grayImage, cv::COLOR_BGR2GRAY);
     }
     else {
         grayImage = inputImage.clone();
@@ -129,18 +131,32 @@ cv::Mat ImageProcessorCUDA::cannyEdges(cv::Mat& inputImage)
     cv::Mat edges;
     d_cannyEdges.download(edges);
 
-    // 출력 이미지에 초록색 엣지 표시
-    cv::Mat outputImage = cv::Mat::zeros(inputImage.size(), CV_8UC3); // 3-channel BGR image
-    cv::Mat mask(edges.size(), CV_8UC1, cv::Scalar(0)); // Mask for green edges
-    mask.setTo(cv::Scalar(255), edges); // Set pixels to 255 (white) where edges are detected
-    cv::Mat channels[3];
-    cv::split(outputImage, channels);
-    //channels[1] = mask; // Green channel is set by mask
-    channels[0] = mask; // Blue channel is set by mask
-    channels[1] = mask; // Green channel is set by mask
-    channels[2] = mask; // Red channel is set by mask
-    cv::merge(channels, 3, outputImage); // Merge channels to get green edges
-    // GPU 메모리 해제는 GpuMat 객체가 스코프를 벗어날 때 자동으로 처리됩니다.
+    cv::Mat outputImage;
+
+    if (inputImage.channels() == 3) {
+        // 컬러 이미지가 입력된 경우
+        outputImage = inputImage.clone();
+
+        for (int y = 0; y < edges.rows; ++y) {
+            for (int x = 0; x < edges.cols; ++x) {
+                if (edges.at<uchar>(y, x) > 0) {
+                    outputImage.at<cv::Vec3b>(y, x) = cv::Vec3b(0, 255, 0); // 초록색
+                }
+            }
+        }
+    }
+    else {
+        // 흑백 이미지가 입력된 경우
+        outputImage = cv::Mat(grayImage.size(), CV_8UC1, cv::Scalar(0));
+
+        for (int y = 0; y < edges.rows; ++y) {
+            for (int x = 0; x < edges.cols; ++x) {
+                if (edges.at<uchar>(y, x) > 0) {
+                    outputImage.at<uchar>(y, x) = 255; // 흰색
+                }
+            }
+        }
+    }
 
     return outputImage;
 }

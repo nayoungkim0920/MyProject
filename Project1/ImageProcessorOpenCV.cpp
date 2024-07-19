@@ -51,15 +51,30 @@ cv::Mat ImageProcessorOpenCV::gaussianBlur(cv::Mat& inputImage, int kernelSize, 
 cv::Mat ImageProcessorOpenCV::cannyEdges(cv::Mat& inputImage)
 {
     cv::Mat grayImage;
+    cv::Mat edges;
+    cv::Mat outputImage = inputImage.clone();
+
     if (inputImage.channels() == 3) {
+        // 컬러 이미지인 경우, 그레이스케일로 변환하여 Canny 엣지 검출 수행
         cv::cvtColor(inputImage, grayImage, cv::COLOR_BGR2GRAY);
+        cv::Canny(grayImage, edges, 50, 150);
+
+        // 엣지를 초록색으로 표시
+        for (int y = 0; y < edges.rows; y++) {
+            for (int x = 0; x < edges.cols; x++) {
+                if (edges.at<uchar>(y, x) > 0) {
+                    outputImage.at<cv::Vec3b>(y, x) = cv::Vec3b(0, 255, 0); // 초록색
+                }
+            }
+        }
+    }
+    else if (inputImage.channels() == 1) {
+        // 회색조 이미지인 경우
+        cv::Canny(inputImage, outputImage, 50, 150);
     }
     else {
-        grayImage = inputImage.clone();
+        throw std::runtime_error("지원되지 않는 이미지 형식입니다.");
     }
-
-    cv::Mat outputImage;
-    cv::Canny(grayImage, outputImage, 50, 150);
 
     return outputImage;
 }

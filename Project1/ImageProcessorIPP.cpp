@@ -348,115 +348,150 @@ cv::Mat ImageProcessorIPP::gaussianBlur(cv::Mat& inputImage, int kernelSize)
 {
     std::cout << "Starting Gaussian Blur Processing..." << std::endl;
 
-    // 입력 이미지가 BGR 포맷인지 확인
     cv::Mat bgrInputImage;
+    cv::Mat tempOutputImage;
+
+    // 입력 이미지가 그레이스케일인지 컬러인지에 따라 처리
     if (inputImage.channels() == 1) {
-        cv::cvtColor(inputImage, bgrInputImage, cv::COLOR_GRAY2BGR);
-        std::cout << "Converted grayscale image to BGR." << std::endl;
+        // 그레이스케일 이미지
+        bgrInputImage = inputImage.clone();
+        std::cout << "Grayscale image detected." << std::endl;
+
+        // 임시 출력 이미지를 16비트 그레이스케일로 설정
+        tempOutputImage.create(bgrInputImage.size(), CV_16UC1);
+
+        // IPP 데이터 타입 설정
+        Ipp16u* pSrc = reinterpret_cast<Ipp16u*>(bgrInputImage.data);
+        Ipp16u* pDst = reinterpret_cast<Ipp16u*>(tempOutputImage.data);
+
+        // ROI 크기 설정
+        IppiSize roiSize = { bgrInputImage.cols, bgrInputImage.rows };
+
+        // Gaussian 필터를 위한 버퍼 및 스펙 사이즈 계산
+        int specSize = 0, bufferSize = 0;
+        IppStatus status = ippiFilterGaussianGetBufferSize(roiSize, kernelSize, ipp16u, 1, &specSize, &bufferSize);
+        if (status != ippStsNoErr) {
+            std::cerr << "Error: ippiFilterGaussianGetBufferSize failed with status " << status << std::endl;
+            return cv::Mat();
+        }
+
+        Ipp8u* pBuffer = ippsMalloc_8u(bufferSize);
+        if (pBuffer == nullptr) {
+            std::cerr << "Error: Failed to allocate buffer." << std::endl;
+            return cv::Mat();
+        }
+
+        IppFilterGaussianSpec* pSpec = reinterpret_cast<IppFilterGaussianSpec*>(ippsMalloc_8u(specSize));
+        if (pSpec == nullptr) {
+            std::cerr << "Error: Failed to allocate spec structure." << std::endl;
+            ippsFree(pBuffer);
+            return cv::Mat();
+        }
+
+        // Gaussian 필터 초기화
+        status = ippiFilterGaussianInit(roiSize, kernelSize, 1.5, ippBorderRepl, ipp16u, 1, pSpec, pBuffer);
+        if (status != ippStsNoErr) {
+            std::cerr << "Error: ippiFilterGaussianInit failed with status " << status << std::endl;
+            ippsFree(pBuffer);
+            ippsFree(pSpec);
+            return cv::Mat();
+        }
+
+        // 소스와 목적지 이미지의 단계 계산
+        int srcStep = bgrInputImage.cols * sizeof(Ipp16u);
+        int dstStep = tempOutputImage.cols * sizeof(Ipp16u);
+
+        // Gaussian 필터 적용
+        Ipp16u borderValue = 0;
+        status = ippiFilterGaussian_16u_C1R(pSrc, srcStep, pDst, dstStep, roiSize, ippBorderRepl, &borderValue, pSpec, pBuffer);
+        if (status != ippStsNoErr) {
+            std::cerr << "Error: ippiFilterGaussian_16u_C1R failed with status " << status << std::endl;
+            ippsFree(pBuffer);
+            ippsFree(pSpec);
+            return cv::Mat();
+        }
+
+        // 메모리 해제
+        ippsFree(pBuffer);
+        ippsFree(pSpec);
+
+        // 16비트 그레이스케일 이미지를 8비트로 변환
+        cv::Mat outputImage;
+        tempOutputImage.convertTo(outputImage, CV_8UC1, 1.0 / 256.0);
+        return outputImage;
     }
     else if (inputImage.channels() == 3 && inputImage.type() == CV_8UC3) {
+        // 컬러 이미지
         bgrInputImage = inputImage.clone();
+        std::cout << "Color image detected." << std::endl;
+
+        // 임시 출력 이미지를 16비트 컬러로 설정
+        tempOutputImage.create(bgrInputImage.size(), CV_16UC3);
+
+        // IPP 데이터 타입 설정
+        Ipp16u* pSrc = reinterpret_cast<Ipp16u*>(bgrInputImage.data);
+        Ipp16u* pDst = reinterpret_cast<Ipp16u*>(tempOutputImage.data);
+
+        // ROI 크기 설정
+        IppiSize roiSize = { bgrInputImage.cols, bgrInputImage.rows };
+
+        // Gaussian 필터를 위한 버퍼 및 스펙 사이즈 계산
+        int specSize = 0, bufferSize = 0;
+        IppStatus status = ippiFilterGaussianGetBufferSize(roiSize, kernelSize, ipp16u, 3, &specSize, &bufferSize);
+        if (status != ippStsNoErr) {
+            std::cerr << "Error: ippiFilterGaussianGetBufferSize failed with status " << status << std::endl;
+            return cv::Mat();
+        }
+
+        Ipp8u* pBuffer = ippsMalloc_8u(bufferSize);
+        if (pBuffer == nullptr) {
+            std::cerr << "Error: Failed to allocate buffer." << std::endl;
+            return cv::Mat();
+        }
+
+        IppFilterGaussianSpec* pSpec = reinterpret_cast<IppFilterGaussianSpec*>(ippsMalloc_8u(specSize));
+        if (pSpec == nullptr) {
+            std::cerr << "Error: Failed to allocate spec structure." << std::endl;
+            ippsFree(pBuffer);
+            return cv::Mat();
+        }
+
+        // Gaussian 필터 초기화
+        status = ippiFilterGaussianInit(roiSize, kernelSize, 1.5, ippBorderRepl, ipp16u, 3, pSpec, pBuffer);
+        if (status != ippStsNoErr) {
+            std::cerr << "Error: ippiFilterGaussianInit failed with status " << status << std::endl;
+            ippsFree(pBuffer);
+            ippsFree(pSpec);
+            return cv::Mat();
+        }
+
+        // 소스와 목적지 이미지의 단계 계산
+        int srcStep = bgrInputImage.cols * sizeof(Ipp16u) * 3;
+        int dstStep = tempOutputImage.cols * sizeof(Ipp16u) * 3;
+
+        // Gaussian 필터 적용
+        Ipp16u borderValue[3] = { 0, 0, 0 };
+        status = ippiFilterGaussian_16u_C3R(pSrc, srcStep, pDst, dstStep, roiSize, ippBorderRepl, borderValue, pSpec, pBuffer);
+        if (status != ippStsNoErr) {
+            std::cerr << "Error: ippiFilterGaussian_16u_C3R failed with status " << status << std::endl;
+            ippsFree(pBuffer);
+            ippsFree(pSpec);
+            return cv::Mat();
+        }
+
+        // 메모리 해제
+        ippsFree(pBuffer);
+        ippsFree(pSpec);
+
+        // 16비트 컬러 이미지를 8비트로 변환
+        cv::Mat outputImage;
+        tempOutputImage.convertTo(outputImage, CV_8UC3, 1.0 / 256.0);
+        return outputImage;
     }
     else {
         std::cerr << "Error: Unsupported image format." << std::endl;
         return cv::Mat();
     }
-
-    std::cout << "Input Image Size: " << bgrInputImage.cols << "x" << bgrInputImage.rows << ", Channels: " << bgrInputImage.channels() << std::endl;
-
-    // 임시 출력 이미지를 16비트로 설정
-    cv::Mat tempOutputImage(bgrInputImage.size(), CV_16UC3);
-    std::cout << "Temporary Output Image Size: " << tempOutputImage.cols << "x" << tempOutputImage.rows << ", Type: " << tempOutputImage.type() << std::endl;
-
-    // IPP 데이터 타입 설정
-    Ipp16u* pSrc = reinterpret_cast<Ipp16u*>(bgrInputImage.data);
-    Ipp16u* pDst = reinterpret_cast<Ipp16u*>(tempOutputImage.data);
-
-    // ROI 크기 설정
-    IppiSize roiSize = { bgrInputImage.cols, bgrInputImage.rows };
-    std::cout << "ROI Size: " << roiSize.width << "x" << roiSize.height << std::endl;
-
-    // Gaussian 필터를 위한 버퍼 및 스펙 사이즈 계산
-    int specSize = 0, bufferSize = 0;
-    IppStatus status = ippiFilterGaussianGetBufferSize(roiSize, kernelSize, ipp16u, 3, &specSize, &bufferSize);
-    std::cout << "Spec Size: " << specSize << ", Buffer Size: " << bufferSize << ", Status: " << status << std::endl;
-    if (status != ippStsNoErr) {
-        std::cerr << "Error: ippiFilterGaussianGetBufferSize failed with status " << status << std::endl;
-        return cv::Mat();
-    }
-
-    Ipp8u* pBuffer = ippsMalloc_8u(bufferSize);
-    if (pBuffer == nullptr) {
-        std::cerr << "Error: Failed to allocate buffer." << std::endl;
-        return cv::Mat();
-    }
-    std::cout << "Buffer allocated. Buffer Size: " << bufferSize << std::endl;
-
-    IppFilterGaussianSpec* pSpec = reinterpret_cast<IppFilterGaussianSpec*>(ippsMalloc_8u(specSize));
-    if (pSpec == nullptr) {
-        std::cerr << "Error: Failed to allocate spec structure." << std::endl;
-        ippsFree(pBuffer);
-        return cv::Mat();
-    }
-    std::cout << "Spec structure allocated. Spec Size: " << specSize << std::endl;
-
-    // Gaussian 필터 초기화
-    status = ippiFilterGaussianInit(roiSize, kernelSize, 1.5, ippBorderRepl, ipp16u, 3, pSpec, pBuffer);
-    std::cout << "Gaussian Filter Init Status: " << status << std::endl;
-    if (status != ippStsNoErr) {
-        std::cerr << "Error: ippiFilterGaussianInit failed with status " << status << std::endl;
-        ippsFree(pBuffer);
-        ippsFree(pSpec);
-        return cv::Mat();
-    }
-
-    // 소스와 목적지 이미지의 단계 계산
-    int srcStep = bgrInputImage.cols * sizeof(Ipp16u) * 3;
-    int dstStep = tempOutputImage.cols * sizeof(Ipp16u) * 3;
-    std::cout << "Src Step: " << srcStep << ", Dst Step: " << dstStep << std::endl;
-
-    // Gaussian 필터 적용
-    Ipp16u borderValue[3] = { 0, 0, 0 };
-    status = ippiFilterGaussian_16u_C3R(pSrc, srcStep, pDst, dstStep, roiSize, ippBorderRepl, borderValue, pSpec, pBuffer);
-    std::cout << "Gaussian Filter Border Status: " << status << std::endl;
-    if (status != ippStsNoErr) {
-        std::cerr << "Error: ippiFilterGaussian_16u_C3R failed with status " << status << std::endl;
-        ippsFree(pBuffer);
-        ippsFree(pSpec);
-        return cv::Mat();
-    }
-
-    // 메모리 해제
-    ippsFree(pBuffer);
-    ippsFree(pSpec);
-    std::cout << "Buffer and Spec memory freed." << std::endl;
-
-    // 16비트 이미지를 8비트로 변환
-    cv::Mat outputImage;
-    tempOutputImage.convertTo(outputImage, CV_8UC3, 1.0 / 256.0);
-
-    std::cout << "Output Image Size: " << outputImage.cols << "x" << outputImage.rows << ", Type: " << outputImage.type() << std::endl;
-    std::cout << "Output Image Data Type: " << outputImage.depth() << ", Channels: " << outputImage.channels() << std::endl;
-
-    // 결과 이미지 저장 (디버깅용)
-    cv::imwrite("outputImage_debug.png", outputImage);
-
-    // 데이터가 여러 타일로 나오는 문제를 해결하기 위해 픽셀 데이터를 직접 출력
-    std::cout << "Inspecting first few pixels:" << std::endl;
-    for (int y = 0; y < 10; ++y) {
-        for (int x = 0; x < 10; ++x) {
-            cv::Vec3b color = outputImage.at<cv::Vec3b>(y, x);
-            std::cout << "Pixel (" << x << "," << y << "): ["
-                << static_cast<int>(color[0]) << ", "
-                << static_cast<int>(color[1]) << ", "
-                << static_cast<int>(color[2]) << "]" << std::endl;
-        }
-    }
-
-    // 원본 이미지와 처리된 이미지 비교
-    cv::imwrite("originalImage_debug.png", bgrInputImage);
-
-    return outputImage;
 }
 
 
@@ -464,10 +499,14 @@ cv::Mat ImageProcessorIPP::gaussianBlur(cv::Mat& inputImage, int kernelSize)
 cv::Mat ImageProcessorIPP::cannyEdges(cv::Mat& inputImage)
 {
     cv::Mat grayImage;
+    cv::Mat outputImage;
+
     if (inputImage.channels() == 3) {
+        // 컬러 이미지인 경우, 그레이스케일로 변환하여 Canny 엣지 검출 수행
         grayImage = grayScale(inputImage);
     }
     else {
+        // 흑백 이미지인 경우
         grayImage = inputImage.clone();
     }
 
@@ -487,7 +526,7 @@ cv::Mat ImageProcessorIPP::cannyEdges(cv::Mat& inputImage)
     int bufferSize;
     IppStatus status = ippiCannyBorderGetSize(roiSize, ippFilterSobel, ippMskSize3x3, ipp8u, &bufferSize);
     if (status != ippStsNoErr) {
-        std::cerr << "IPP error: Failed to calculate buffer size for Canny edge detection (" << status << ")";
+        std::cerr << "IPP error: Failed to calculate buffer size for Canny edge detection (" << status << ")" << std::endl;
         ippsFree(dstData); // 할당된 메모리 해제
         return cv::Mat(); // 오류 발생 시 처리 중단
     }
@@ -495,7 +534,7 @@ cv::Mat ImageProcessorIPP::cannyEdges(cv::Mat& inputImage)
     // 임시 버퍼 할당
     Ipp8u* pBuffer = ippsMalloc_8u(bufferSize);
     if (!pBuffer) {
-        std::cerr << "Memory allocation error: Failed to allocate dstData" << std::endl;
+        std::cerr << "Memory allocation error: Failed to allocate pBuffer" << std::endl;
         ippsFree(dstData); // 이미 할당된 dstData 메모리도 해제
         return cv::Mat(); // 메모리 할당 오류 처리 중단
     }
@@ -503,14 +542,30 @@ cv::Mat ImageProcessorIPP::cannyEdges(cv::Mat& inputImage)
     // IPP Canny 엣지 감지 수행
     status = ippiCannyBorder_8u_C1R(srcData, srcStep, dstData, dstStep, roiSize, ippFilterSobel, ippMskSize3x3, ippBorderRepl, 0, 50.0f, 150.0f, ippNormL2, pBuffer);
     if (status != ippStsNoErr) {
-        std::cerr << "IPP error: Failed to perform Canny edge detection (" << status << ")";
+        std::cerr << "IPP error: Failed to perform Canny edge detection (" << status << ")" << std::endl;
         ippsFree(pBuffer); // 할당된 메모리 해제
         ippsFree(dstData); // 할당된 메모리 해제
         return cv::Mat(); // 오류 발생 시 처리 중단
     }
 
     // 결과를 OpenCV Mat 형식으로 변환
-    cv::Mat outputImage(grayImage.rows, grayImage.cols, CV_8UC1, dstData);
+    cv::Mat edgeImage(grayImage.rows, grayImage.cols, CV_8UC1, dstData);
+
+    if (inputImage.channels() == 3) {
+        // 컬러 이미지일 때, 엣지를 초록색으로 표시
+        outputImage = inputImage.clone();
+        for (int y = 0; y < edgeImage.rows; ++y) {
+            for (int x = 0; x < edgeImage.cols; ++x) {
+                if (edgeImage.at<uchar>(y, x) > 0) {
+                    outputImage.at<cv::Vec3b>(y, x) = cv::Vec3b(0, 255, 0); // 초록색
+                }
+            }
+        }
+    }
+    else {
+        // 흑백 이미지일 때
+        outputImage = edgeImage;
+    }
 
     // 할당된 메모리 해제
     ippsFree(pBuffer);

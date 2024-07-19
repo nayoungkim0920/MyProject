@@ -18,6 +18,8 @@
 #include <nppi_filtering_functions.h>
 #include <nppi_geometry_transforms.h>
 
+void checkNppError(NppStatus status, const std::string& errorMessage);
+
 class ImageProcessorNPP {
 public:
     ImageProcessorNPP();
@@ -25,7 +27,9 @@ public:
     
     cv::Mat grayScale(cv::Mat& inputImage);
     cv::Mat rotate(cv::Mat& inputImage, bool isRight);
+    cv::Mat zoom(cv::Mat& inputImage, double newWidth, double newHeight);
     cv::Mat gaussianBlur(cv::Mat& inputImage, int kernelSize);
+    cv::Mat cannyEdges(cv::Mat& inputImage);
     cv::Mat bilateralFilter(cv::Mat& inputImage);
 };
 

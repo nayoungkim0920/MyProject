@@ -105,6 +105,8 @@ QFuture<bool> ImageProcessor::zoomOutImage(cv::Mat& imageOpenCV
                                             , cv::Mat& imageIPP
                                             , cv::Mat& imageCUDA
                                             , cv::Mat& imageCUDAKernel
+                                            , cv::Mat& imageNPP
+                                            , cv::Mat& imageGStreamer
                                             , double scaleFactor)
 {
     //함수 이름을 문자열로 저장
@@ -115,6 +117,8 @@ QFuture<bool> ImageProcessor::zoomOutImage(cv::Mat& imageOpenCV
                             , &imageIPP
                             , &imageCUDA
                             , &imageCUDAKernel
+                            , &imageNPP
+                            , &imageGStreamer
                             , scaleFactor
                             , functionName]() -> bool {
 
@@ -136,6 +140,8 @@ QFuture<bool> ImageProcessor::zoomOutImage(cv::Mat& imageOpenCV
                 pushToUndoStackIPP(imageIPP.clone());
                 pushToUndoStackCUDA(imageCUDA.clone());
                 pushToUndoStackCUDAKernel(imageCUDAKernel.clone());
+                pushToUndoStackNPP(imageNPP.clone());
+                pushToUndoStackGStreamer(imageGStreamer.clone());
 
                 QVector<ProcessingResult> results;
 
@@ -158,6 +164,14 @@ QFuture<bool> ImageProcessor::zoomOutImage(cv::Mat& imageOpenCV
                 lastProcessedImageCUDAKernel = outputCUDAKernel.processedImage.clone();
                 results.append(outputCUDAKernel);
 
+                ProcessingResult outputNPP = zoomNPP(imageNPP, newWidth, newHeight);
+                lastProcessedImageNPP = outputNPP.processedImage.clone();
+                results.append(outputNPP);
+
+                ProcessingResult outputGStreamer = zoomGStreamer(imageGStreamer, newWidth, newHeight);
+                lastProcessedImageGStreamer = outputGStreamer.processedImage.clone();
+                results.append(outputGStreamer);
+
                 emit imageProcessed(results); // 이미지 처리 완료 시그널 발생
 
                 return true;
@@ -173,6 +187,8 @@ QFuture<bool> ImageProcessor::zoomInImage(cv::Mat& imageOpenCV
                                         , cv::Mat& imageIPP
                                         , cv::Mat& imageCUDA
                                         , cv::Mat& imageCUDAKernel
+                                        , cv::Mat& imageNPP
+                                        , cv::Mat& imageGStreamer
                                         , double scaleFactor)
 {
     //함수 이름을 문자열로 저장
@@ -183,6 +199,8 @@ QFuture<bool> ImageProcessor::zoomInImage(cv::Mat& imageOpenCV
                             , &imageIPP
                             , &imageCUDA
                             , &imageCUDAKernel
+                            , &imageNPP
+                            , &imageGStreamer
                             , scaleFactor
                             , functionName]() -> bool {
 
@@ -204,6 +222,8 @@ QFuture<bool> ImageProcessor::zoomInImage(cv::Mat& imageOpenCV
             pushToUndoStackIPP(imageIPP.clone());
             pushToUndoStackCUDA(imageCUDA.clone());
             pushToUndoStackCUDAKernel(imageCUDAKernel.clone());
+            pushToUndoStackNPP(imageNPP.clone());
+            pushToUndoStackGStreamer(imageGStreamer.clone());
 
             QVector<ProcessingResult> results;
 
@@ -225,6 +245,14 @@ QFuture<bool> ImageProcessor::zoomInImage(cv::Mat& imageOpenCV
             ProcessingResult outputCUDAKernel = zoomCUDAKernel(imageCUDAKernel, newWidth, newHeight);
             lastProcessedImageCUDAKernel = outputCUDAKernel.processedImage.clone();
             results.append(outputCUDAKernel);
+
+            ProcessingResult outputNPP = zoomNPP(imageNPP, newWidth, newHeight);
+            lastProcessedImageNPP = outputNPP.processedImage.clone();
+            results.append(outputNPP);
+
+            ProcessingResult outputGStreamer = zoomGStreamer(imageGStreamer, newWidth, newHeight);
+            lastProcessedImageGStreamer = outputGStreamer.processedImage.clone();
+            results.append(outputGStreamer);
 
             emit imageProcessed(results); // 이미지 처리 완료 시그널 발생
 
@@ -504,6 +532,38 @@ ImageProcessor::ProcessingResult ImageProcessor::zoomCUDAKernel(cv::Mat& inputIm
     return result;
 }
 
+ImageProcessor::ProcessingResult ImageProcessor::zoomNPP(cv::Mat& inputImage, double newWidth, double newHeight) {
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    ImageProcessorNPP IPNPP;
+    cv::Mat outputImage = IPNPP.zoom(inputImage, newWidth, newHeight);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "zoom", "NPP", elapsedTimeMs
+        , QString("w:%1, h:%2").arg(newWidth).arg(newHeight));
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::zoomGStreamer(cv::Mat& inputImage, double newWidth, double newHeight) {
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    ImageProcessorNPP IPNPP;
+    cv::Mat outputImage = IPNPP.zoom(inputImage, newWidth, newHeight);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "zoom", "GStreamer", elapsedTimeMs
+        , QString("w:%1, h:%2").arg(newWidth).arg(newHeight));
+
+    return result;
+}
+
 ImageProcessor::ProcessingResult ImageProcessor::rotateOpenCV(cv::Mat& inputImage)
 {
     ProcessingResult result;
@@ -653,7 +713,7 @@ QFuture<bool> ImageProcessor::gaussianBlur(cv::Mat& imageOpenCV
             pushToUndoStackCUDA(imageCUDA.clone());
             pushToUndoStackCUDAKernel(imageCUDAKernel.clone());
             pushToUndoStackNPP(imageNPP.clone());
-            pushToUndoStackCUDAKernel(imageGStreamer.clone());
+            pushToUndoStackGStreamer(imageGStreamer.clone());
 
             QVector<ProcessingResult> results;
 
@@ -800,7 +860,9 @@ ImageProcessor::ProcessingResult ImageProcessor::gaussianBlurGStreamer(cv::Mat& 
 QFuture<bool> ImageProcessor::cannyEdges(cv::Mat& imageOpenCV
                                         , cv::Mat& imageIPP
                                         , cv::Mat& imageCUDA
-                                        , cv::Mat& imageCUDAKernel)
+                                        , cv::Mat& imageCUDAKernel
+                                        , cv::Mat& imageNPP
+                                        , cv::Mat& imageGStreamer)
 {
     //함수 이름을 문자열로 저장
     const char* functionName = __func__;
@@ -810,6 +872,8 @@ QFuture<bool> ImageProcessor::cannyEdges(cv::Mat& imageOpenCV
         , &imageIPP
         , &imageCUDA
         , &imageCUDAKernel
+        , &imageNPP
+        , &imageGStreamer
         , functionName]() -> bool {
 
         QMutexLocker locker(&mutex);
@@ -824,7 +888,9 @@ QFuture<bool> ImageProcessor::cannyEdges(cv::Mat& imageOpenCV
             pushToUndoStackOpenCV(imageOpenCV.clone());
             pushToUndoStackIPP(imageIPP.clone());
             pushToUndoStackCUDA(imageCUDA.clone());
-            pushToUndoStackCUDAKernel(imageCUDAKernel.clone());            
+            pushToUndoStackCUDAKernel(imageCUDAKernel.clone()); 
+            pushToUndoStackNPP(imageNPP.clone());
+            pushToUndoStackGStreamer(imageGStreamer.clone());
 
             QVector<ProcessingResult> results;
 
@@ -842,7 +908,15 @@ QFuture<bool> ImageProcessor::cannyEdges(cv::Mat& imageOpenCV
 
             ProcessingResult outputCUDAKernel = cannyEdgesCUDAKernel(imageCUDAKernel);
             lastProcessedImageCUDAKernel = outputCUDAKernel.processedImage.clone();
-            results.append(outputCUDAKernel);            
+            results.append(outputCUDAKernel);  
+
+            ProcessingResult outputNPP = cannyEdgesNPP(imageNPP);
+            lastProcessedImageNPP = outputNPP.processedImage.clone();
+            results.append(outputNPP);
+
+            ProcessingResult outputGStreamer = cannyEdgesGStreamer(imageGStreamer);
+            lastProcessedImageGStreamer = outputGStreamer.processedImage.clone();
+            results.append(outputGStreamer);
 
             emit imageProcessed(results);
 
@@ -867,7 +941,7 @@ ImageProcessor::ProcessingResult ImageProcessor::cannyEdgesOpenCV(cv::Mat& input
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "cannyEdges", "OpenCV", elapsedTimeMs
-        , "");
+        , "thresold1:50, thresold2:150");
 
     return result;
 }
@@ -918,6 +992,40 @@ ImageProcessor::ProcessingResult ImageProcessor::cannyEdgesCUDAKernel(cv::Mat& i
 
     result = setResult(result, inputImage, outputImage, "cannyEdges", "CUDAKernel", elapsedTimeMs
     , "");
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::cannyEdgesNPP(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    ImageProcessorNPP IPNPP;
+    cv::Mat outputImage = IPNPP.cannyEdges(inputImage);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "cannyEdges", "NPP", elapsedTimeMs
+        , "");
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::cannyEdgesGStreamer(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    ImageProcessorNPP IPGStreamer;
+    cv::Mat outputImage = IPGStreamer.cannyEdges(inputImage);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "cannyEdges", "GStreamer", elapsedTimeMs
+        , "");
 
     return result;
 }

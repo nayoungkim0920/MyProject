@@ -8,6 +8,55 @@ ImageProcessorGStreamer::~ImageProcessorGStreamer()
 {
 }
 
+cv::Mat gstBufferToMat(GstBuffer* buffer, GstCaps* caps) {
+    GstMapInfo map;
+    gst_buffer_map(buffer, &map, GST_MAP_READ);
+
+    gint width, height;
+    const gchar* format;
+    GstStructure* structure = gst_caps_get_structure(caps, 0);
+
+    gst_structure_get_int(structure, "width", &width);
+    gst_structure_get_int(structure, "height", &height);
+
+    format = gst_structure_get_string(structure, "format");
+    if (!format) {
+        std::cerr << "비디오 포맷을 가져오는 데 실패했습니다." << std::endl;
+        gst_buffer_unmap(buffer, &map);
+        return cv::Mat();
+    }
+
+    cv::Mat mat;
+    if (strcmp(format, "BGR") == 0) {
+        mat = cv::Mat(height, width, CV_8UC3, map.data, map.size / height).clone();
+    }
+    else if (strcmp(format, "GRAY8") == 0) {
+        mat = cv::Mat(height, width, CV_8UC1, map.data, map.size / height).clone();
+    }
+    else {
+        std::cerr << "지원하지 않는 비디오 포맷입니다: " << format << std::endl;
+    }
+
+    gst_buffer_unmap(buffer, &map);
+    return mat;
+}
+
+GstBuffer* matToGstBuffer(const cv::Mat& mat) {
+    // 이미지의 크기와 데이터 크기 출력
+    std::cout << "Creating GstBuffer with size: " << mat.total() * mat.elemSize() << " bytes" << std::endl;
+
+    GstBuffer* buffer = gst_buffer_new_allocate(nullptr, mat.total() * mat.elemSize(), nullptr);
+    if (!buffer) {
+        std::cerr << "GstBuffer allocation failed." << std::endl;
+        return nullptr;
+    }
+
+    gst_buffer_fill(buffer, 0, mat.data, mat.total() * mat.elemSize());
+    std::cout << "GstBuffer filled successfully." << std::endl;
+
+    return buffer;
+}
+
 cv::Mat ImageProcessorGStreamer::grayScale(cv::Mat& inputImage) {
     GstElement* pipeline = nullptr;
     GstElement* source = nullptr;
@@ -40,7 +89,6 @@ cv::Mat ImageProcessorGStreamer::grayScale(cv::Mat& inputImage) {
         nullptr);
     g_object_set(G_OBJECT(source), "caps", srcCaps, nullptr);
     g_object_set(G_OBJECT(source), "is-live", TRUE, "block", TRUE, nullptr);
-    g_object_set(G_OBJECT(source), "max-bytes", inputImage.total() * inputImage.elemSize(), nullptr);
 
     // Set up sink caps for GRAY8 output
     GstCaps* sinkCaps = gst_caps_new_simple("video/x-raw",
@@ -76,6 +124,7 @@ cv::Mat ImageProcessorGStreamer::grayScale(cv::Mat& inputImage) {
     // Set pipeline to PLAYING state and wait for processing
     gst_element_set_state(pipeline, GST_STATE_PLAYING);
 
+    // Wait for the processing to complete
     guint64 startTime = g_get_monotonic_time();
     guint64 endTime = startTime + 5000000; // 5초 대기
 
@@ -121,32 +170,6 @@ cv::Mat ImageProcessorGStreamer::grayScale(cv::Mat& inputImage) {
     return outputImage;
 }
 
-GstBuffer* matToGstBuffer(const cv::Mat& mat) {
-    GstBuffer* buffer = gst_buffer_new_allocate(nullptr, mat.total() * mat.elemSize(), nullptr);
-    GstMapInfo map;
-    gst_buffer_map(buffer, &map, GST_MAP_WRITE);
-    memcpy(map.data, mat.data, mat.total() * mat.elemSize());
-    gst_buffer_unmap(buffer, &map);
-    return buffer;
-}
-
-cv::Mat gstBufferToMat(GstBuffer* buffer, GstCaps* caps) {
-    GstMapInfo map;
-    gst_buffer_map(buffer, &map, GST_MAP_READ);
-
-    GstVideoInfo videoInfo;
-    gst_video_info_from_caps(&videoInfo, caps);
-
-    int width = GST_VIDEO_INFO_WIDTH(&videoInfo);
-    int height = GST_VIDEO_INFO_HEIGHT(&videoInfo);
-    int channels = GST_VIDEO_INFO_N_COMPONENTS(&videoInfo);
-
-    cv::Mat mat(height, width, CV_8UC(channels), map.data);
-    gst_buffer_unmap(buffer, &map);
-
-    return mat;
-}
-
 cv::Mat ImageProcessorGStreamer::rotate(cv::Mat& inputImage, bool isRight) {
     GstElement* pipeline = nullptr;
     GstElement* source = nullptr;
@@ -173,10 +196,10 @@ cv::Mat ImageProcessorGStreamer::rotate(cv::Mat& inputImage, bool isRight) {
         return cv::Mat();
     }
 
-    // flip 속성 설정
-    g_object_set(G_OBJECT(flip), "method", isRight ? 1 : 0, nullptr);
+    // Set flip method for rotation
+    g_object_set(G_OBJECT(flip), "method", isRight ? 1 : 0, nullptr); // 1 for 90 degrees clockwise, 0 for 90 degrees counter-clockwise
 
-    // appsrc 속성 설정
+    // Set appsrc properties
     GstCaps* srcCaps = gst_caps_new_simple("video/x-raw",
         "format", G_TYPE_STRING, "BGR",
         "width", G_TYPE_INT, inputImage.cols,
@@ -184,9 +207,9 @@ cv::Mat ImageProcessorGStreamer::rotate(cv::Mat& inputImage, bool isRight) {
         "framerate", GST_TYPE_FRACTION, 30, 1,
         nullptr);
     g_object_set(G_OBJECT(source), "caps", srcCaps, nullptr);
-    g_object_set(G_OBJECT(source), "is-live", TRUE, "block", TRUE, nullptr);
+    g_object_set(G_OBJECT(source), "is-live", TRUE, nullptr);
 
-    // appsink 속성 설정
+    // Set appsink properties
     GstCaps* sinkCaps = gst_caps_new_simple("video/x-raw",
         "format", G_TYPE_STRING, "BGR",
         nullptr);
@@ -200,7 +223,7 @@ cv::Mat ImageProcessorGStreamer::rotate(cv::Mat& inputImage, bool isRight) {
         return cv::Mat();
     }
 
-    // cv::Mat을 GstBuffer로 변환하고 appsrc에 푸시
+    // Convert cv::Mat to GstBuffer and push to appsrc
     GstBuffer* buffer = matToGstBuffer(inputImage);
     GstFlowReturn ret;
     g_signal_emit_by_name(source, "push-buffer", buffer, &ret);
@@ -214,13 +237,29 @@ cv::Mat ImageProcessorGStreamer::rotate(cv::Mat& inputImage, bool isRight) {
 
     gst_element_set_state(pipeline, GST_STATE_PLAYING);
 
-    // GStreamer 파이프라인이 처리 완료될 때까지 기다림
+    // Poll for the pipeline's state change
     GstStateChangeReturn stateChangeRet;
     do {
+        
         stateChangeRet = gst_element_get_state(pipeline, nullptr, nullptr, GST_CLOCK_TIME_NONE);
+        if (stateChangeRet == GST_STATE_CHANGE_FAILURE) {
+            std::cerr << "GStreamer pipeline failed!" << std::endl;
+            gst_element_set_state(pipeline, GST_STATE_NULL);
+            gst_object_unref(GST_OBJECT(pipeline));
+            return cv::Mat();
+        }
     } while (stateChangeRet != GST_STATE_CHANGE_SUCCESS);
+    std::cerr << "*************************" << std::endl;
 
-    // appsink에서 샘플을 가져옵니다.
+    // Wait for processing to complete
+    gst_element_set_state(pipeline, GST_STATE_PAUSED);
+    GstState state;
+    GstState pending;
+    do {
+        gst_element_get_state(pipeline, &state, &pending, GST_CLOCK_TIME_NONE);
+    } while (state != GST_STATE_PAUSED && pending != GST_STATE_VOID_PENDING);
+
+    // Pull sample from appsink
     sample = gst_app_sink_pull_sample(GST_APP_SINK(sink));
     if (!sample) {
         std::cerr << "appsink에서 샘플을 가져오는 데 실패했습니다." << std::endl;
@@ -256,11 +295,21 @@ cv::Mat ImageProcessorGStreamer::rotate(cv::Mat& inputImage, bool isRight) {
     return outputImage;
 }
 
-cv::Mat ImageProcessorGStreamer::gaussianBlur(cv::Mat& inputImage, int kernelSize) {
+// cv::Mat을 GstBuffer로 변환
+GstBuffer* matToGstBuffer(cv::Mat& mat) {
+    GstBuffer* buffer = gst_buffer_new_allocate(nullptr, mat.total() * mat.elemSize(), nullptr);
+    GstMapInfo map;
+    gst_buffer_map(buffer, &map, GST_MAP_WRITE);
+    std::memcpy(map.data, mat.data, mat.total() * mat.elemSize());
+    gst_buffer_unmap(buffer, &map);
+    return buffer;
+}
+
+cv::Mat ImageProcessorGStreamer::zoom(cv::Mat& inputImage, double newWidth, double newHeight) {
+
     GstElement* pipeline = nullptr;
     GstElement* source = nullptr;
     GstElement* convert = nullptr;
-    GstElement* blur = nullptr;
     GstElement* sink = nullptr;
     GstSample* sample = nullptr;
 
@@ -269,23 +318,18 @@ cv::Mat ImageProcessorGStreamer::gaussianBlur(cv::Mat& inputImage, int kernelSiz
     pipeline = gst_pipeline_new("pipeline");
     source = gst_element_factory_make("appsrc", "source");
     convert = gst_element_factory_make("videoconvert", "convert");
-    blur = gst_element_factory_make("gaussianblur", "blur");  // Note: "gaussianblur" is used as a placeholder
     sink = gst_element_factory_make("appsink", "sink");
 
-    if (!pipeline || !source || !convert || !blur || !sink) {
+    if (!pipeline || !source || !convert || !sink) {
         std::cerr << "GStreamer 요소를 생성하지 못했습니다." << std::endl;
         if (pipeline) gst_object_unref(GST_OBJECT(pipeline));
         if (source) gst_object_unref(GST_OBJECT(source));
         if (convert) gst_object_unref(GST_OBJECT(convert));
-        if (blur) gst_object_unref(GST_OBJECT(blur));
         if (sink) gst_object_unref(GST_OBJECT(sink));
         return cv::Mat();
     }
 
-    // Gaussian blur 속성 설정 (여기서는 예시로 속성을 설정하는 코드 추가)
-    g_object_set(G_OBJECT(blur), "kernel-size", kernelSize, nullptr);
-
-    // appsrc 속성 설정
+    // appsrc 설정
     GstCaps* srcCaps = gst_caps_new_simple("video/x-raw",
         "format", G_TYPE_STRING, "BGR",
         "width", G_TYPE_INT, inputImage.cols,
@@ -295,15 +339,15 @@ cv::Mat ImageProcessorGStreamer::gaussianBlur(cv::Mat& inputImage, int kernelSiz
     g_object_set(G_OBJECT(source), "caps", srcCaps, nullptr);
     g_object_set(G_OBJECT(source), "is-live", TRUE, "block", TRUE, nullptr);
 
-    // appsink 속성 설정
+    // appsink 설정
     GstCaps* sinkCaps = gst_caps_new_simple("video/x-raw",
         "format", G_TYPE_STRING, "BGR",
         nullptr);
     g_object_set(G_OBJECT(sink), "caps", sinkCaps, nullptr);
     g_object_set(G_OBJECT(sink), "sync", FALSE, "emit-signals", TRUE, nullptr);
 
-    gst_bin_add_many(GST_BIN(pipeline), source, convert, blur, sink, nullptr);
-    if (!gst_element_link_many(source, convert, blur, sink, nullptr)) {
+    gst_bin_add_many(GST_BIN(pipeline), source, convert, sink, nullptr);
+    if (!gst_element_link_many(source, convert, sink, nullptr)) {
         std::cerr << "요소들을 연결할 수 없습니다." << std::endl;
         gst_object_unref(GST_OBJECT(pipeline));
         return cv::Mat();
@@ -327,6 +371,12 @@ cv::Mat ImageProcessorGStreamer::gaussianBlur(cv::Mat& inputImage, int kernelSiz
     GstStateChangeReturn stateChangeRet;
     do {
         stateChangeRet = gst_element_get_state(pipeline, nullptr, nullptr, GST_CLOCK_TIME_NONE);
+        if (stateChangeRet == GST_STATE_CHANGE_FAILURE) {
+            std::cerr << "GStreamer 파이프라인 상태 변경 실패." << std::endl;
+            gst_element_set_state(pipeline, GST_STATE_NULL);
+            gst_object_unref(GST_OBJECT(pipeline));
+            return cv::Mat();
+        }
     } while (stateChangeRet != GST_STATE_CHANGE_SUCCESS);
 
     // appsink에서 샘플을 가져옵니다.
@@ -361,6 +411,239 @@ cv::Mat ImageProcessorGStreamer::gaussianBlur(cv::Mat& inputImage, int kernelSiz
     gst_sample_unref(sample);
     gst_element_set_state(pipeline, GST_STATE_NULL);
     gst_object_unref(GST_OBJECT(pipeline));
+
+    // 이미지 줌 처리
+    cv::Mat zoomedImage;
+    cv::resize(outputImage, zoomedImage, cv::Size(newWidth, newHeight), 0, 0, cv::INTER_LINEAR);
+
+    return zoomedImage;
+}
+
+void printImagePixels(const cv::Mat& image, int numPixels) {
+    int count = 0;
+
+    // 이미지의 크기를 가져옵니다.
+    int rows = image.rows;
+    int cols = image.cols;
+
+    // 이미지가 비어있거나 픽셀 수가 0보다 작으면 반환합니다.
+    if (rows == 0 || cols == 0 || numPixels <= 0) {
+        std::cerr << "이미지 크기가 잘못되었거나 픽셀 수가 유효하지 않습니다." << std::endl;
+        return;
+    }
+
+    // 각 픽셀을 출력합니다.
+    for (int y = 0; y < rows && count < numPixels; ++y) {
+        for (int x = 0; x < cols && count < numPixels; ++x) {
+            // 픽셀 값을 가져옵니다.
+            if (image.channels() == 3) {
+                cv::Vec3b pixel = image.at<cv::Vec3b>(y, x);
+                std::cout << "Pixel (" << x << ", " << y << "): "
+                    << "B=" << static_cast<int>(pixel[0]) << ", "
+                    << "G=" << static_cast<int>(pixel[1]) << ", "
+                    << "R=" << static_cast<int>(pixel[2]) << std::endl;
+            }
+            else if (image.channels() == 1) {
+                uchar pixel = image.at<uchar>(y, x);
+                std::cout << "Pixel (" << x << ", " << y << "): "
+                    << "Gray=" << static_cast<int>(pixel) << std::endl;
+            }
+
+            count++;
+        }
+    }
+
+    if (count == 0) {
+        std::cerr << "픽셀을 출력할 수 없습니다." << std::endl;
+    }
+}
+
+cv::Mat ImageProcessorGStreamer::gaussianBlur(cv::Mat& inputImage, int kernelSize) {
+    GstElement* pipeline = nullptr;
+    GstElement* source = nullptr;
+    GstElement* convert = nullptr;
+    GstElement* sink = nullptr;
+    GstSample* sample = nullptr;
+
+    gst_init(nullptr, nullptr);
+
+    pipeline = gst_pipeline_new("pipeline");
+    source = gst_element_factory_make("appsrc", "source");
+    convert = gst_element_factory_make("videoconvert", "convert");
+    sink = gst_element_factory_make("appsink", "sink");
+
+    if (!pipeline || !source || !convert || !sink) {
+        std::cerr << "GStreamer failed" << std::endl;
+        return cv::Mat();
+    }
+
+    std::cout << "GStreamer 파이프라인 요소 생성 성공." << std::endl;
+
+    // 입력 이미지의 캡 설정
+    GstCaps* srcCaps = nullptr;
+    switch (inputImage.type()) {
+    case CV_8UC1:
+        srcCaps = gst_caps_new_simple("video/x-raw",
+            "format", G_TYPE_STRING, "GRAY8",
+            "width", G_TYPE_INT, inputImage.cols,
+            "height", G_TYPE_INT, inputImage.rows,
+            "framerate", GST_TYPE_FRACTION, 30, 1,
+            nullptr);
+        break;
+    case CV_8UC3:
+        srcCaps = gst_caps_new_simple("video/x-raw",
+            "format", G_TYPE_STRING, "BGR",
+            "width", G_TYPE_INT, inputImage.cols,
+            "height", G_TYPE_INT, inputImage.rows,
+            "framerate", GST_TYPE_FRACTION, 30, 1,
+            nullptr);
+        break;
+    default:
+        std::cerr << "지원하지 않는 이미지 타입입니다: " << inputImage.type() << std::endl;
+        gst_object_unref(GST_OBJECT(pipeline));
+        return cv::Mat();
+    }
+
+    std::cout << "Source caps set: " << gst_caps_to_string(srcCaps) << std::endl;
+    g_object_set(G_OBJECT(source), "caps", srcCaps, nullptr);
+    g_object_set(G_OBJECT(source), "is-live", TRUE, nullptr);
+
+    GstCaps* sinkCaps = gst_caps_new_simple("video/x-raw",
+        "format", G_TYPE_STRING, inputImage.type() == CV_8UC1 ? "GRAY8" : "BGR",
+        nullptr);
+    std::cout << "Sink caps set: " << gst_caps_to_string(sinkCaps) << std::endl;
+    g_object_set(G_OBJECT(sink), "caps", sinkCaps, nullptr);
+    g_object_set(G_OBJECT(sink), "sync", TRUE, "emit-signals", TRUE, nullptr);
+
+    gst_bin_add_many(GST_BIN(pipeline), source, convert, sink, nullptr);
+    if (!gst_element_link_many(source, convert, sink, nullptr)) {
+        std::cerr << "요소들을 연결할 수 없습니다." << std::endl;
+        gst_object_unref(GST_OBJECT(pipeline));
+        return cv::Mat();
+    }
+
+    // OpenCV를 사용하여 Gaussian Blur 적용
+    cv::Mat blurredImage;
+    cv::GaussianBlur(inputImage, blurredImage, cv::Size(kernelSize, kernelSize), 0);
+
+    // 처리된 이미지를 GStreamer 파이프라인으로 푸시
+    GstBuffer* buffer = matToGstBuffer(blurredImage);
+    GstFlowReturn ret;
+    g_signal_emit_by_name(source, "push-buffer", buffer, &ret);
+    gst_buffer_unref(buffer);
+
+    if (ret != GST_FLOW_OK) {
+        std::cerr << "appsrc에 버퍼를 푸시하는데 실패했습니다. 반환값: " << ret << std::endl;
+        gst_object_unref(GST_OBJECT(pipeline));
+        return cv::Mat();
+    }
+
+    gst_element_set_state(pipeline, GST_STATE_PLAYING);
+    std::cout << "Pipeline 상태를 PLAYING으로 설정했습니다." << std::endl;
+
+    GstStateChangeReturn stateChangeRet;
+    do {
+        stateChangeRet = gst_element_get_state(pipeline, nullptr, nullptr, GST_CLOCK_TIME_NONE);
+        std::cout << "Pipeline 상태 변경: " << stateChangeRet << std::endl;
+    } while (stateChangeRet != GST_STATE_CHANGE_SUCCESS);
+
+    sample = gst_app_sink_pull_sample(GST_APP_SINK(sink));
+    if (!sample) {
+        std::cerr << "appsink에서 샘플을 가져오는 데 실패했습니다." << std::endl;
+        gst_element_set_state(pipeline, GST_STATE_NULL);
+        gst_object_unref(GST_OBJECT(pipeline));
+        return cv::Mat();
+    }
+
+    GstBuffer* outputBuffer = gst_sample_get_buffer(sample);
+    if (!outputBuffer) {
+        std::cerr << "샘플에서 버퍼를 가져오는 데 실패했습니다." << std::endl;
+        gst_sample_unref(sample);
+        gst_element_set_state(pipeline, GST_STATE_NULL);
+        gst_object_unref(GST_OBJECT(pipeline));
+        return cv::Mat();
+    }
+
+    GstCaps* caps = gst_sample_get_caps(sample);
+    if (!caps) {
+        std::cerr << "샘플에서 캡을 가져오는 데 실패했습니다." << std::endl;
+        gst_sample_unref(sample);
+        gst_element_set_state(pipeline, GST_STATE_NULL);
+        gst_object_unref(GST_OBJECT(pipeline));
+        return cv::Mat();
+    }
+
+    cv::Mat outputImage = gstBufferToMat(outputBuffer, caps);
+
+    printImagePixels(outputImage, 20);
+
+    std::cout << "Output image type: " << outputImage.type() << std::endl;
+
+    gst_sample_unref(sample);
+    gst_element_set_state(pipeline, GST_STATE_NULL);
+    gst_object_unref(GST_OBJECT(pipeline));
+
+    printImagePixels(outputImage, 20);
+
+    return outputImage;
+}
+
+
+void ImageProcessorGStreamer::drawEdgesOnColorImage(cv::Mat& image, const cv::Mat& edges) {
+    // 엣지 이미지를 컬러 이미지에 초록색으로 오버레이
+    for (int y = 0; y < edges.rows; ++y) {
+        for (int x = 0; x < edges.cols; ++x) {
+            if (edges.at<uchar>(y, x) == 255) {
+                image.at<cv::Vec3b>(y, x)[0] = 0;   // Blue channel
+                image.at<cv::Vec3b>(y, x)[1] = 255; // Green channel
+                image.at<cv::Vec3b>(y, x)[2] = 0;   // Red channel
+            }
+        }
+    }
+}
+
+void ImageProcessorGStreamer::drawEdgesOnGrayImage(cv::Mat& image, const cv::Mat& edges) {
+    // 엣지 이미지를 그레이스케일 이미지에 흰색으로 오버레이
+    for (int y = 0; y < edges.rows; ++y) {
+        for (int x = 0; x < edges.cols; ++x) {
+            if (edges.at<uchar>(y, x) == 255) {
+                image.at<uchar>(y, x) = 255;
+            }
+            else {
+                image.at<uchar>(y, x) = 0;
+            }
+        }
+    }
+}
+
+cv::Mat ImageProcessorGStreamer::cannyEdges(cv::Mat& inputImage) {
+
+    cv::Mat grayImage;
+    cv::Mat edges;
+    cv::Mat outputImage;
+
+    // 입력 이미지가 컬러일 경우 그레이스케일로 변환
+    if (inputImage.channels() == 3) {
+        cv::cvtColor(inputImage, grayImage, cv::COLOR_BGR2GRAY);
+    }
+    else {
+        grayImage = inputImage.clone();
+    }
+
+    // Canny 엣지 검출 수행
+    cv::Canny(grayImage, edges, 50, 150);
+
+    // Canny 엣지 결과를 출력 이미지로 변환
+    if (inputImage.channels() == 3) {
+        // 컬러 이미지에 초록색 엣지 표시
+        outputImage = inputImage.clone();
+        drawEdgesOnColorImage(outputImage, edges);
+    }
+    else {
+        // 그레이스케일 이미지에 흰색 엣지 표시
+        outputImage.create(edges.size(), CV_8UC1);
+        drawEdgesOnGrayImage(outputImage, edges);
+    }
 
     return outputImage;
 }

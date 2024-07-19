@@ -45,16 +45,16 @@ cv::Mat ImageProcessorCUDAKernel::gaussianBlur(cv::Mat& inputImage, int kernelSi
 
 cv::Mat ImageProcessorCUDAKernel::cannyEdges(cv::Mat& inputImage)
 {
-    cv::Mat grayImage;
-    if (inputImage.channels() == 3) {
-        grayImage = grayScale(inputImage);
-    }
-    else {
-        grayImage = inputImage.clone();
-    }
+    //cv::Mat grayImage;
+    //if (inputImage.channels() == 3) {
+    //    grayImage = grayScale(inputImage);
+    //}
+    //else {
+    //    grayImage = inputImage.clone();
+    //}
 
     cv::Mat outputImage;
-    callCannyEdgesCUDA(grayImage, outputImage);
+    callCannyEdgesCUDA(inputImage, outputImage);
 
     return outputImage;
 }

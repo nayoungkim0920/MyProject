@@ -109,6 +109,8 @@ void MainWindow::zoomInImage()
                 , currentImageIPP
                 , currentImageCUDA
                 , currentImageCUDAKernel
+                , currentImageNPP
+                , currentImageGStreamer
                 , scaleFactor = 1.25);
         }
     });
@@ -123,6 +125,8 @@ void MainWindow::zoomOutImage()
                 , currentImageIPP
                 , currentImageCUDA
                 , currentImageCUDAKernel
+                , currentImageNPP
+                , currentImageGStreamer
                 , scaleFactor = 0.8);
         }
         });
@@ -187,7 +191,12 @@ void MainWindow::gaussianBlur()
 void MainWindow::cannyEdges()
 {
     QtConcurrent::run([this]() {
-            imageProcessor->cannyEdges(currentImageOpenCV, currentImageIPP, currentImageCUDA, currentImageCUDAKernel);
+            imageProcessor->cannyEdges(currentImageOpenCV
+                , currentImageIPP
+                , currentImageCUDA
+                , currentImageCUDAKernel
+                , currentImageNPP
+                , currentImageGStreamer);
         });
     //applyImageProcessing(&ImageProcessor::cannyEdges, currentImage);
 }
@@ -282,7 +291,7 @@ void MainWindow::displayImage(cv::Mat image, QLabel* label)
             QImage::Format_Grayscale8);
     }
     else if (image.type() == CV_8UC3) {
-        qDebug() << "displayImage() type: BGR CV_8UC3 Format_RGB888";
+        qDebug() << ">>displayImage() type: BGR CV_8UC3 Format_RGB888";
         qImage = QImage(image.data,
             image.cols,
             image.rows,

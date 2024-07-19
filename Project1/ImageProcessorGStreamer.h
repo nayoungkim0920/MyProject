@@ -18,8 +18,14 @@ public:
 
     cv::Mat grayScale(cv::Mat& inputImage);
     cv::Mat rotate(cv::Mat& inputImage, bool isRight);
+    cv::Mat zoom(cv::Mat& inputImage, double newWidth, double newHeight);
+    cv::Mat cannyEdges(cv::Mat& inputImage);
     cv::Mat gaussianBlur(cv::Mat& inputImage, int kernelSize);
     cv::Mat bilateralFilter(cv::Mat& inputImage);
+
+private:
+    void drawEdgesOnColorImage(cv::Mat& image, const cv::Mat& edges);
+    void drawEdgesOnGrayImage(cv::Mat& image, const cv::Mat& edges);
 };
 
 #endif // IMAGEPROCESSORGSTREAMER_H

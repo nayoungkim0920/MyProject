@@ -48,7 +48,7 @@ __global__ void grayScaleImageKernel(const unsigned char* input, unsigned char* 
     }
 }
 
-__global__ void cannyEdgesKernel(const unsigned char* input, unsigned char* output, int cols, int rows) {
+__global__ void cannyEdgesKernel(const unsigned char* input, unsigned char* output, int cols, int rows, int channels, bool isColor) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -58,12 +58,15 @@ __global__ void cannyEdgesKernel(const unsigned char* input, unsigned char* outp
 
         // Calculate gradients (Sobel operators)
         if (x > 0 && x < cols - 1 && y > 0 && y < rows - 1) {
-            gradientX = -1.0f * input[(y - 1) * cols + (x - 1)] + 1.0f * input[(y - 1) * cols + (x + 1)]
-                - 2.0f * input[y * cols + (x - 1)] + 2.0f * input[y * cols + (x + 1)]
-                - 1.0f * input[(y + 1) * cols + (x - 1)] + 1.0f * input[(y + 1) * cols + (x + 1)];
+            for (int c = 0; c < (isColor ? 3 : 1); c++) {
+                int offset = c * rows * cols;
+                gradientX += -1.0f * input[offset + (y - 1) * cols + (x - 1)] + 1.0f * input[offset + (y - 1) * cols + (x + 1)]
+                    - 2.0f * input[offset + y * cols + (x - 1)] + 2.0f * input[offset + y * cols + (x + 1)]
+                    - 1.0f * input[offset + (y + 1) * cols + (x - 1)] + 1.0f * input[offset + (y + 1) * cols + (x + 1)];
 
-            gradientY = -1.0f * input[(y - 1) * cols + (x - 1)] - 2.0f * input[(y - 1) * cols + x] - 1.0f * input[(y - 1) * cols + (x + 1)]
-                + 1.0f * input[(y + 1) * cols + (x - 1)] + 2.0f * input[(y + 1) * cols + x] + 1.0f * input[(y + 1) * cols + (x + 1)];
+                gradientY += -1.0f * input[offset + (y - 1) * cols + (x - 1)] - 2.0f * input[offset + (y - 1) * cols + x] - 1.0f * input[offset + (y - 1) * cols + (x + 1)]
+                    + 1.0f * input[offset + (y + 1) * cols + (x - 1)] + 2.0f * input[offset + (y + 1) * cols + x] + 1.0f * input[offset + (y + 1) * cols + (x + 1)];
+            }
         }
 
         // Calculate gradient magnitude
@@ -71,10 +74,24 @@ __global__ void cannyEdgesKernel(const unsigned char* input, unsigned char* outp
 
         // Apply hysteresis thresholding to detect edges
         if (gradientMagnitude > 50) {  // Adjust this threshold as needed
-            output[idx] = 255;
+            if (isColor) {
+                output[idx * 3] = 0;       // Blue
+                output[idx * 3 + 1] = 255; // Green
+                output[idx * 3 + 2] = 0;   // Red
+            }
+            else {
+                output[idx] = 255;
+            }
         }
         else {
-            output[idx] = 0;
+            if (isColor) {
+                output[idx * 3] = input[idx * 3];
+                output[idx * 3 + 1] = input[idx * 3 + 1];
+                output[idx * 3 + 2] = input[idx * 3 + 2];
+            }
+            else {
+                output[idx] = 0;
+            }
         }
     }
 }
@@ -86,10 +103,11 @@ __global__ void gaussianBlurKernel(const unsigned char* input, unsigned char* ou
     if (x < cols && y < rows) {
         int halfSize = kernelSize / 2;
         float sum = 0.0f;
+        float normalization = 0.0f;
 
-        // Apply Gaussian blur using the kernel size
         for (int c = 0; c < channels; ++c) {
             sum = 0.0f;
+            normalization = 0.0f;
 
             for (int i = -halfSize; i <= halfSize; ++i) {
                 for (int j = -halfSize; j <= halfSize; ++j) {
@@ -97,13 +115,14 @@ __global__ void gaussianBlurKernel(const unsigned char* input, unsigned char* ou
                     int offsetY = y + j;
 
                     if (offsetX >= 0 && offsetX < cols && offsetY >= 0 && offsetY < rows) {
-                        float weight = exp(-(i * i + j * j) / (2.0f * kernelSize * kernelSize));
+                        float weight = expf(-(i * i + j * j) / (2.0f * halfSize * halfSize));
                         sum += weight * input[(offsetY * cols + offsetX) * channels + c];
+                        normalization += weight;
                     }
                 }
             }
 
-            output[(y * cols + x) * channels + c] = static_cast<unsigned char>(sum);
+            output[(y * cols + x) * channels + c] = static_cast<unsigned char>(sum / normalization);
         }
     }
 }
@@ -524,16 +543,12 @@ void callCannyEdgesCUDA(cv::Mat& inputImage, cv::Mat& outputImage) {
     int cols = inputImage.cols;
     int rows = inputImage.rows;
     int channels = inputImage.channels();
-
-    //if (channels != 3) {
-    //    std::cerr << "Input image must be a 3-channel BGR image." << std::endl;
-    //    return;
-    //}
+    bool isColor = (channels == 3);
 
     uchar* d_inputImage = nullptr;
     uchar* d_outputImage = nullptr;
     size_t inputSize = cols * rows * channels * sizeof(uchar);
-    size_t outputSize = cols * rows * sizeof(uchar);
+    size_t outputSize = cols * rows * (isColor ? channels : 1) * sizeof(uchar);
 
     cudaError_t err;
     err = cudaMalloc(&d_inputImage, inputSize);
@@ -560,7 +575,7 @@ void callCannyEdgesCUDA(cv::Mat& inputImage, cv::Mat& outputImage) {
     dim3 threadsPerBlock(16, 16);
     dim3 numBlocks((cols + threadsPerBlock.x - 1) / threadsPerBlock.x, (rows + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
-    cannyEdgesKernel << <numBlocks, threadsPerBlock >> > (d_inputImage, d_outputImage, cols, rows);
+    cannyEdgesKernel << <numBlocks, threadsPerBlock >> > (d_inputImage, d_outputImage, cols, rows, channels, isColor);
 
     err = cudaGetLastError();
     if (err != cudaSuccess) {
@@ -572,7 +587,13 @@ void callCannyEdgesCUDA(cv::Mat& inputImage, cv::Mat& outputImage) {
 
     cudaDeviceSynchronize();
 
-    outputImage.create(rows, cols, CV_8UC1);
+    if (isColor) {
+        outputImage.create(rows, cols, CV_8UC3);
+    }
+    else {
+        outputImage.create(rows, cols, CV_8UC1);
+    }
+
     err = cudaMemcpy(outputImage.data, d_outputImage, outputSize, cudaMemcpyDeviceToHost);
     if (err != cudaSuccess) {
         std::cerr << "CUDA memcpy error: " << cudaGetErrorString(err) << std::endl;
@@ -593,30 +614,36 @@ void callGaussianBlurCUDA(cv::Mat& inputImage, cv::Mat& outputImage, int kernelS
     size_t outputSize = cols * rows * channels * sizeof(uchar);
 
     cudaError_t err;
+
+    // CUDA 메모리 할당
     err = cudaMalloc(&d_inputImage, inputSize);
     if (err != cudaSuccess) {
-        std::cerr << "CUDA malloc error: " << cudaGetErrorString(err) << std::endl;
+        std::cerr << "CUDA malloc error for inputImage: " << cudaGetErrorString(err) << std::endl;
         return;
     }
 
     err = cudaMalloc(&d_outputImage, outputSize);
     if (err != cudaSuccess) {
-        std::cerr << "CUDA malloc error: " << cudaGetErrorString(err) << std::endl;
+        std::cerr << "CUDA malloc error for outputImage: " << cudaGetErrorString(err) << std::endl;
         cudaFree(d_inputImage);
         return;
     }
 
+    // CUDA 메모리로 데이터 복사
     err = cudaMemcpy(d_inputImage, inputImage.data, inputSize, cudaMemcpyHostToDevice);
     if (err != cudaSuccess) {
-        std::cerr << "CUDA memcpy error: " << cudaGetErrorString(err) << std::endl;
+        std::cerr << "CUDA memcpy error for inputImage: " << cudaGetErrorString(err) << std::endl;
         cudaFree(d_inputImage);
         cudaFree(d_outputImage);
         return;
     }
 
+    // CUDA 커널 호출 설정
     dim3 threadsPerBlock(16, 16);
-    dim3 numBlocks((cols + threadsPerBlock.x - 1) / threadsPerBlock.x, (rows + threadsPerBlock.y - 1) / threadsPerBlock.y);
+    dim3 numBlocks((cols + threadsPerBlock.x - 1) / threadsPerBlock.x,
+        (rows + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
+    // Gaussian blur 커널 호출
     gaussianBlurKernel << <numBlocks, threadsPerBlock >> > (d_inputImage, d_outputImage, cols, rows, kernelSize, channels);
 
     err = cudaGetLastError();
@@ -629,12 +656,14 @@ void callGaussianBlurCUDA(cv::Mat& inputImage, cv::Mat& outputImage, int kernelS
 
     cudaDeviceSynchronize();
 
+    // 출력 이미지 생성 및 데이터 복사
     outputImage.create(rows, cols, inputImage.type());
     err = cudaMemcpy(outputImage.data, d_outputImage, outputSize, cudaMemcpyDeviceToHost);
     if (err != cudaSuccess) {
-        std::cerr << "CUDA memcpy error: " << cudaGetErrorString(err) << std::endl;
+        std::cerr << "CUDA memcpy error for outputImage: " << cudaGetErrorString(err) << std::endl;
     }
 
+    // 메모리 해제
     cudaFree(d_inputImage);
     cudaFree(d_outputImage);
 }
@@ -808,4 +837,24 @@ void callSobelFilterCUDA(cv::Mat& inputImage, cv::Mat& outputImage) {
     // 메모리 해제
     cudaFree(d_input);
     cudaFree(d_output);
+}
+
+void createGaussianKernel(float* kernel, int kernelSize, float sigma)
+{
+    int halfSize = kernelSize / 2;
+    float sum = 0.0f;
+
+    for (int i = -halfSize; i <= halfSize; ++i) {
+        for (int j = -halfSize; j <= halfSize; ++j) {
+            kernel[(i + halfSize) * kernelSize + (j + halfSize)] = expf(-(i * i + j * j) / (2.0f * sigma * sigma));
+            sum += kernel[(i + halfSize) * kernelSize + (j + halfSize)];
+        }
+    }
+
+    // Normalize the kernel
+    for (int i = 0; i < kernelSize; ++i) {
+        for (int j = 0; j < kernelSize; ++j) {
+            kernel[i * kernelSize + j] /= sum;
+        }
+    }
 }
