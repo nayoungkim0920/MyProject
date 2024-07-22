@@ -18,7 +18,7 @@
 #include <nppi_filtering_functions.h>
 #include <nppi_geometry_transforms.h>
 
-void checkNppError(NppStatus status, const std::string& errorMessage);
+#include "ImageProcessingLib.h"
 
 class ImageProcessorNPP {
 public:
@@ -30,6 +30,7 @@ public:
     cv::Mat zoom(cv::Mat& inputImage, double newWidth, double newHeight);
     cv::Mat gaussianBlur(cv::Mat& inputImage, int kernelSize);
     cv::Mat cannyEdges(cv::Mat& inputImage);
+    cv::Mat medianFilter(cv::Mat& inputImage);
     cv::Mat bilateralFilter(cv::Mat& inputImage);
 };
 

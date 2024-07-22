@@ -143,7 +143,6 @@ void MainWindow::grayScale()
         , currentImageCUDAKernel
         , currentImageNPP
         , currentImageGStreamer);
-
         });
 
     //applyImageProcessing(&ImageProcessor::grayScale, currentImage);
@@ -204,7 +203,13 @@ void MainWindow::cannyEdges()
 void MainWindow::medianFilter()
 {
     QtConcurrent::run([this]() {
-            imageProcessor->medianFilter(currentImageOpenCV, currentImageIPP, currentImageCUDA, currentImageCUDAKernel);
+            imageProcessor->medianFilter(
+                currentImageOpenCV
+                , currentImageIPP
+                , currentImageCUDA
+                , currentImageCUDAKernel
+                , currentImageNPP
+                , currentImageGStreamer);
         });
     //applyImageProcessing(&ImageProcessor::medianFilter, currentImage);
 }

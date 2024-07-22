@@ -9,7 +9,6 @@
 #include <QMessageBox>
 #include <QInputDialog>
 #include <QGuiApplication>
-#include <opencv2/opencv.hpp>
 #include "ImageProcessor.h"
 #include "ui_MainWindow.h"
 

@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\myLab\Project1\Project1\imageProcessingLib\ImageProcessingLib.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="C:\myLab\Project1\Project1\imageProcessingLib\ImageProcessingLib.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\myLab\Project1\Project1\imageProcessingLib\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{9D3E7378-7CBA-3A14-B27E-B48DFCECB333}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{A154977F-C8C8-3DDE-8F35-2F3B37B86844}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

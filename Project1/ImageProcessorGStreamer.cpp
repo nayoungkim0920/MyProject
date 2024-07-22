@@ -8,55 +8,6 @@ ImageProcessorGStreamer::~ImageProcessorGStreamer()
 {
 }
 
-cv::Mat gstBufferToMat(GstBuffer* buffer, GstCaps* caps) {
-    GstMapInfo map;
-    gst_buffer_map(buffer, &map, GST_MAP_READ);
-
-    gint width, height;
-    const gchar* format;
-    GstStructure* structure = gst_caps_get_structure(caps, 0);
-
-    gst_structure_get_int(structure, "width", &width);
-    gst_structure_get_int(structure, "height", &height);
-
-    format = gst_structure_get_string(structure, "format");
-    if (!format) {
-        std::cerr << "비디오 포맷을 가져오는 데 실패했습니다." << std::endl;
-        gst_buffer_unmap(buffer, &map);
-        return cv::Mat();
-    }
-
-    cv::Mat mat;
-    if (strcmp(format, "BGR") == 0) {
-        mat = cv::Mat(height, width, CV_8UC3, map.data, map.size / height).clone();
-    }
-    else if (strcmp(format, "GRAY8") == 0) {
-        mat = cv::Mat(height, width, CV_8UC1, map.data, map.size / height).clone();
-    }
-    else {
-        std::cerr << "지원하지 않는 비디오 포맷입니다: " << format << std::endl;
-    }
-
-    gst_buffer_unmap(buffer, &map);
-    return mat;
-}
-
-GstBuffer* matToGstBuffer(const cv::Mat& mat) {
-    // 이미지의 크기와 데이터 크기 출력
-    std::cout << "Creating GstBuffer with size: " << mat.total() * mat.elemSize() << " bytes" << std::endl;
-
-    GstBuffer* buffer = gst_buffer_new_allocate(nullptr, mat.total() * mat.elemSize(), nullptr);
-    if (!buffer) {
-        std::cerr << "GstBuffer allocation failed." << std::endl;
-        return nullptr;
-    }
-
-    gst_buffer_fill(buffer, 0, mat.data, mat.total() * mat.elemSize());
-    std::cout << "GstBuffer filled successfully." << std::endl;
-
-    return buffer;
-}
-
 cv::Mat ImageProcessorGStreamer::grayScale(cv::Mat& inputImage) {
     GstElement* pipeline = nullptr;
     GstElement* source = nullptr;
@@ -295,16 +246,6 @@ cv::Mat ImageProcessorGStreamer::rotate(cv::Mat& inputImage, bool isRight) {
     return outputImage;
 }
 
-// cv::Mat을 GstBuffer로 변환
-GstBuffer* matToGstBuffer(cv::Mat& mat) {
-    GstBuffer* buffer = gst_buffer_new_allocate(nullptr, mat.total() * mat.elemSize(), nullptr);
-    GstMapInfo map;
-    gst_buffer_map(buffer, &map, GST_MAP_WRITE);
-    std::memcpy(map.data, mat.data, mat.total() * mat.elemSize());
-    gst_buffer_unmap(buffer, &map);
-    return buffer;
-}
-
 cv::Mat ImageProcessorGStreamer::zoom(cv::Mat& inputImage, double newWidth, double newHeight) {
 
     GstElement* pipeline = nullptr;
@@ -417,45 +358,6 @@ cv::Mat ImageProcessorGStreamer::zoom(cv::Mat& inputImage, double newWidth, doub
     cv::resize(outputImage, zoomedImage, cv::Size(newWidth, newHeight), 0, 0, cv::INTER_LINEAR);
 
     return zoomedImage;
-}
-
-void printImagePixels(const cv::Mat& image, int numPixels) {
-    int count = 0;
-
-    // 이미지의 크기를 가져옵니다.
-    int rows = image.rows;
-    int cols = image.cols;
-
-    // 이미지가 비어있거나 픽셀 수가 0보다 작으면 반환합니다.
-    if (rows == 0 || cols == 0 || numPixels <= 0) {
-        std::cerr << "이미지 크기가 잘못되었거나 픽셀 수가 유효하지 않습니다." << std::endl;
-        return;
-    }
-
-    // 각 픽셀을 출력합니다.
-    for (int y = 0; y < rows && count < numPixels; ++y) {
-        for (int x = 0; x < cols && count < numPixels; ++x) {
-            // 픽셀 값을 가져옵니다.
-            if (image.channels() == 3) {
-                cv::Vec3b pixel = image.at<cv::Vec3b>(y, x);
-                std::cout << "Pixel (" << x << ", " << y << "): "
-                    << "B=" << static_cast<int>(pixel[0]) << ", "
-                    << "G=" << static_cast<int>(pixel[1]) << ", "
-                    << "R=" << static_cast<int>(pixel[2]) << std::endl;
-            }
-            else if (image.channels() == 1) {
-                uchar pixel = image.at<uchar>(y, x);
-                std::cout << "Pixel (" << x << ", " << y << "): "
-                    << "Gray=" << static_cast<int>(pixel) << std::endl;
-            }
-
-            count++;
-        }
-    }
-
-    if (count == 0) {
-        std::cerr << "픽셀을 출력할 수 없습니다." << std::endl;
-    }
 }
 
 cv::Mat ImageProcessorGStreamer::gaussianBlur(cv::Mat& inputImage, int kernelSize) {
@@ -588,34 +490,6 @@ cv::Mat ImageProcessorGStreamer::gaussianBlur(cv::Mat& inputImage, int kernelSiz
     return outputImage;
 }
 
-
-void ImageProcessorGStreamer::drawEdgesOnColorImage(cv::Mat& image, const cv::Mat& edges) {
-    // 엣지 이미지를 컬러 이미지에 초록색으로 오버레이
-    for (int y = 0; y < edges.rows; ++y) {
-        for (int x = 0; x < edges.cols; ++x) {
-            if (edges.at<uchar>(y, x) == 255) {
-                image.at<cv::Vec3b>(y, x)[0] = 0;   // Blue channel
-                image.at<cv::Vec3b>(y, x)[1] = 255; // Green channel
-                image.at<cv::Vec3b>(y, x)[2] = 0;   // Red channel
-            }
-        }
-    }
-}
-
-void ImageProcessorGStreamer::drawEdgesOnGrayImage(cv::Mat& image, const cv::Mat& edges) {
-    // 엣지 이미지를 그레이스케일 이미지에 흰색으로 오버레이
-    for (int y = 0; y < edges.rows; ++y) {
-        for (int x = 0; x < edges.cols; ++x) {
-            if (edges.at<uchar>(y, x) == 255) {
-                image.at<uchar>(y, x) = 255;
-            }
-            else {
-                image.at<uchar>(y, x) = 0;
-            }
-        }
-    }
-}
-
 cv::Mat ImageProcessorGStreamer::cannyEdges(cv::Mat& inputImage) {
 
     cv::Mat grayImage;
@@ -643,6 +517,40 @@ cv::Mat ImageProcessorGStreamer::cannyEdges(cv::Mat& inputImage) {
         // 그레이스케일 이미지에 흰색 엣지 표시
         outputImage.create(edges.size(), CV_8UC1);
         drawEdgesOnGrayImage(outputImage, edges);
+    }
+
+    return outputImage;
+}
+
+cv::Mat ImageProcessorGStreamer::medianFilter(cv::Mat& inputImage) {
+
+    cv::Mat outputImage;
+
+    if (inputImage.empty()) {
+        std::cerr << "Input image is empty." << std::endl;
+        return outputImage; // 빈 이미지 반환
+    }
+
+    int numChannels = inputImage.channels();
+    int kernelSize = 5; // 미디안 필터 커널 크기
+
+    // 그레이스케일 이미지 처리
+    if (numChannels == 1) {
+        cv::medianBlur(inputImage, outputImage, kernelSize);
+    }
+    // 컬러 이미지 처리
+    else if (numChannels == 3) {
+        std::vector<cv::Mat> channels(3);
+        cv::split(inputImage, channels);
+
+        for (int i = 0; i < 3; ++i) {
+            cv::medianBlur(channels[i], channels[i], kernelSize);
+        }
+
+        cv::merge(channels, outputImage);
+    }
+    else {
+        std::cerr << "Unsupported number of channels: " << numChannels << std::endl;
     }
 
     return outputImage;

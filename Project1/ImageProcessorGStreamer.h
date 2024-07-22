@@ -11,6 +11,8 @@
 #include <windows.h>
 #include <cstdlib>
 
+#include "ImageProcessingLib.h"
+
 class ImageProcessorGStreamer {
 public:
     ImageProcessorGStreamer();
@@ -21,11 +23,8 @@ public:
     cv::Mat zoom(cv::Mat& inputImage, double newWidth, double newHeight);
     cv::Mat cannyEdges(cv::Mat& inputImage);
     cv::Mat gaussianBlur(cv::Mat& inputImage, int kernelSize);
+    cv::Mat medianFilter(cv::Mat& inputImage);
     cv::Mat bilateralFilter(cv::Mat& inputImage);
-
-private:
-    void drawEdgesOnColorImage(cv::Mat& image, const cv::Mat& edges);
-    void drawEdgesOnGrayImage(cv::Mat& image, const cv::Mat& edges);
 };
 
 #endif // IMAGEPROCESSORGSTREAMER_H

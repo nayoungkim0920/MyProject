@@ -1031,9 +1031,11 @@ ImageProcessor::ProcessingResult ImageProcessor::cannyEdgesGStreamer(cv::Mat& in
 }
 
 QFuture<bool> ImageProcessor::medianFilter(cv::Mat& imageOpenCV
-    , cv::Mat& imageIPP
-    , cv::Mat& imageCUDA
-    , cv::Mat& imageCUDAKernel)
+                                            , cv::Mat& imageIPP
+                                            , cv::Mat& imageCUDA
+                                            , cv::Mat& imageCUDAKernel
+                                            , cv::Mat& imageNPP
+                                            , cv::Mat& imageGStreamer)
 {
 
     //함수 이름을 문자열로 저장
@@ -1044,6 +1046,8 @@ QFuture<bool> ImageProcessor::medianFilter(cv::Mat& imageOpenCV
         , &imageIPP
         , &imageCUDA
         , &imageCUDAKernel
+        , &imageNPP
+        , &imageGStreamer
         , functionName]() -> bool {
 
         QMutexLocker locker(&mutex);
@@ -1059,6 +1063,8 @@ QFuture<bool> ImageProcessor::medianFilter(cv::Mat& imageOpenCV
             pushToUndoStackIPP(imageIPP.clone());
             pushToUndoStackCUDA(imageCUDA.clone());
             pushToUndoStackCUDAKernel(imageCUDAKernel.clone());
+            pushToUndoStackNPP(imageNPP.clone());
+            pushToUndoStackGStreamer(imageGStreamer.clone());
 
             QVector<ProcessingResult> results;
 
@@ -1077,6 +1083,14 @@ QFuture<bool> ImageProcessor::medianFilter(cv::Mat& imageOpenCV
             ProcessingResult outputCUDAKernel = medianFilterCUDAKernel(imageCUDAKernel);
             lastProcessedImageCUDAKernel = outputCUDAKernel.processedImage.clone();
             results.append(outputCUDAKernel);
+
+            ProcessingResult outputNPP = medianFilterNPP(imageNPP);
+            lastProcessedImageNPP = outputNPP.processedImage.clone();
+            results.append(outputNPP);
+
+            ProcessingResult outputGStreamer = medianFilterGStreamer(imageGStreamer);
+            lastProcessedImageGStreamer = outputGStreamer.processedImage.clone();
+            results.append(outputGStreamer);
 
             emit imageProcessed(results);
 
@@ -1102,7 +1116,7 @@ ImageProcessor::ProcessingResult ImageProcessor::medianFilterOpenCV(cv::Mat& inp
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "medianFilter", "OpenCV", elapsedTimeMs
-    , "");
+    , "ksize:5");
 
     return result;
 }
@@ -1119,7 +1133,7 @@ ImageProcessor::ProcessingResult ImageProcessor::medianFilterIPP(cv::Mat& inputI
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "medianFilter", "IPP", elapsedTimeMs
-    , "");
+    , "ksize:5");
 
     return result;
 }
@@ -1136,7 +1150,7 @@ ImageProcessor::ProcessingResult ImageProcessor::medianFilterCUDA(cv::Mat& input
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "medianFilter", "CUDA", elapsedTimeMs
-    , "");
+    , "ksize:5");
 
     return result;
 }
@@ -1153,7 +1167,41 @@ ImageProcessor::ProcessingResult ImageProcessor::medianFilterCUDAKernel(cv::Mat&
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "medianFilter", "OpenCV", elapsedTimeMs
-    , "");
+    , "ksize:5");
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::medianFilterNPP(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    ImageProcessorNPP IPNPP;
+    cv::Mat outputImage = IPNPP.medianFilter(inputImage);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "medianFilter", "NPP", elapsedTimeMs
+        , "ksize:5");
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::medianFilterGStreamer(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    ImageProcessorGStreamer IPGStreamer;
+    cv::Mat outputImage = IPGStreamer.medianFilter(inputImage);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "medianFilter", "GStreamer", elapsedTimeMs
+        , "ksize:5");
 
     return result;
 }
@@ -1910,13 +1958,13 @@ ImageProcessor::ProcessingResult ImageProcessor::setResult(ProcessingResult& res
     result.processName = processName;
     result.inputInfo = "\n(Input) Channels: " + QString::number(inputImage.channels())
         + ", type: " + QString::number(inputImage.type())
-        + "(" + ImageTypeConverter::getImageTypeString(inputImage.type()) + ")"
+        + "(" + getImageTypeString(inputImage.type()) + ")"
         + ", depth: " + QString::number(inputImage.depth());
     result.processedImage = outputImage.clone();
     result.processingTime = processingTime;
     result.outputInfo = "\n(Output) Channels: " + QString::number(outputImage.channels())
         + ", type: " + QString::number(outputImage.type())
-        + "(" + ImageTypeConverter::getImageTypeString(outputImage.type()) + ")"
+        + "(" + getImageTypeString(outputImage.type()) + ")"
         + ", depth: " + QString::number(outputImage.depth());
     result.argInfo = argInfo;
 

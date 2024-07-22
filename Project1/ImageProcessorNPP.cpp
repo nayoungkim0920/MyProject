@@ -1,13 +1,5 @@
 #include "ImageProcessorNPP.h"
 
-// NPP 오류 처리 함수
-void checkNPPError(NppStatus status) {
-    if (status != NPP_SUCCESS) {
-        std::cerr << "NPP 오류: " << status << std::endl;
-        exit(EXIT_FAILURE);
-    }
-}
-
 ImageProcessorNPP::ImageProcessorNPP()
 {
 }
@@ -71,24 +63,6 @@ cv::Mat ImageProcessorNPP::grayScale(cv::Mat& inputImage) {
     cudaStreamDestroy(cudaStream);
 
     return outputImage;
-}
-
-// 이미지의 픽셀 값을 출력하는 함수
-void printPixelValues(const std::string& message, const cv::Mat& image) {
-    std::cout << message << ": ";
-    int numChannels = image.channels();
-    for (int y = 0; y < std::min(image.rows, 1); ++y) {
-        for (int x = 0; x < std::min(image.cols, 10); ++x) {
-            const uchar* pixel = image.ptr<uchar>(y) + x * numChannels;
-            std::cout << "(";
-            for (int c = 0; c < numChannels; ++c) {
-                std::cout << static_cast<int>(pixel[c]);
-                if (c < numChannels - 1) std::cout << ", ";
-            }
-            std::cout << ") ";
-        }
-        std::cout << std::endl;
-    }
 }
 
 cv::Mat ImageProcessorNPP::rotate(cv::Mat& inputImage, bool isRight) {
@@ -169,24 +143,6 @@ cv::Mat ImageProcessorNPP::rotate(cv::Mat& inputImage, bool isRight) {
     return outputImage;
 }
 
-// cv::Mat을 NPP 이미지로 변환
-Npp8u* matToNppImage(cv::Mat& mat, NppiSize& size, int& nppSize) {
-    nppSize = mat.cols * mat.rows * mat.elemSize();
-    Npp8u* pNppImage = new Npp8u[nppSize];
-    memcpy(pNppImage, mat.data, nppSize);
-    size.width = mat.cols;
-    size.height = mat.rows;
-    return pNppImage;
-}
-
-// NPP 이미지에서 cv::Mat으로 변환
-cv::Mat nppImageToMat(Npp8u* pNppImage, NppiSize size, int nppSize) {
-    cv::Mat mat(size.height, size.width, CV_8UC3, pNppImage);
-    return mat;
-}
-
-
-
 cv::Mat ImageProcessorNPP::zoom(cv::Mat& inputImage, double newWidth, double newHeight) {
     
     int inputWidth = inputImage.cols;
@@ -259,7 +215,7 @@ cv::Mat ImageProcessorNPP::zoom(cv::Mat& inputImage, double newWidth, double new
     }
 
     // NPP 오류 처리
-    checkNppError(nppStatus, "nppiResize failed");
+    checkNPPError(nppStatus);
 
     // GPU 이미지를 CPU 메모리로 다운로드
     cv::Mat outputImage(newHeightInt, newWidthInt, inputImage.type());
@@ -268,24 +224,7 @@ cv::Mat ImageProcessorNPP::zoom(cv::Mat& inputImage, double newWidth, double new
     return outputImage;
 }
 
-std::string typeToString(int type) {
-    int depth = CV_MAT_DEPTH(type);
-    int chans = CV_MAT_CN(type);
 
-    std::string depthStr;
-    switch (depth) {
-    case CV_8U:  depthStr = "CV_8U";  break;
-    case CV_8S:  depthStr = "CV_8S";  break;
-    case CV_16U: depthStr = "CV_16U"; break;
-    case CV_16S: depthStr = "CV_16S"; break;
-    case CV_32S: depthStr = "CV_32S"; break;
-    case CV_32F: depthStr = "CV_32F"; break;
-    case CV_64F: depthStr = "CV_64F"; break;
-    default:     depthStr = "Unknown"; break;
-    }
-
-    return depthStr + "C" + std::to_string(chans);
-}
 
 cv::Mat ImageProcessorNPP::gaussianBlur(cv::Mat& inputImage, int kernelSize) {
     if (kernelSize % 2 == 0 || kernelSize < 3) {
@@ -295,7 +234,7 @@ cv::Mat ImageProcessorNPP::gaussianBlur(cv::Mat& inputImage, int kernelSize) {
 
     std::cout << "Kernel size: " << kernelSize << std::endl;
     std::cout << "Input image size: " << inputImage.cols << " x " << inputImage.rows << std::endl;
-    std::cout << "Input image type: " << typeToString(inputImage.type()) << std::endl;
+    std::cout << "Input image type: " << cv::typeToString(inputImage.type()) << std::endl;
 
     cv::Mat outputImage(inputImage.size(), inputImage.type());
 
@@ -453,63 +392,8 @@ cv::Mat ImageProcessorNPP::gaussianBlur(cv::Mat& inputImage, int kernelSize) {
     return outputImage;
 }
 
-void checkNppError(NppStatus status, const std::string& errorMessage) {
-    if (status != NPP_SUCCESS) {
-        std::cerr << errorMessage << " Error code: " << status << std::endl;
-        throw std::runtime_error(errorMessage);
-    }
-}
 
-void checkCudaError(cudaError_t err, const std::string& errorMessage) {
-    if (err != cudaSuccess) {
-        std::cerr << errorMessage << " Error: " << cudaGetErrorString(err) << std::endl;
-        throw std::runtime_error(errorMessage);
-    }
-}
 
-void checkNPPStatus(NppStatus status, const std::string& context) {
-    if (status != NPP_SUCCESS) {
-        std::cerr << "NPP error in " << context << ": " << status << std::endl;
-        switch (status) {
-        case NPP_CUDA_KERNEL_EXECUTION_ERROR:
-            std::cerr << "CUDA kernel execution error." << std::endl;
-            break;
-        case NPP_BAD_ARGUMENT_ERROR:
-            std::cerr << "Bad argument error." << std::endl;
-            break;
-        case NPP_MEMORY_ALLOCATION_ERR:
-            std::cerr << "Memory allocation error." << std::endl;
-            break;
-        default:
-            std::cerr << "Unknown error: " << status << std::endl;
-            break;
-        }
-    }
-}
-
-void checkDeviceProperties() {
-    int deviceCount;
-    cudaError_t cudaErr = cudaGetDeviceCount(&deviceCount);
-    if (cudaErr != cudaSuccess) {
-        std::cerr << "Failed to get device count: " << cudaGetErrorString(cudaErr) << std::endl;
-        return;
-    }
-
-    for (int i = 0; i < deviceCount; ++i) {
-        cudaDeviceProp deviceProp;
-        cudaErr = cudaGetDeviceProperties(&deviceProp, i);
-        if (cudaErr != cudaSuccess) {
-            std::cerr << "Failed to get device properties: " << cudaGetErrorString(cudaErr) << std::endl;
-            return;
-        }
-
-        std::cout << "Device " << i << ": " << deviceProp.name << std::endl;
-        std::cout << "  Compute Capability: " << deviceProp.major << "." << deviceProp.minor << std::endl;
-        std::cout << "  Total Global Memory: " << deviceProp.totalGlobalMem / (1024 * 1024) << " MB" << std::endl;
-        std::cout << "  Max Threads Per Block: " << deviceProp.maxThreadsPerBlock << std::endl;
-        std::cout << "  Max Grid Size: (" << deviceProp.maxGridSize[0] << ", " << deviceProp.maxGridSize[1] << ", " << deviceProp.maxGridSize[2] << ")" << std::endl;
-    }
-}
 
 cv::Mat ImageProcessorNPP::cannyEdges(cv::Mat& inputImage) {
 
@@ -595,6 +479,91 @@ cv::Mat ImageProcessorNPP::cannyEdges(cv::Mat& inputImage) {
                 }
             }
         }
+    }
+
+    return outputImage;
+}
+
+cv::Mat ImageProcessorNPP::medianFilter(cv::Mat& inputImage) {    
+
+    if (inputImage.empty()) {
+        std::cerr << "Input image is empty." << std::endl;
+        return cv::Mat(); // 빈 이미지 반환
+    }
+
+    int numChannels = inputImage.channels();
+    cv::Mat outputImage(inputImage.size(), inputImage.type());
+
+    Npp32s nSrcStep = inputImage.step[0];
+    Npp32s nDstStep = outputImage.step[0];
+    NppiSize oSizeROI = { inputImage.cols, inputImage.rows };
+    NppiSize oMaskSize = { 5, 5 }; // 5x5 필터
+    NppiPoint oAnchor = { 2, 2 }; // 5x5 필터의 중앙
+
+    try {
+        NppStatus status;
+        Npp32u nBufferSize = 0;
+
+        // CUDA 초기화
+        cudaSetDevice(0);        
+
+        // 버퍼 메모리 할당 및 이미지 처리
+        Npp8u* d_buffer;
+        cudaMalloc(&d_buffer, nBufferSize);
+
+        Npp8u* d_src;
+        Npp8u* d_dst;
+        size_t imageSize = inputImage.rows * inputImage.step;
+
+        cudaMalloc(&d_src, imageSize);
+        cudaMalloc(&d_dst, imageSize);
+
+        // 입력 이미지를 GPU 메모리로 복사
+        cudaMemcpy(d_src, inputImage.data, imageSize, cudaMemcpyHostToDevice);
+
+        // 미디안 필터 적용
+        if (numChannels == 3) {
+            status = nppiFilterMedian_8u_C3R(
+                d_src, nSrcStep, d_dst, nDstStep, oSizeROI, oMaskSize, oAnchor, d_buffer
+            );
+
+            std::cout << "nppiFilterMedian_8u_C3R status: " << status << std::endl;
+            if (status != NPP_SUCCESS) {
+                std::cerr << "nppiFilterMedian_8u_C3R failed with status: " << status << std::endl;
+                throw std::runtime_error("nppiFilterMedian_8u_C3R failed.");
+            }
+        }
+        else if (numChannels == 1) {
+            status = nppiFilterMedian_8u_C1R(
+                d_src, nSrcStep, d_dst, nDstStep, oSizeROI, oMaskSize, oAnchor, d_buffer
+            );
+
+            std::cout << "nppiFilterMedian_8u_C1R status: " << status << std::endl;
+            if (status != NPP_SUCCESS) {
+                std::cerr << "nppiFilterMedian_8u_C1R failed with status: " << status << std::endl;
+                throw std::runtime_error("nppiFilterMedian_8u_C1R failed.");
+            }
+        }
+
+        // 결과를 호스트로 복사
+        cudaMemcpy(outputImage.data, d_dst, imageSize, cudaMemcpyDeviceToHost);
+
+        // GPU 메모리 해제
+        cudaFree(d_src);
+        cudaFree(d_dst);
+        cudaFree(d_buffer);
+
+        // CUDA 에러 체크
+        cudaError_t cudaErr = cudaGetLastError();
+        if (cudaErr != cudaSuccess) {
+            std::cerr << "CUDA error: " << cudaGetErrorString(cudaErr) << std::endl;
+            throw std::runtime_error("CUDA error occurred.");
+        }
+
+    }
+    catch (const std::exception& ex) {
+        std::cerr << "Exception: " << ex.what() << std::endl;
+        return cv::Mat(); // 빈 이미지 반환
     }
 
     return outputImage;
