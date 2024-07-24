@@ -217,7 +217,11 @@ void MainWindow::medianFilter()
 void MainWindow::laplacianFilter()
 {
     QtConcurrent::run([this]() {
-        imageProcessor->laplacianFilter(currentImageOpenCV, currentImageIPP, currentImageCUDA, currentImageCUDAKernel);
+        imageProcessor->laplacianFilter(
+            currentImageOpenCV
+            , currentImageIPP
+            , currentImageCUDA
+            , currentImageCUDAKernel);
         });
     //applyImageProcessing(&ImageProcessor::laplacianFilter, currentImage);
 }
@@ -225,7 +229,13 @@ void MainWindow::laplacianFilter()
 void MainWindow::bilateralFilter()
 {
     QtConcurrent::run([this]() {
-            imageProcessor->bilateralFilter(currentImageOpenCV, currentImageIPP, currentImageCUDA, currentImageCUDAKernel, currentImageNPP, currentImageGStreamer);
+            imageProcessor->bilateralFilter(
+                currentImageOpenCV
+                , currentImageIPP
+                , currentImageCUDA
+                , currentImageCUDAKernel
+                , currentImageNPP
+                , currentImageGStreamer);
         });
     //applyImageProcessing(&ImageProcessor::bilateralFilter, currentImage);
 }
@@ -233,7 +243,14 @@ void MainWindow::bilateralFilter()
 void MainWindow::sobelFilter()
 {
     QtConcurrent::run([this]() {
-            imageProcessor->sobelFilter(currentImageOpenCV, currentImageIPP, currentImageCUDA, currentImageCUDAKernel);
+            imageProcessor->sobelFilter(
+                currentImageOpenCV
+                , currentImageIPP
+                , currentImageCUDA
+                , currentImageCUDAKernel
+                , currentImageNPP
+                , currentImageGStreamer
+            );
         });
     //applyImageProcessing(&ImageProcessor::)
 }

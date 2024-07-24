@@ -673,105 +673,181 @@ cv::Mat ImageProcessorIPP::laplacianFilter(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorIPP::bilateralFilter(cv::Mat& inputImage)
 {
-    // IPP 구조체와 버퍼 크기 계산
+    int numChannels = inputImage.channels();
     IppiSize roiSize = { inputImage.cols, inputImage.rows };
-    int kernelSize = 9; // 필터 크기
-    IppDataType dataType = ipp8u; // 데이터 타입 (8비트 무채색 이미지)
-    int numChannels = 3; // 채널 수
-    IppiDistanceMethodType distMethod = ippDistNormL2; // 거리 방법
+    int kernelSize = 9; // Filter size
+    IppDataType dataType;
+    IppiDistanceMethodType distMethod; // Distance method
     int specSize = 0, bufferSize = 0;
 
-    ippiFilterBilateralGetBufferSize(ippiFilterBilateralGauss, roiSize, kernelSize, dataType, numChannels, distMethod, &specSize, &bufferSize);
+    // Determine data type and allocate buffer size based on channels
+    if (numChannels == 1) {
+        dataType = ipp8u; // Grayscale
+        distMethod = ippDistNormL1;
 
-    // 메모리 할당
-    IppiFilterBilateralSpec* pSpec = (IppiFilterBilateralSpec*)ippMalloc(specSize);
-    Ipp8u* pBuffer = (Ipp8u*)ippMalloc(bufferSize);
+        // Calculate buffer size needed for the filter
+        IppStatus status = ippiFilterBilateralBorderGetBufferSize(
+            ippiFilterBilateralGauss, // Filter type
+            roiSize,
+            kernelSize / 2, // Radius of circular neighborhood
+            dataType,
+            numChannels,
+            distMethod,
+            &specSize,
+            &bufferSize
+        );
 
-    // 필터 초기화
-    IppStatus status = ippiFilterBilateralInit(ippiFilterBilateralGauss, roiSize, kernelSize, dataType, numChannels, distMethod, 75, 75, pSpec);
-    if (status != ippStsNoErr) {
-        std::cerr << "Error initializing bilateral filter: " << status << std::endl;
+        std::cout << "Buffer size calculation status: " << status << std::endl;
+        std::cout << "Calculated Spec size: " << specSize << ", Calculated Buffer size: " << bufferSize << std::endl;
+
+        if (status != ippStsNoErr) {
+            std::cerr << "Error getting buffer size: " << status << std::endl;
+            switch (status) {
+            case ippStsBadArgErr:
+                std::cerr << "Bad argument error. Check input parameters." << std::endl;
+                break;
+            case ippStsSizeErr:
+                std::cerr << "Size error. Check roiSize and kernelSize." << std::endl;
+                break;
+            case ippStsNotSupportedModeErr:
+                std::cerr << "Not supported mode error. Check filter or distMethod." << std::endl;
+                break;
+            case ippStsDataTypeErr:
+                std::cerr << "Data type error. Check dataType." << std::endl;
+                break;
+            case ippStsNumChannelsErr:
+                std::cerr << "Number of channels error. Check numChannels." << std::endl;
+                break;
+            default:
+                std::cerr << "Other error: " << status << std::endl;
+                break;
+            }
+            return cv::Mat(); // Return empty image
+        }
+
+        // Allocate memory
+        IppiFilterBilateralSpec* pSpec = (IppiFilterBilateralSpec*)ippMalloc(specSize);
+        Ipp8u* pBuffer = (Ipp8u*)ippMalloc(bufferSize);
+        std::cout << "Allocated memory for spec size: " << specSize << ", buffer size: " << bufferSize << std::endl;
+        if (!pSpec || !pBuffer) {
+            std::cerr << "Error allocating memory for filter." << std::endl;
+            ippFree(pSpec);
+            ippFree(pBuffer);
+            return cv::Mat(); // Return empty image
+        }
+        std::cout << "Memory allocated successfully." << std::endl;
+
+        // Initialize the filter
+        status = ippiFilterBilateralBorderInit(
+            ippiFilterBilateralGauss, // Filter type
+            roiSize,
+            kernelSize / 2, // Radius of circular neighborhood
+            dataType,
+            numChannels,
+            distMethod,
+            75.0f, // valSquareSigma
+            75.0f, // posSquareSigma
+            pSpec
+        );
+
+        std::cout << "Filter initialization status: " << status << std::endl;
+        if (status != ippStsNoErr) {
+            std::cerr << "Error initializing bilateral filter: " << status << std::endl;
+            ippFree(pSpec);
+            ippFree(pBuffer);
+            return cv::Mat(); // Return empty image
+        }
+        std::cout << "Filter initialized successfully." << std::endl;
+
+        // Allocate buffer for output image
+        cv::Mat outputImage(inputImage.size(), inputImage.type());
+        std::cout << "Output image size: " << outputImage.cols << " x " << outputImage.rows << ", type: " << outputImage.type() << std::endl;
+        if (outputImage.empty()) {
+            std::cerr << "Error allocating output image." << std::endl;
+            ippFree(pSpec);
+            ippFree(pBuffer);
+            return cv::Mat(); // Return empty image
+        }
+        std::cout << "Output image allocated successfully." << std::endl;
+
+        // Grayscale image
+        status = ippiFilterBilateralBorder_8u_C1R(
+            inputImage.ptr<Ipp8u>(),
+            inputImage.step[0], // Row step (stride) in bytes
+            outputImage.ptr<Ipp8u>(),
+            outputImage.step[0], // Row step (stride) in bytes
+            roiSize,
+            ippBorderRepl,
+            NULL,
+            pSpec,
+            pBuffer
+        );
+        std::cout << "Bilateral filter (grayscale) status: " << status << std::endl;
+        if (status != ippStsNoErr) {
+            std::cerr << "Error in filtering process." << std::endl;
+        }
+        else {
+            std::cout << "Bilateral filter applied successfully." << std::endl;
+        }
+
+        // Free memory
         ippFree(pSpec);
         ippFree(pBuffer);
-        return cv::Mat();
+
+        return outputImage;
     }
+    else if (numChannels == 3) {
+        dataType = ipp8u; // BGR color
+        distMethod = ippDistNormL2;
 
-    // 출력 이미지 버퍼 할당
-    cv::Mat outputImage(inputImage.size(), inputImage.type());
+        // Calculate buffer size needed for the filter
+        IppStatus status = ippiFilterBilateralGetBufferSize(ippiFilterBilateralGauss, roiSize, kernelSize, dataType, numChannels, distMethod, &specSize, &bufferSize);
+        if (status != ippStsNoErr) {
+            std::cerr << "Error getting buffer size: " << status << std::endl;
+            return cv::Mat(); // Return empty image
+        }
 
-    // 양방향 필터 적용
-    status = ippiFilterBilateral_8u_C3R(inputImage.ptr<Ipp8u>(), inputImage.step, outputImage.ptr<Ipp8u>(), outputImage.step, roiSize, ippBorderRepl, NULL, pSpec, pBuffer);
-    if (status != ippStsNoErr) {
-        std::cerr << "Error applying bilateral filter: " << status << std::endl;
-    }
+        // Allocate memory
+        IppiFilterBilateralSpec* pSpec = (IppiFilterBilateralSpec*)ippMalloc(specSize);
+        Ipp8u* pBuffer = (Ipp8u*)ippMalloc(bufferSize);
+        if (!pSpec || !pBuffer) {
+            std::cerr << "Error allocating memory for filter." << std::endl;
+            ippFree(pSpec);
+            ippFree(pBuffer);
+            return cv::Mat(); // Return empty image
+        }
 
-    // 메모리 해제
-    ippFree(pSpec);
-    ippFree(pBuffer);
+        // Initialize the filter
+        status = ippiFilterBilateralInit(ippiFilterBilateralGauss, roiSize, kernelSize, dataType, numChannels, distMethod, 75, 75, pSpec);
+        if (status != ippStsNoErr) {
+            std::cerr << "Error initializing bilateral filter: " << status << std::endl;
+            ippFree(pSpec);
+            ippFree(pBuffer);
+            return cv::Mat(); // Return empty image
+        }
 
-    return outputImage;
+        // Allocate buffer for output image
+        cv::Mat outputImage(inputImage.size(), inputImage.type());
 
-    // NPP
-    /*
-    ProcessingResult result;
-    double startTime = cv::getTickCount(); // 시작 시간 측정
+        status = ippiFilterBilateral_8u_C3R(inputImage.ptr<Ipp8u>(), inputImage.step, outputImage.ptr<Ipp8u>(), outputImage.step, roiSize, ippBorderRepl, NULL, pSpec, pBuffer);
 
-    // 입력 이미지를 GPU 메모리로 복사
-    Npp8u* d_inputImage;
-    size_t inputImagePitch;
-    cudaMallocPitch((void**)&d_inputImage, &inputImagePitch, inputImage.cols * sizeof(Npp8u) * inputImage.channels(), inputImage.rows);
-    cudaMemcpy2D(d_inputImage, inputImagePitch, inputImage.data, inputImage.step, inputImage.cols * sizeof(Npp8u) * inputImage.channels(), inputImage.rows, cudaMemcpyHostToDevice);
-
-    // 출력 이미지를 GPU 메모리로 할당
-    cv::Mat outputImage(inputImage.size(), inputImage.type());
-    Npp8u* d_outputImage;
-    size_t outputImagePitch;
-    cudaMallocPitch((void**)&d_outputImage, &outputImagePitch, outputImage.cols * sizeof(Npp8u) * outputImage.channels(), outputImage.rows);
-
-    // 양방향 필터 파라미터 설정
-    NppiSize oSrcSize = { inputImage.cols, inputImage.rows };
-    NppiPoint oSrcOffset = { 0, 0 };
-    Npp32f nValSquareSigma = 75.0f;
-    Npp32f nPosSquareSigma = 75.0f;
-    int nRadius = 9;
-    NppiBorderType eBorderType = NPP_BORDER_REPLICATE;
-
-    // 이미지 채널 수에 따라 함수 선택
-    if (inputImage.channels() == 1) {
-        NppStatus status = nppiFilterBilateralGaussBorder_8u_C1R(d_inputImage, static_cast<int>(inputImagePitch), oSrcSize, oSrcOffset,
-            d_outputImage, static_cast<int>(outputImagePitch), oSrcSize,
-            nRadius, 1, nValSquareSigma, nPosSquareSigma, eBorderType);
-        if (status != NPP_SUCCESS) {
+        if (status != ippStsNoErr) {
             std::cerr << "Error applying bilateral filter: " << status << std::endl;
         }
-    }
-    else if (inputImage.channels() == 3) {
-        NppStatus status = nppiFilterBilateralGaussBorder_8u_C3R(d_inputImage, static_cast<int>(inputImagePitch), oSrcSize, oSrcOffset,
-            d_outputImage, static_cast<int>(outputImagePitch), oSrcSize,
-            nRadius, 3, nValSquareSigma, nPosSquareSigma, eBorderType);
-        if (status != NPP_SUCCESS) {
-            std::cerr << "Error applying bilateral filter: " << status << std::endl;
-        }
+
+        // Free memory
+        ippFree(pSpec);
+        ippFree(pBuffer);
+
+        return outputImage;
     }
     else {
-        std::cerr << "Unsupported number of channels: " << inputImage.channels() << std::endl;
+        std::cerr << "Unsupported number of channels: " << numChannels << std::endl;
+        return cv::Mat(); // Return empty image
     }
-
-    // 처리된 이미지를 호스트로 복사
-    cudaMemcpy2D(outputImage.data, outputImage.step, d_outputImage, outputImagePitch, outputImage.cols * sizeof(Npp8u) * outputImage.channels(), outputImage.rows, cudaMemcpyDeviceToHost);
-
-    double endTime = cv::getTickCount(); // 종료 시간 측정
-    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
-
-    result = setResult(result, inputImage, outputImage, "bilateralFilter", "NPP", elapsedTimeMs);
-
-    // 메모리 해제
-    cudaFree(d_inputImage);
-    cudaFree(d_outputImage);
-
-    return result;
-    */
+    
 }
+
 
 cv::Mat ImageProcessorIPP::sobelFilter(cv::Mat& inputImage)
 {

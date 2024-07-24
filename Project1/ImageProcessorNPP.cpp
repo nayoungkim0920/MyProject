@@ -66,11 +66,16 @@ cv::Mat ImageProcessorNPP::grayScale(cv::Mat& inputImage) {
 }
 
 cv::Mat ImageProcessorNPP::rotate(cv::Mat& inputImage, bool isRight) {
+    if (inputImage.empty()) {
+        std::cerr << "Input image is empty." << std::endl;
+        return cv::Mat();
+    }
+
     int srcWidth = inputImage.cols;
     int srcHeight = inputImage.rows;
     int numChannels = inputImage.channels();
 
-    // 회전된 이미지의 크기 계산
+    // 회전 각도 설정
     double angleInDegrees = isRight ? 90.0 : -90.0;
     double angleInRadians = angleInDegrees * CV_PI / 180.0; // 각도를 라디안 단위로 변환
 
@@ -403,7 +408,8 @@ cv::Mat ImageProcessorNPP::cannyEdges(cv::Mat& inputImage) {
 
     // Convert to grayscale if necessary
     if (inputImage.channels() == 3) {
-        cv::cvtColor(inputImage, grayImage, cv::COLOR_BGR2GRAY);
+        //cv::cvtColor(inputImage, grayImage, cv::COLOR_BGR2GRAY);
+        grayImage = grayScale(inputImage);
     }
     else {
         grayImage = inputImage.clone();
@@ -565,6 +571,101 @@ cv::Mat ImageProcessorNPP::medianFilter(cv::Mat& inputImage) {
         std::cerr << "Exception: " << ex.what() << std::endl;
         return cv::Mat(); // 빈 이미지 반환
     }
+
+    return outputImage;
+}
+
+cv::Mat ImageProcessorNPP::sobelFilter(cv::Mat& inputImage) {
+    if (inputImage.empty()) {
+        std::cerr << "Input image is empty." << std::endl;
+        return cv::Mat(); // 빈 이미지 반환
+    }
+
+    int numChannels = inputImage.channels();
+    cv::Mat outputImage(inputImage.size(), inputImage.type());
+
+    Npp32s nSrcStep = inputImage.step[0];
+    Npp32s nDstStep = outputImage.step[0];
+    NppiSize oSizeROI = { inputImage.cols, inputImage.rows };
+
+    NppStatus status;
+
+    // CUDA 초기화
+    cudaSetDevice(0);
+
+    size_t imageSize = inputImage.rows * inputImage.step;
+
+    unsigned char* d_src;
+    unsigned char* d_dst;
+
+    // CUDA 메모리 할당
+    cudaMalloc(&d_src, imageSize);
+    cudaMalloc(&d_dst, imageSize);
+
+    // 입력 이미지를 GPU 메모리로 복사
+    cudaMemcpy(d_src, inputImage.data, imageSize, cudaMemcpyHostToDevice);
+
+    // 소벨 필터 처리
+    try {
+        if (numChannels == 3) {
+            // 수평 소벨 필터
+            status = nppiFilterSobelHoriz_8u_C3R(d_src, nSrcStep, d_dst, nDstStep, oSizeROI);
+            if (status != NPP_SUCCESS) {
+                std::cerr << "nppiFilterSobelHoriz_8u_C3R failed with status: " << status << std::endl;
+                throw std::runtime_error("nppiFilterSobelHoriz_8u_C3R failed.");
+            }
+
+            // 수직 소벨 필터
+            status = nppiFilterSobelVert_8u_C3R(d_dst, nSrcStep, d_dst, nDstStep, oSizeROI);
+            if (status != NPP_SUCCESS) {
+                std::cerr << "nppiFilterSobelVert_8u_C3R failed with status: " << status << std::endl;
+                throw std::runtime_error("nppiFilterSobelVert_8u_C3R failed.");
+            }
+        }
+        else if (numChannels == 1) {
+            // 그레이스케일 이미지에서 소벨 필터 적용
+
+            // 수평 소벨 필터
+            status = nppiFilterSobelHoriz_8u_C1R(d_src, nSrcStep, d_dst, nDstStep, oSizeROI);
+            if (status != NPP_SUCCESS) {
+                std::cerr << "nppiFilterSobelHoriz_8u_C1R failed with status: " << status << std::endl;
+                throw std::runtime_error("nppiFilterSobelHoriz_8u_C1R failed.");
+            }
+
+            // 수직 소벨 필터
+            status = nppiFilterSobelVert_8u_C1R(d_dst, nSrcStep, d_dst, nDstStep, oSizeROI);
+            if (status != NPP_SUCCESS) {
+                std::cerr << "nppiFilterSobelVert_8u_C1R failed with status: " << status << std::endl;
+                throw std::runtime_error("nppiFilterSobelVert_8u_C1R failed.");
+            }
+        }
+        else {
+            std::cerr << "Unsupported number of channels: " << numChannels << std::endl;
+            cudaFree(d_src);
+            cudaFree(d_dst);
+            return cv::Mat(); // 빈 이미지 반환
+        }
+
+        // 결과를 호스트로 복사
+        cudaMemcpy(outputImage.data, d_dst, imageSize, cudaMemcpyDeviceToHost);
+
+        // CUDA 오류 체크
+        cudaError_t cudaErr = cudaGetLastError();
+        if (cudaErr != cudaSuccess) {
+            std::cerr << "CUDA error: " << cudaGetErrorString(cudaErr) << std::endl;
+            throw std::runtime_error("CUDA error occurred.");
+        }
+    }
+    catch (const std::exception& ex) {
+        std::cerr << "Exception: " << ex.what() << std::endl;
+        cudaFree(d_src);
+        cudaFree(d_dst);
+        return cv::Mat(); // 빈 이미지 반환
+    }
+
+    // GPU 메모리 해제
+    cudaFree(d_src);
+    cudaFree(d_dst);
 
     return outputImage;
 }

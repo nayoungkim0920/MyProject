@@ -75,7 +75,7 @@ public:
     QFuture<bool> medianFilter(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, cv::Mat& imageNPP, cv::Mat& imageGStreamer);
     QFuture<bool> laplacianFilter(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
     QFuture<bool> bilateralFilter(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, cv::Mat& imageNPP, cv::Mat& imageGStreamer);
-    QFuture<bool> sobelFilter(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
+    QFuture<bool> sobelFilter(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, cv::Mat& imageNPP, cv::Mat& imageGStreamer);
 
     bool canUndoOpenCV() const;
     bool canRedoOpenCV() const;
@@ -200,6 +200,8 @@ private:
     ProcessingResult sobelFilterIPP(cv::Mat& inputImage);
     ProcessingResult sobelFilterCUDA(cv::Mat& inputImage);
     ProcessingResult sobelFilterCUDAKernel(cv::Mat& inputImage);
+    ProcessingResult sobelFilterNPP(cv::Mat& inputImage);
+    ProcessingResult sobelFilterGStreamer(cv::Mat& inputImage);
 
     double getCurrentTimeMs();
 };

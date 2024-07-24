@@ -254,7 +254,7 @@ cv::Mat ImageProcessorCUDA::sobelFilter(cv::Mat& inputImage)
         grayImage = grayScale(inputImage);
     }
     else {
-        grayImage = inputImage;
+        grayImage = inputImage.clone();
     }
 
     // Transfer input image to GPU

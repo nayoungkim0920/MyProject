@@ -88,9 +88,9 @@ cv::Mat ImageProcessorCUDAKernel::bilateralFilter(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorCUDAKernel::sobelFilter(cv::Mat& inputImage)
 {
-    cv::Mat grayImage = grayScale(inputImage);
+    //cv::Mat grayImage = grayScale(inputImage);
     cv::Mat outputImage;
-    callSobelFilterCUDA(grayImage, outputImage);
+    callSobelFilterCUDA(inputImage, outputImage);
 
     return outputImage;
 }

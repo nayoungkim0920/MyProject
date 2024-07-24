@@ -304,13 +304,14 @@ QFuture<bool> ImageProcessor::grayScale(cv::Mat& imageOpenCV
                 return false;
             }
 
-            if (imageOpenCV.channels() == 3) {
-                pushToUndoStackOpenCV(imageOpenCV.clone());
-                pushToUndoStackIPP(imageIPP.clone());
-                pushToUndoStackCUDA(imageCUDA.clone());
-                pushToUndoStackCUDAKernel(imageCUDAKernel.clone());
-                pushToUndoStackNPP(imageNPP.clone());
-                pushToUndoStackGStreamer(imageGStreamer.clone());
+            pushToUndoStackOpenCV(imageOpenCV.clone());
+            pushToUndoStackIPP(imageIPP.clone());
+            pushToUndoStackCUDA(imageCUDA.clone());
+            pushToUndoStackCUDAKernel(imageCUDAKernel.clone());
+            pushToUndoStackNPP(imageNPP.clone());
+            pushToUndoStackGStreamer(imageGStreamer.clone());
+
+            if (imageOpenCV.channels() == 3) {                
 
                 QVector<ProcessingResult> results;
 
@@ -341,12 +342,6 @@ QFuture<bool> ImageProcessor::grayScale(cv::Mat& imageOpenCV
                 emit imageProcessed(results);
             }
             else {
-                pushToUndoStackOpenCV(imageOpenCV.clone());
-                pushToUndoStackIPP(imageIPP.clone());
-                pushToUndoStackCUDA(imageCUDA.clone());
-                pushToUndoStackCUDAKernel(imageCUDAKernel.clone());
-                pushToUndoStackCUDAKernel(imageNPP.clone());
-                pushToUndoStackGStreamer(imageGStreamer.clone());
 
                 lastProcessedImageOpenCV = imageOpenCV.clone();
                 lastProcessedImageIPP = imageIPP.clone();
@@ -1520,7 +1515,9 @@ ImageProcessor::ProcessingResult ImageProcessor::bilateralFilterGStreamer(cv::Ma
 QFuture<bool> ImageProcessor::sobelFilter(cv::Mat& imageOpenCV
                                         , cv::Mat& imageIPP
                                         , cv::Mat& imageCUDA
-                                        , cv::Mat& imageCUDAKernel)
+                                        , cv::Mat& imageCUDAKernel
+                                        , cv::Mat& imageNPP
+                                        , cv::Mat& imageGStreamer)
 {
     //함수 이름을 문자열로 저장
     const char* functionName = __func__;
@@ -1530,6 +1527,8 @@ QFuture<bool> ImageProcessor::sobelFilter(cv::Mat& imageOpenCV
         , &imageIPP
         , &imageCUDA
         , &imageCUDAKernel
+        , &imageNPP
+        , &imageGStreamer
         , functionName]() -> bool {
 
         if (imageOpenCV.empty()) {
@@ -1541,6 +1540,8 @@ QFuture<bool> ImageProcessor::sobelFilter(cv::Mat& imageOpenCV
         pushToUndoStackIPP(imageIPP.clone());
         pushToUndoStackCUDA(imageCUDA.clone());
         pushToUndoStackCUDAKernel(imageCUDAKernel.clone());
+        pushToUndoStackNPP(imageNPP.clone());
+        pushToUndoStackGStreamer(imageGStreamer.clone());
 
         QVector<ProcessingResult> results;
 
@@ -1559,6 +1560,14 @@ QFuture<bool> ImageProcessor::sobelFilter(cv::Mat& imageOpenCV
         ProcessingResult outputCUDAKernel = sobelFilterCUDAKernel(imageCUDAKernel);
         lastProcessedImageCUDAKernel = outputCUDAKernel.processedImage.clone();
         results.append(outputCUDAKernel);
+
+        ProcessingResult outputNPP = sobelFilterNPP(imageNPP);
+        lastProcessedImageNPP = outputNPP.processedImage.clone();
+        results.append(outputNPP);
+
+        ProcessingResult outputGStreamer = sobelFilterGStreamer(imageGStreamer);
+        lastProcessedImageGStreamer = outputGStreamer.processedImage.clone();
+        results.append(outputGStreamer);
 
         emit imageProcessed(results);
 
@@ -1630,6 +1639,40 @@ ImageProcessor::ProcessingResult ImageProcessor::sobelFilterCUDAKernel(cv::Mat& 
 
     result = setResult(result, inputImage, outputImage, "sobelFilter", "CUDAKernel", elapsedTimeMs
     , "");
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::sobelFilterNPP(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    ImageProcessorNPP IPNPP;
+    cv::Mat outputImage = IPNPP.sobelFilter(inputImage);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "sobelFilter", "NPP", elapsedTimeMs
+        , "");
+
+    return result;
+}
+
+ImageProcessor::ProcessingResult ImageProcessor::sobelFilterGStreamer(cv::Mat& inputImage)
+{
+    ProcessingResult result;
+    double startTime = cv::getTickCount(); // 시작 시간 측정
+
+    ImageProcessorGStreamer IPGStreamer;
+    cv::Mat outputImage = IPGStreamer.sobelFilter(inputImage);
+
+    double endTime = cv::getTickCount(); // 종료 시간 측정
+    double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
+
+    result = setResult(result, inputImage, outputImage, "sobelFilter", "GStreamer", elapsedTimeMs
+        , "");
 
     return result;
 }

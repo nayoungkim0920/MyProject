@@ -24,6 +24,7 @@ public:
     cv::Mat cannyEdges(cv::Mat& inputImage);
     cv::Mat gaussianBlur(cv::Mat& inputImage, int kernelSize);
     cv::Mat medianFilter(cv::Mat& inputImage);
+    cv::Mat sobelFilter(cv::Mat& inputImage);
     cv::Mat bilateralFilter(cv::Mat& inputImage);
 };
 

@@ -104,21 +104,37 @@ target_link_libraries(Project1
     ${GSTREAMER_LIBRARIES}
 )
 
+# 빌드 후 TARGET_FILE_DIR 출력
+add_custom_command(TARGET Project1 POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E echo "TARGET_FILE_DIR for Project1: $<TARGET_FILE_DIR:Project1>"
+    COMMAND ${CMAKE_COMMAND} -E echo "$<TARGET_FILE_DIR:Project1>" > "Project1_dir.txt"
+)
+
 # 실행 파일 출력 디렉토리 설정
 set_target_properties(Project1 PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/Debug"
     RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/Release"
 )
 
-# DLL 복사
-add_custom_command(TARGET Project1 POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/myLab/Project1/Project1/imageProcessingLib/build/bin/Debug/imageProcessingLib.dll" "$<TARGET_FILE_DIR:Project1>"
+#file(COPY "C:/myLab/Project1/Project1/imageProcessingLib/build/bin/Debug/imageProcessingLib.dll"
+#     DESTINATION "${CMAKE_BINARY_DIR}/Debug"
+#)
+
+file(COPY "C:/myLab/Project1/Project1/imageProcessingLib/build/lib/Debug/imageProcessingLib.lib"
+     DESTINATION "${CMAKE_BINARY_DIR}/Debug"
 )
-add_custom_command(TARGET Project1 POST_BUILD
+
+add_custom_command(TARGET Project1 POST_BUILD 
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/myLab/Project1/Project1/imageProcessingLib/build/lib/Debug/imageProcessingLib.lib" "$<TARGET_FILE_DIR:Project1>"
+    "C:/myLab/Project1/Project1/imageProcessingLib/build/bin/Debug/imageProcessingLib.dll"
+    "$<TARGET_FILE_DIR:Project1>"
+    COMMENT "Copying Debug imageProcessingLib dll to output directory"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "C:/myLab/Project1/Project1/imageProcessingLib/build/lib/Debug/imageProcessingLib.lib"
+    "$<TARGET_FILE_DIR:Project1>"
+    COMMENT "Copying Debug imageProcessingLib lib to output directory"
 )
+
 # 디버그 빌드에서의 OpenCV opencv_world DLL 복사
 add_custom_command(TARGET Project1 POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different

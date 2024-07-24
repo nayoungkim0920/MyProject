@@ -9,6 +9,11 @@ ImageProcessorGStreamer::~ImageProcessorGStreamer()
 }
 
 cv::Mat ImageProcessorGStreamer::grayScale(cv::Mat& inputImage) {
+    if (inputImage.empty()) {
+        std::cerr << "Input image is empty." << std::endl;
+        return cv::Mat(); // Return empty image
+    }
+
     GstElement* pipeline = nullptr;
     GstElement* source = nullptr;
     GstElement* convert = nullptr;
@@ -17,13 +22,14 @@ cv::Mat ImageProcessorGStreamer::grayScale(cv::Mat& inputImage) {
 
     gst_init(nullptr, nullptr);
 
+    // Create GStreamer elements
     pipeline = gst_pipeline_new("pipeline");
     source = gst_element_factory_make("appsrc", "source");
     convert = gst_element_factory_make("videoconvert", "convert");
     sink = gst_element_factory_make("appsink", "sink");
 
     if (!pipeline || !source || !convert || !sink) {
-        std::cerr << "GStreamer 요소를 생성하지 못했습니다." << std::endl;
+        std::cerr << "Failed to create GStreamer elements." << std::endl;
         if (pipeline) gst_object_unref(GST_OBJECT(pipeline));
         if (source) gst_object_unref(GST_OBJECT(source));
         if (convert) gst_object_unref(GST_OBJECT(convert));
@@ -50,7 +56,7 @@ cv::Mat ImageProcessorGStreamer::grayScale(cv::Mat& inputImage) {
 
     gst_bin_add_many(GST_BIN(pipeline), source, convert, sink, nullptr);
     if (!gst_element_link_many(source, convert, sink, nullptr)) {
-        std::cerr << "요소들을 연결할 수 없습니다." << std::endl;
+        std::cerr << "Failed to link GStreamer elements." << std::endl;
         gst_object_unref(GST_OBJECT(pipeline));
         return cv::Mat();
     }
@@ -67,26 +73,30 @@ cv::Mat ImageProcessorGStreamer::grayScale(cv::Mat& inputImage) {
     gst_buffer_unref(buffer);
 
     if (ret != GST_FLOW_OK) {
-        std::cerr << "appsrc에 버퍼를 푸시하는데 실패했습니다." << std::endl;
+        std::cerr << "Failed to push buffer to appsrc." << std::endl;
         gst_object_unref(GST_OBJECT(pipeline));
         return cv::Mat();
     }
 
-    // Set pipeline to PLAYING state and wait for processing
+    // Set pipeline to PLAYING state
     gst_element_set_state(pipeline, GST_STATE_PLAYING);
 
-    // Wait for the processing to complete
-    guint64 startTime = g_get_monotonic_time();
-    guint64 endTime = startTime + 5000000; // 5초 대기
+    // Wait for processing to complete
+    GstStateChangeReturn stateChangeRet;
+    do {
+        stateChangeRet = gst_element_get_state(pipeline, nullptr, nullptr, GST_CLOCK_TIME_NONE);
+        if (stateChangeRet == GST_STATE_CHANGE_FAILURE) {
+            std::cerr << "GStreamer pipeline failed!" << std::endl;
+            gst_element_set_state(pipeline, GST_STATE_NULL);
+            gst_object_unref(GST_OBJECT(pipeline));
+            return cv::Mat();
+        }
+    } while (stateChangeRet != GST_STATE_CHANGE_SUCCESS);
 
-    while (g_get_monotonic_time() < endTime) {
-        sample = gst_app_sink_pull_sample(GST_APP_SINK(sink));
-        if (sample) break;
-        g_usleep(100000); // 0.1초 대기
-    }
-
+    // Pull sample from appsink
+    sample = gst_app_sink_pull_sample(GST_APP_SINK(sink));
     if (!sample) {
-        std::cerr << "appsink에서 샘플을 가져오는 데 실패했습니다." << std::endl;
+        std::cerr << "Failed to pull sample from appsink." << std::endl;
         gst_element_set_state(pipeline, GST_STATE_NULL);
         gst_object_unref(GST_OBJECT(pipeline));
         return cv::Mat();
@@ -94,7 +104,16 @@ cv::Mat ImageProcessorGStreamer::grayScale(cv::Mat& inputImage) {
 
     GstBuffer* outputBuffer = gst_sample_get_buffer(sample);
     if (!outputBuffer) {
-        std::cerr << "샘플에서 버퍼를 가져오는 데 실패했습니다." << std::endl;
+        std::cerr << "Failed to get buffer from sample." << std::endl;
+        gst_sample_unref(sample);
+        gst_element_set_state(pipeline, GST_STATE_NULL);
+        gst_object_unref(GST_OBJECT(pipeline));
+        return cv::Mat();
+    }
+
+    GstCaps* caps = gst_sample_get_caps(sample);
+    if (!caps) {
+        std::cerr << "Failed to get caps from sample." << std::endl;
         gst_sample_unref(sample);
         gst_element_set_state(pipeline, GST_STATE_NULL);
         gst_object_unref(GST_OBJECT(pipeline));
@@ -104,11 +123,20 @@ cv::Mat ImageProcessorGStreamer::grayScale(cv::Mat& inputImage) {
     GstMapInfo outputMap;
     gst_buffer_map(outputBuffer, &outputMap, GST_MAP_READ);
 
-    int bufferSize = gst_buffer_get_size(outputBuffer);
-    std::cout << "OutputBuffer Size: " << bufferSize << std::endl;
+    // Extract width and height from caps
+    GstStructure* s = gst_caps_get_structure(caps, 0);
+    gint width, height;
+    if (!gst_structure_get_int(s, "width", &width) || !gst_structure_get_int(s, "height", &height)) {
+        std::cerr << "Failed to extract width and height from caps." << std::endl;
+        gst_buffer_unmap(outputBuffer, &outputMap);
+        gst_sample_unref(sample);
+        gst_element_set_state(pipeline, GST_STATE_NULL);
+        gst_object_unref(GST_OBJECT(pipeline));
+        return cv::Mat();
+    }
 
     // Ensure cv::Mat is created correctly
-    cv::Mat outputImage(inputImage.rows, inputImage.cols, CV_8UC1, outputMap.data);
+    cv::Mat outputImage(height, width, CV_8UC1, outputMap.data);
 
     // Unmap and clean up
     gst_buffer_unmap(outputBuffer, &outputMap);
@@ -122,6 +150,11 @@ cv::Mat ImageProcessorGStreamer::grayScale(cv::Mat& inputImage) {
 }
 
 cv::Mat ImageProcessorGStreamer::rotate(cv::Mat& inputImage, bool isRight) {
+    if (inputImage.empty()) {
+        std::cerr << "Input image is empty." << std::endl;
+        return cv::Mat(); // Return empty image
+    }
+
     GstElement* pipeline = nullptr;
     GstElement* source = nullptr;
     GstElement* convert = nullptr;
@@ -131,6 +164,7 @@ cv::Mat ImageProcessorGStreamer::rotate(cv::Mat& inputImage, bool isRight) {
 
     gst_init(nullptr, nullptr);
 
+    // Create GStreamer elements
     pipeline = gst_pipeline_new("pipeline");
     source = gst_element_factory_make("appsrc", "source");
     convert = gst_element_factory_make("videoconvert", "convert");
@@ -138,7 +172,7 @@ cv::Mat ImageProcessorGStreamer::rotate(cv::Mat& inputImage, bool isRight) {
     sink = gst_element_factory_make("appsink", "sink");
 
     if (!pipeline || !source || !convert || !flip || !sink) {
-        std::cerr << "GStreamer 요소를 생성하지 못했습니다." << std::endl;
+        std::cerr << "Failed to create GStreamer elements." << std::endl;
         if (pipeline) gst_object_unref(GST_OBJECT(pipeline));
         if (source) gst_object_unref(GST_OBJECT(source));
         if (convert) gst_object_unref(GST_OBJECT(convert));
@@ -148,7 +182,7 @@ cv::Mat ImageProcessorGStreamer::rotate(cv::Mat& inputImage, bool isRight) {
     }
 
     // Set flip method for rotation
-    g_object_set(G_OBJECT(flip), "method", isRight ? 1 : 0, nullptr); // 1 for 90 degrees clockwise, 0 for 90 degrees counter-clockwise
+    g_object_set(G_OBJECT(flip), "method", isRight ? 1 : 3, nullptr); // 1 for 90 degrees clockwise, 3 for 90 degrees counter-clockwise
 
     // Set appsrc properties
     GstCaps* srcCaps = gst_caps_new_simple("video/x-raw",
@@ -169,7 +203,7 @@ cv::Mat ImageProcessorGStreamer::rotate(cv::Mat& inputImage, bool isRight) {
 
     gst_bin_add_many(GST_BIN(pipeline), source, convert, flip, sink, nullptr);
     if (!gst_element_link_many(source, convert, flip, sink, nullptr)) {
-        std::cerr << "요소들을 연결할 수 없습니다." << std::endl;
+        std::cerr << "Failed to link GStreamer elements." << std::endl;
         gst_object_unref(GST_OBJECT(pipeline));
         return cv::Mat();
     }
@@ -181,17 +215,16 @@ cv::Mat ImageProcessorGStreamer::rotate(cv::Mat& inputImage, bool isRight) {
     gst_buffer_unref(buffer);
 
     if (ret != GST_FLOW_OK) {
-        std::cerr << "appsrc에 버퍼를 푸시하는데 실패했습니다." << std::endl;
+        std::cerr << "Failed to push buffer to appsrc." << std::endl;
         gst_object_unref(GST_OBJECT(pipeline));
         return cv::Mat();
     }
 
     gst_element_set_state(pipeline, GST_STATE_PLAYING);
 
-    // Poll for the pipeline's state change
+    // Wait for the pipeline to be in PAUSED state
     GstStateChangeReturn stateChangeRet;
     do {
-        
         stateChangeRet = gst_element_get_state(pipeline, nullptr, nullptr, GST_CLOCK_TIME_NONE);
         if (stateChangeRet == GST_STATE_CHANGE_FAILURE) {
             std::cerr << "GStreamer pipeline failed!" << std::endl;
@@ -200,7 +233,6 @@ cv::Mat ImageProcessorGStreamer::rotate(cv::Mat& inputImage, bool isRight) {
             return cv::Mat();
         }
     } while (stateChangeRet != GST_STATE_CHANGE_SUCCESS);
-    std::cerr << "*************************" << std::endl;
 
     // Wait for processing to complete
     gst_element_set_state(pipeline, GST_STATE_PAUSED);
@@ -213,7 +245,7 @@ cv::Mat ImageProcessorGStreamer::rotate(cv::Mat& inputImage, bool isRight) {
     // Pull sample from appsink
     sample = gst_app_sink_pull_sample(GST_APP_SINK(sink));
     if (!sample) {
-        std::cerr << "appsink에서 샘플을 가져오는 데 실패했습니다." << std::endl;
+        std::cerr << "Failed to pull sample from appsink." << std::endl;
         gst_element_set_state(pipeline, GST_STATE_NULL);
         gst_object_unref(GST_OBJECT(pipeline));
         return cv::Mat();
@@ -221,7 +253,7 @@ cv::Mat ImageProcessorGStreamer::rotate(cv::Mat& inputImage, bool isRight) {
 
     GstBuffer* outputBuffer = gst_sample_get_buffer(sample);
     if (!outputBuffer) {
-        std::cerr << "샘플에서 버퍼를 가져오는 데 실패했습니다." << std::endl;
+        std::cerr << "Failed to get buffer from sample." << std::endl;
         gst_sample_unref(sample);
         gst_element_set_state(pipeline, GST_STATE_NULL);
         gst_object_unref(GST_OBJECT(pipeline));
@@ -230,7 +262,7 @@ cv::Mat ImageProcessorGStreamer::rotate(cv::Mat& inputImage, bool isRight) {
 
     GstCaps* caps = gst_sample_get_caps(sample);
     if (!caps) {
-        std::cerr << "샘플에서 캡을 가져오는 데 실패했습니다." << std::endl;
+        std::cerr << "Failed to get caps from sample." << std::endl;
         gst_sample_unref(sample);
         gst_element_set_state(pipeline, GST_STATE_NULL);
         gst_object_unref(GST_OBJECT(pipeline));
@@ -556,10 +588,18 @@ cv::Mat ImageProcessorGStreamer::medianFilter(cv::Mat& inputImage) {
     return outputImage;
 }
 
-cv::Mat ImageProcessorGStreamer::bilateralFilter(cv::Mat& inputImage)
+cv::Mat ImageProcessorGStreamer::sobelFilter(cv::Mat& inputImage)
 {
-    GstElement* pipeline = nullptr, * source = nullptr, * convert = nullptr, * sink = nullptr;
+    GstElement* pipeline = nullptr;
+    GstElement* source = nullptr;
+    GstElement* convert = nullptr;
+    GstElement* sink = nullptr;
     GstSample* sample = nullptr;
+
+    if (inputImage.empty()) {
+        std::cerr << "Input image is empty." << std::endl;
+        return cv::Mat(); // 빈 이미지 반환
+    }
 
     // Initialize GStreamer
     gst_init(nullptr, nullptr);
@@ -604,15 +644,28 @@ cv::Mat ImageProcessorGStreamer::bilateralFilter(cv::Mat& inputImage)
         return cv::Mat();
     }
 
-    // Apply bilateral filter
-    cv::Mat filteredImage;
-    cv::bilateralFilter(inputImage, filteredImage, 9, 75, 75, cv::BORDER_DEFAULT);
+    // Apply Sobel filter using OpenCV
+    cv::Mat grayImage, gradX, gradY, absGradX, absGradY, outputImage;
+    if (inputImage.channels() == 3) {
+        // Convert color image to grayscale
+        cv::cvtColor(inputImage, grayImage, cv::COLOR_BGR2GRAY);
+    }
+    else {
+        grayImage = inputImage;
+    }
+
+    // Apply Sobel filter
+    cv::Sobel(grayImage, gradX, CV_16S, 1, 0, 3);
+    cv::convertScaleAbs(gradX, absGradX);
+    cv::Sobel(grayImage, gradY, CV_16S, 0, 1, 3);
+    cv::convertScaleAbs(gradY, absGradY);
+    cv::addWeighted(absGradX, 0.5, absGradY, 0.5, 0, outputImage);
 
     // Convert cv::Mat to GstBuffer
-    GstBuffer* buffer = gst_buffer_new_allocate(nullptr, filteredImage.total() * filteredImage.elemSize(), nullptr);
+    GstBuffer* buffer = gst_buffer_new_allocate(nullptr, outputImage.total() * outputImage.elemSize(), nullptr);
     GstMapInfo map;
     gst_buffer_map(buffer, &map, GST_MAP_WRITE);
-    memcpy(map.data, filteredImage.data, filteredImage.total() * filteredImage.elemSize());
+    memcpy(map.data, outputImage.data, outputImage.total() * outputImage.elemSize());
     gst_buffer_unmap(buffer, &map);
 
     // Push buffer to appsrc
@@ -646,11 +699,122 @@ cv::Mat ImageProcessorGStreamer::bilateralFilter(cv::Mat& inputImage)
     }
 
     gst_buffer_map(outputBuffer, &map, GST_MAP_READ);
-    cv::Mat outputImage(inputImage.rows, inputImage.cols, CV_8UC3, map.data);
-    outputImage = outputImage.clone(); // Make a deep copy of the data
+    cv::Mat finalImage(inputImage.rows, inputImage.cols, CV_8UC3, map.data);
+    finalImage = finalImage.clone(); // Make a deep copy of the data
     gst_buffer_unmap(outputBuffer, &map);
 
     // Cleanup
+    gst_sample_unref(sample);
+    gst_element_set_state(pipeline, GST_STATE_NULL);
+    gst_object_unref(pipeline);
+
+    return finalImage;
+}
+
+cv::Mat ImageProcessorGStreamer::bilateralFilter(cv::Mat& inputImage)
+{
+    if (inputImage.empty()) {
+        std::cerr << "입력 이미지가 비어 있습니다." << std::endl;
+        return cv::Mat(); // 빈 Mat 반환
+    }
+
+    // GStreamer 요소 초기화
+    GstElement* pipeline = nullptr;
+    GstElement* source = nullptr;
+    GstElement* convert = nullptr;
+    GstElement* sink = nullptr;
+    GstSample* sample = nullptr;
+
+    // GStreamer 초기화
+    gst_init(nullptr, nullptr);
+
+    // 요소 생성
+    pipeline = gst_pipeline_new("pipeline");
+    source = gst_element_factory_make("appsrc", "source");
+    convert = gst_element_factory_make("videoconvert", "convert");
+    sink = gst_element_factory_make("appsink", "sink");
+
+    if (!pipeline || !source || !convert || !sink) {
+        std::cerr << "failed" << std::endl;
+        if (pipeline) gst_object_unref(GST_OBJECT(pipeline));
+        if (source) gst_object_unref(GST_OBJECT(source));
+        if (convert) gst_object_unref(GST_OBJECT(convert));
+        if (sink) gst_object_unref(GST_OBJECT(sink));
+        return cv::Mat(); // 실패 시 빈 Mat 반환
+    }
+
+    // appsrc 속성 설정
+    g_object_set(G_OBJECT(source), "caps",
+        gst_caps_new_simple("video/x-raw",
+            "format", G_TYPE_STRING, (inputImage.channels() == 1) ? "GRAY8" : "BGR",
+            "width", G_TYPE_INT, inputImage.cols,
+            "height", G_TYPE_INT, inputImage.rows,
+            "framerate", GST_TYPE_FRACTION, 30, 1,
+            nullptr), nullptr);
+    g_object_set(G_OBJECT(source), "is-live", TRUE, "block", TRUE, nullptr);
+
+    // appsink 속성 설정
+    g_object_set(G_OBJECT(sink), "caps",
+        gst_caps_new_simple("video/x-raw",
+            "format", G_TYPE_STRING, (inputImage.channels() == 1) ? "GRAY8" : "BGR",
+            nullptr), nullptr);
+    g_object_set(G_OBJECT(sink), "sync", FALSE, nullptr);
+
+    // 파이프라인 구축
+    gst_bin_add_many(GST_BIN(pipeline), source, convert, sink, nullptr);
+    if (!gst_element_link_many(source, convert, sink, nullptr)) {
+        std::cerr << "요소를 연결할 수 없습니다." << std::endl;
+        gst_object_unref(GST_OBJECT(pipeline));
+        return cv::Mat();
+    }
+
+    // 양방향 필터 적용
+    cv::Mat filteredImage;
+    cv::bilateralFilter(inputImage, filteredImage, 9, 75, 75, cv::BORDER_DEFAULT);
+
+    // cv::Mat을 GstBuffer로 변환
+    GstBuffer* buffer = gst_buffer_new_allocate(nullptr, filteredImage.total() * filteredImage.elemSize(), nullptr);
+    GstMapInfo map;
+    gst_buffer_map(buffer, &map, GST_MAP_WRITE);
+    memcpy(map.data, filteredImage.data, filteredImage.total() * filteredImage.elemSize());
+    gst_buffer_unmap(buffer, &map);
+
+    // 버퍼를 appsrc로 푸시
+    GstFlowReturn ret;
+    g_signal_emit_by_name(source, "push-buffer", buffer, &ret);
+    gst_buffer_unref(buffer);
+
+    if (ret != GST_FLOW_OK) {
+        std::cerr << "appsrc로 버퍼를 푸시하는 데 실패했습니다." << std::endl;
+        gst_object_unref(GST_OBJECT(pipeline));
+        return cv::Mat(); // 실패 시 빈 Mat 반환
+    }
+
+    // 파이프라인을 재생 상태로 설정
+    gst_element_set_state(pipeline, GST_STATE_PLAYING);
+
+    // appsink에서 샘플 가져오기
+    sample = gst_app_sink_pull_sample(GST_APP_SINK(sink));
+    if (!sample) {
+        std::cerr << "appsink에서 샘플을 가져오는 데 실패했습니다." << std::endl;
+        gst_object_unref(GST_OBJECT(pipeline));
+        return cv::Mat(); // 실패 시 빈 Mat 반환
+    }
+
+    GstBuffer* outputBuffer = gst_sample_get_buffer(sample);
+    if (!outputBuffer) {
+        std::cerr << "샘플에서 버퍼를 가져오는 데 실패했습니다." << std::endl;
+        gst_sample_unref(sample);
+        gst_object_unref(GST_OBJECT(pipeline));
+        return cv::Mat(); // 실패 시 빈 Mat 반환
+    }
+
+    gst_buffer_map(outputBuffer, &map, GST_MAP_READ);
+    cv::Mat outputImage(inputImage.rows, inputImage.cols, inputImage.type(), map.data);
+    outputImage = outputImage.clone(); // 데이터의 깊은 복사본 만들기
+    gst_buffer_unmap(outputBuffer, &map);
+
+    // 정리
     gst_sample_unref(sample);
     gst_element_set_state(pipeline, GST_STATE_NULL);
     gst_object_unref(pipeline);
