@@ -634,41 +634,85 @@ cv::Mat ImageProcessorIPP::medianFilter(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorIPP::laplacianFilter(cv::Mat& inputImage)
 {
-    // 입력 이미지를 IPP 형식으로 변환
-    IppiSize roiSize = { inputImage.cols, inputImage.rows };
-    int step = inputImage.step;
-    Ipp8u* pSrc = inputImage.data;
+    std::cout << "Applying Laplacian filter using IPP." << std::endl;
 
-    // 출력 이미지 준비
-    cv::Mat outputImage(inputImage.size(), CV_16S); // 16비트 정수형으로 변경
-    Ipp16s* pDst = reinterpret_cast<Ipp16s*>(outputImage.data); // 포인터 형변환
-    int dstStep = outputImage.step;
-
-    // 필요한 버퍼 크기 계산
-    int bufferSize = 0;
-    IppStatus status = ippiFilterLaplacianGetBufferSize_8u16s_C1R(roiSize, ippMskSize3x3, &bufferSize);
-    if (status != ippStsNoErr) {
-        std::cerr << "Failed to get buffer size with status: " << status << std::endl;
+    if (inputImage.empty()) {
+        std::cerr << "Input image is empty." << std::endl;
         return cv::Mat();
     }
 
-    Ipp8u* pBuffer = ippsMalloc_8u(bufferSize);
-
-    // 필터 적용
-    status = ippiFilterLaplacianBorder_8u16s_C1R(
-        pSrc, step, pDst, dstStep, roiSize, ippMskSize3x3, ippBorderRepl, 0, pBuffer);
-
-    ippsFree(pBuffer);
-
-    if (status != ippStsNoErr) {
-        std::cerr << "IPP Laplacian filter failed with status: " << status << std::endl;
-        return cv::Mat(); // 에러 처리
+    int numChannels = inputImage.channels();
+    if (numChannels != 1 && numChannels != 3) {
+        std::cerr << "Unsupported image format." << std::endl;
+        return cv::Mat();
     }
 
-    // 결과를 8비트 이미지로 변환
-    outputImage.convertTo(outputImage, CV_8U);
+    // Helper function to apply Laplacian filter to a single channel
+    auto applyFilterToChannel = [](const cv::Mat& inputChannel, cv::Mat& outputChannel) {
+        IppiSize roiSize = { inputChannel.cols, inputChannel.rows };
+        int step = inputChannel.step;
+        Ipp8u* pSrc = inputChannel.data;
+
+        outputChannel.create(inputChannel.size(), CV_16S);
+        Ipp16s* pDst = reinterpret_cast<Ipp16s*>(outputChannel.data);
+        int dstStep = outputChannel.step;
+
+        int bufferSize = 0;
+        IppStatus status = ippiFilterLaplacianGetBufferSize_8u16s_C1R(roiSize, ippMskSize3x3, &bufferSize);
+        if (status != ippStsNoErr) {
+            std::cerr << "Failed to get buffer size with status: " << status << std::endl;
+            return false;
+        }
+
+        Ipp8u* pBuffer = ippsMalloc_8u(bufferSize);
+        status = ippiFilterLaplacianBorder_8u16s_C1R(
+            pSrc, step, pDst, dstStep, roiSize, ippMskSize3x3, ippBorderRepl, 0, pBuffer
+        );
+
+        ippsFree(pBuffer);
+
+        if (status != ippStsNoErr) {
+            std::cerr << "IPP Laplacian filter failed with status: " << status << std::endl;
+            return false;
+        }
+
+        return true;
+    };
+
+    cv::Mat outputImage;
+
+    if (numChannels == 1) {
+        // Apply filter to grayscale image
+        
+        bool success = applyFilterToChannel(inputImage, outputImage);
+        if (!success) {
+            return cv::Mat();
+        }
+
+        outputImage.convertTo(outputImage, CV_8U);
+
+    }
+    else if (numChannels == 3) {
+        // Apply filter to each channel of a color image
+        std::vector<cv::Mat> channels;
+        cv::split(inputImage, channels);
+
+        std::vector<cv::Mat> filteredChannels(3);
+        for (int i = 0; i < 3; ++i) {
+            bool success = applyFilterToChannel(channels[i], filteredChannels[i]);
+            if (!success) {
+                return cv::Mat();
+            }
+        }
+
+        
+        cv::merge(filteredChannels, outputImage);
+        outputImage.convertTo(outputImage, CV_8U);
+        
+    }
 
     return outputImage;
+
 }
 
 cv::Mat ImageProcessorIPP::bilateralFilter(cv::Mat& inputImage)

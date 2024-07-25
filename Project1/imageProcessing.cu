@@ -182,43 +182,32 @@ __global__ void laplacianFilterKernel(const unsigned char* input, unsigned char*
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-    if (x < cols && y < rows) {
+    if (x >= 1 && x < cols - 1 && y >= 1 && y < rows - 1) {
         // Laplacian 필터 계산
-        float sum = 0.0f;
-
-        // 현재 픽셀
-        for (int c = 0; c < channels; ++c) {
-            sum += input[y * pitch + x * channels + c];
-        }
-
-        // 주변 픽셀
-        if (x > 0) {
-            for (int c = 0; c < channels; ++c) {
-                sum += input[y * pitch + (x - 1) * channels + c];
-            }
-        }
-        if (x < cols - 1) {
-            for (int c = 0; c < channels; ++c) {
-                sum += input[y * pitch + (x + 1) * channels + c];
-            }
-        }
-        if (y > 0) {
-            for (int c = 0; c < channels; ++c) {
-                sum += input[(y - 1) * pitch + x * channels + c];
-            }
-        }
-        if (y < rows - 1) {
-            for (int c = 0; c < channels; ++c) {
-                sum += input[(y + 1) * pitch + x * channels + c];
-            }
-        }
+        int kernel[3][3] = {
+            {0, -1, 0},
+            {-1, 4, -1},
+            {0, -1, 0}
+        };
 
         for (int c = 0; c < channels; ++c) {
-            output[y * pitch + x * channels + c] = static_cast<unsigned char>(sum / 5.0f);
+            float sum = 0.0f;
+
+            // 커널 적용
+            for (int ky = -1; ky <= 1; ++ky) {
+                for (int kx = -1; kx <= 1; ++kx) {
+                    int pixelX = x + kx;
+                    int pixelY = y + ky;
+                    float pixelValue = input[pixelY * pitch + pixelX * channels + c];
+                    sum += pixelValue * kernel[ky + 1][kx + 1];
+                }
+            }
+
+            // 결과 저장
+            output[y * pitch + x * channels + c] = static_cast<unsigned char>(min(max(sum, 0.0f), 255.0f));
         }
     }
 }
-
 __global__ void bilateralKernel(
     const unsigned char* d_input,
     unsigned char* d_output,
@@ -792,7 +781,7 @@ void callLaplacianFilterCUDA(cv::Mat& inputImage, cv::Mat& outputImage) {
     cudaMallocPitch(&d_output, &pitch, width * channels * sizeof(unsigned char), height);
 
     // 입력 이미지 복사
-    cudaMemcpy2D(d_input, pitch, inputImage.ptr(), width * channels * sizeof(unsigned char), width * channels * sizeof(unsigned char), height, cudaMemcpyHostToDevice);
+    cudaMemcpy2D(d_input, pitch, inputImage.ptr(), inputImage.step[0], width * channels * sizeof(unsigned char), height, cudaMemcpyHostToDevice);
 
     // CUDA 커널 실행 구성
     dim3 blockSize(16, 16);
@@ -801,13 +790,19 @@ void callLaplacianFilterCUDA(cv::Mat& inputImage, cv::Mat& outputImage) {
     // CUDA 커널 호출
     laplacianFilterKernel << <gridSize, blockSize >> > (d_input, d_output, width, height, pitch, channels);
 
+    // CUDA 오류 체크
+    cudaError_t cudaStatus = cudaGetLastError();
+    if (cudaStatus != cudaSuccess) {
+        std::cerr << "CUDA kernel launch failed: " << cudaGetErrorString(cudaStatus) << std::endl;
+        cudaFree(d_input);
+        cudaFree(d_output);
+        return;
+    }
+
     // 결과 이미지 복사
-    outputImage.create(width, height, inputImage.type());
-    cudaMemcpy2D(outputImage.ptr(), width * channels * sizeof(unsigned char), d_output, pitch, width * channels * sizeof(unsigned char), height, cudaMemcpyDeviceToHost);
-    //std::cout << "Input Image:" << std::endl;
-    //std::cout << inputImage.empty() << std::endl;
-    //std::cout << "Output Image:" << std::endl;
-    //std::cout << outputImage.empty() << std::endl;
+    outputImage.create(height, width, inputImage.type()); // 올바른 높이와 너비로 이미지 생성
+    cudaMemcpy2D(outputImage.ptr(), outputImage.step[0], d_output, pitch, width * channels * sizeof(unsigned char), height, cudaMemcpyDeviceToHost);
+
     // 메모리 해제
     cudaFree(d_input);
     cudaFree(d_output);

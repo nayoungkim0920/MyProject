@@ -73,7 +73,7 @@ public:
     QFuture<bool> gaussianBlur(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, cv::Mat& NPP, cv::Mat& imageGStreamer, int kernelSize);
     QFuture<bool> cannyEdges(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, cv::Mat& imageNPP, cv::Mat& imageGStreamer);
     QFuture<bool> medianFilter(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, cv::Mat& imageNPP, cv::Mat& imageGStreamer);
-    QFuture<bool> laplacianFilter(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel);
+    QFuture<bool> laplacianFilter(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, cv::Mat& imageNPP, cv::Mat& imageGStreamer);
     QFuture<bool> bilateralFilter(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, cv::Mat& imageNPP, cv::Mat& imageGStreamer);
     QFuture<bool> sobelFilter(cv::Mat& imageOpenCV, cv::Mat& imageIPP, cv::Mat& imageCUDA, cv::Mat& imageCUDAKernel, cv::Mat& imageNPP, cv::Mat& imageGStreamer);
 
@@ -188,6 +188,8 @@ private:
     ProcessingResult laplacianFilterIPP(cv::Mat& inputImage);
     ProcessingResult laplacianFilterCUDA(cv::Mat& inputImage);
     ProcessingResult laplacianFilterCUDAKernel(cv::Mat& inputImage);
+    ProcessingResult laplacianFilterNPP(cv::Mat& inputImage);
+    ProcessingResult laplacianFilterGStreamer(cv::Mat& inputImage);
 
     ProcessingResult bilateralFilterOpenCV(cv::Mat& inputImage);
     ProcessingResult bilateralFilterIPP(cv::Mat& inputImage);

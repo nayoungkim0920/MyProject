@@ -150,29 +150,30 @@ void MainWindow::grayScale()
 
 void MainWindow::gaussianBlur()
 {
-    bool ok;
+    //bool ok;
 
-    QInputDialog inputDialog(this);
-    inputDialog.setWindowTitle(tr("Gaussian Blur"));
-    inputDialog.setLabelText(tr("Enter kernel size (odd number):"));
-    inputDialog.setIntRange(1, 101);
-    inputDialog.setIntStep(2);
-    inputDialog.setIntValue(5);
+    //QInputDialog inputDialog(this);
+    //inputDialog.setWindowTitle(tr("Gaussian Blur"));
+    //inputDialog.setLabelText(tr("Enter kernel size (odd number):"));
+    //inputDialog.setIntRange(1, 101);
+    //inputDialog.setIntStep(2);
+    //inputDialog.setIntValue(5);
 
     // 최소 크기 설정
-    inputDialog.setMinimumSize(200, 100);
-    inputDialog.resize(200, 100);
+    //inputDialog.setMinimumSize(200, 100);
+    //inputDialog.resize(200, 100);
 
     // 현재 윈도우의 위치와 크기를 얻어옴
-    QRect windowGeometry = geometry();
-    int x = windowGeometry.x() + (windowGeometry.width() - inputDialog.width()) / 2;
-    int y = windowGeometry.y() + (windowGeometry.height() - inputDialog.height()) / 2;
+    //QRect windowGeometry = geometry();
+    //int x = windowGeometry.x() + (windowGeometry.width() - inputDialog.width()) / 2;
+    //int y = windowGeometry.y() + (windowGeometry.height() - inputDialog.height()) / 2;
 
     // 위치 설정
-    inputDialog.move(x, y);
+    //inputDialog.move(x, y);
 
-    if (inputDialog.exec() == QDialog::Accepted) {
-        int kernelSize = inputDialog.intValue();
+    //if (inputDialog.exec() == QDialog::Accepted) {
+        //int kernelSize = inputDialog.intValue();
+    int kernelSize = 5;
         QtConcurrent::run([this, kernelSize]() {
             imageProcessor->gaussianBlur(currentImageOpenCV
                 , currentImageIPP
@@ -182,7 +183,7 @@ void MainWindow::gaussianBlur()
                 , currentImageGStreamer
                 , kernelSize);
             });
-    }
+    //}
 }
 
 
@@ -221,7 +222,9 @@ void MainWindow::laplacianFilter()
             currentImageOpenCV
             , currentImageIPP
             , currentImageCUDA
-            , currentImageCUDAKernel);
+            , currentImageCUDAKernel
+            , currentImageNPP
+            , currentImageGStreamer);
         });
     //applyImageProcessing(&ImageProcessor::laplacianFilter, currentImage);
 }

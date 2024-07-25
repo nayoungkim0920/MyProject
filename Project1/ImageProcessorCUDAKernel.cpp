@@ -69,11 +69,39 @@ cv::Mat ImageProcessorCUDAKernel::medianFilter(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorCUDAKernel::laplacianFilter(cv::Mat& inputImage)
 {
-    cv::Mat outputImage;
-    callLaplacianFilterCUDA(inputImage, outputImage);
+    //cv::Mat outputImage;
+    //callLaplacianFilterCUDA(inputImage, outputImage);
     // outputImage를 출력하여 내용 확인
     //std::cout << "Output Image:" << std::endl;
     //std::cout << outputImage << std::endl;
+
+    //return outputImage;
+
+    cv::Mat outputImage;
+    // 그레이스케일 이미지인 경우
+    if (inputImage.channels() == 1) {
+        callLaplacianFilterCUDA(inputImage, outputImage);
+    }
+    // 컬러 이미지인 경우
+    else if (inputImage.channels() == 3) {
+
+        std::cout << "this is color!" << std::endl;
+
+        // 채널 분리
+        std::vector<cv::Mat> channels;
+        cv::split(inputImage, channels);
+
+        std::vector<cv::Mat> outputChannels(channels.size());
+        for (int i = 0; i < channels.size(); ++i) {
+            callLaplacianFilterCUDA(channels[i], outputChannels[i]);
+        }
+
+        // 채널 병합
+        cv::merge(outputChannels, outputImage);
+    }
+    else {
+        std::cerr << "Unsupported image format." << std::endl;
+    }
 
     return outputImage;
 }

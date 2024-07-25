@@ -25,6 +25,7 @@ public:
     cv::Mat gaussianBlur(cv::Mat& inputImage, int kernelSize);
     cv::Mat medianFilter(cv::Mat& inputImage);
     cv::Mat sobelFilter(cv::Mat& inputImage);
+    cv::Mat laplacianFilter(cv::Mat& inputImage);
     cv::Mat bilateralFilter(cv::Mat& inputImage);
 };
 
