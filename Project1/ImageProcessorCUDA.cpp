@@ -109,13 +109,15 @@ cv::Mat ImageProcessorCUDA::gaussianBlur(cv::Mat& inputImage, int kernelSize)
 
 cv::Mat ImageProcessorCUDA::cannyEdges(cv::Mat& inputImage)
 {
+    std::cout << __func__ << ": 시작합니다." << std::endl;
+
     cv::Mat grayImage;
 
     // 컬러 이미지를 그레이 스케일로 변환
     if (inputImage.channels() == 3) {
         cv::cvtColor(inputImage, grayImage, cv::COLOR_BGR2GRAY);
     }
-    else {
+    else{
         grayImage = inputImage.clone();
     }
 
@@ -146,6 +148,7 @@ cv::Mat ImageProcessorCUDA::cannyEdges(cv::Mat& inputImage)
         }
     }
     else {
+        
         // 흑백 이미지가 입력된 경우
         outputImage = cv::Mat(grayImage.size(), CV_8UC1, cv::Scalar(0));
 
@@ -158,11 +161,15 @@ cv::Mat ImageProcessorCUDA::cannyEdges(cv::Mat& inputImage)
         }
     }
 
+    std::cout << __func__ << ": 끝납니다." << std::endl;
+
     return outputImage;
 }
 
 cv::Mat ImageProcessorCUDA::medianFilter(cv::Mat& inputImage)
 {
+    std::cout << __func__ << ": 시작합니다." << std::endl;
+
     // Upload image to GPU
     cv::cuda::GpuMat gpuImage;
     gpuImage.upload(inputImage);
@@ -178,6 +185,8 @@ cv::Mat ImageProcessorCUDA::medianFilter(cv::Mat& inputImage)
     // Download the result back to CPU
     cv::Mat outputImage;
     medianedGpuImage.download(outputImage);
+
+    std::cout << __func__ << ": 끝납니다." << std::endl;
 
     return outputImage;
 }
@@ -264,7 +273,7 @@ cv::Mat ImageProcessorCUDA::sobelFilter(cv::Mat& inputImage)
     // Create Sobel filter on GPU
     cv::Ptr<cv::cuda::Filter> sobelFilter = cv::cuda::createSobelFilter(
         d_inputImage.type(),   // srcType
-        CV_16SC1,              // dstType
+        CV_8UC1,              // dstType
         1,                     // dx (order of derivative in x)
         0,                     // dy (order of derivative in y)
         3                      // ksize (kernel size, 3x3 Sobel)

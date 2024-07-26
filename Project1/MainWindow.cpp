@@ -73,17 +73,68 @@ void MainWindow::openFile()
 
 void MainWindow::saveFile()
 {
-    //if (!currentImage.empty()) {
-    //    QString filePath = QFileDialog::getSaveFileName(this, tr("Save Image"), "", tr("Images (*.png *.jpg *.bmp)"));
-    //    if (!filePath.isEmpty()) {
-    //        if (!imageProcessor->saveImage(filePath.toStdString(), currentImage)) {
-    //            QMessageBox::critical(this, tr("Error"), tr("Failed to save image"));
-    //        }
-    //    }
-    //}
-    //else {
-    //    QMessageBox::critical(this, tr("Error"), tr("No image to save"));
-    //}
+    if (!currentImageOpenCV.empty()) {
+        // 파일 저장 대화상자를 열어 사용자로부터 파일 경로를 입력받음
+        QString filePath = QFileDialog::getSaveFileName(this, tr("Save Image"), "", tr("Images (*.png *.jpg *.bmp)"));
+
+        if (!filePath.isEmpty()) {
+            QFileInfo fileInfo(filePath);
+            QString baseName = fileInfo.completeBaseName(); // 파일명(확장자 제외)
+            QString fileExtension = fileInfo.suffix(); // 파일 확장자
+            QString directory = fileInfo.absolutePath(); // 파일 경로
+
+            // 각 이미지 유형에 대해 파일명을 수정하여 저장
+            QString openCVPath = QString("%1/%2OpenCV.%3").arg(directory).arg(baseName).arg(fileExtension);
+            QString ippPath = QString("%1/%2IPP.%3").arg(directory).arg(baseName).arg(fileExtension);
+            QString cudaPath = QString("%1/%2CUDA.%3").arg(directory).arg(baseName).arg(fileExtension);
+            QString cudaKernelPath = QString("%1/%2CUDAKernel.%3").arg(directory).arg(baseName).arg(fileExtension);
+            QString nppPath = QString("%1/%2NPP.%3").arg(directory).arg(baseName).arg(fileExtension);
+            QString gstreamerPath = QString("%1/%2GStreamer.%3").arg(directory).arg(baseName).arg(fileExtension);
+
+            // 디버깅을 위해 경로 출력
+            std::cout << "openCVPath : " << openCVPath.toStdString() << std::endl;
+            std::cout << "ippPath : " << ippPath.toStdString() << std::endl;
+            std::cout << "cudaPath : " << cudaPath.toStdString() << std::endl;
+            std::cout << "cudaKernelPath : " << cudaKernelPath.toStdString() << std::endl;
+            std::cout << "nppPath : " << nppPath.toStdString() << std::endl;
+            std::cout << "gstreamerPath : " << gstreamerPath.toStdString() << std::endl;
+
+            // 각 이미지별로 저장 시도하고 개별적으로 성공 여부를 확인
+            bool success = true;
+            if (!imageProcessor->saveImage(openCVPath.toStdString(), currentImageOpenCV)) {
+                success = false;
+                std::cerr << "Failed to save OpenCV image" << std::endl;
+            }
+            if (!imageProcessor->saveImage(ippPath.toStdString(), currentImageIPP)) {
+                success = false;
+                std::cerr << "Failed to save IPP image" << std::endl;
+            }
+            if (!imageProcessor->saveImage(cudaPath.toStdString(), currentImageCUDA)) {
+                success = false;
+                std::cerr << "Failed to save CUDA image" << std::endl;
+            }
+            if (!imageProcessor->saveImage(cudaKernelPath.toStdString(), currentImageCUDAKernel)) {
+                success = false;
+                std::cerr << "Failed to save CUDAKernel image" << std::endl;
+            }
+            if (!imageProcessor->saveImage(nppPath.toStdString(), currentImageNPP)) {
+                success = false;
+                std::cerr << "Failed to save NPP image" << std::endl;
+            }
+            if (!imageProcessor->saveImage(gstreamerPath.toStdString(), currentImageGStreamer)) {
+                success = false;
+                std::cerr << "Failed to save GStreamer image" << std::endl;
+            }
+
+            // 만약 모든 저장 시도가 실패했다면, 오류 메시지 표시
+            if (!success) {
+                QMessageBox::critical(this, tr("Error"), tr("Failed to save some or all images"));
+            }
+        }
+    }
+    else {
+        QMessageBox::critical(this, tr("Error"), tr("No image to save"));
+    }
 }
 
 void MainWindow::rotateImage()
@@ -280,23 +331,38 @@ void MainWindow::undoAction()
 void MainWindow::first()
 {
     //초기 이미지로 되돌리기
-    //if (!initialImage.empty()) {
-    //    currentImage = initialImage.clone();
+    if (!initialImageOpenCV.empty()) {
 
-    //    displayImage(currentImage, ui->label_opencv);
-    //    displayImage(currentImage, ui->label_ipp);
-     //   displayImage(currentImage, ui->label_cuda);
-     //   displayImage(currentImage, ui->label_cudakernel);
+        currentImageOpenCV = initialImageOpenCV.clone();
+        currentImageIPP = initialImageIPP.clone();
+        currentImageCUDA = initialImageCUDA.clone();
+        currentImageCUDAKernel = initialImageCUDAKernel.clone();
+        currentImageNPP = initialImageNPP.clone();
+        currentImageGStreamer = initialImageGStreamer.clone();
 
-    //    imageProcessor->cleanUndoStack();
-    //    imageProcessor->cleanRedoStack();
-    //}
-    //else {
-    //    QMessageBox::warning(this,
-   //         tr("Warning"),
-   //         tr("No initial Image available."));
-   //     return;
-   // }
+        displayImage(currentImageOpenCV, ui->label_opencv);
+        displayImage(currentImageIPP, ui->label_ipp);
+        displayImage(currentImageCUDA, ui->label_cuda);
+        displayImage(currentImageCUDAKernel, ui->label_cudakernel);
+        displayImage(currentImageNPP, ui->label_npp);
+        displayImage(currentImageGStreamer, ui->label_gstreamer);
+
+        ui->label_opencv_title->setText("openCV");
+        ui->label_ipp_title->setText("IPP");
+        ui->label_cuda_title->setText("CUDA");
+        ui->label_cudakernel_title->setText("CUDAKernel");
+        ui->label_npp_title->setText("NPP");
+        ui->label_gstreamer_title->setText("GStreamer");
+
+        imageProcessor->cleanUndoStack();
+        imageProcessor->cleanRedoStack();
+    }
+    else {
+        QMessageBox::warning(this,
+            tr("Warning"),
+            tr("No initial Image available."));
+        return;
+    }
 }
 
 void MainWindow::displayImage(cv::Mat image, QLabel* label)
