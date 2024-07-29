@@ -1,5 +1,7 @@
 //imageProecssing.cu
 #include "imageProcessing.cuh"
+#include <corecrt_math_defines.h>
+
 
 #define CUDA_CHECK_ERROR(err) \
     if (err != cudaSuccess) { \
@@ -48,50 +50,24 @@ __global__ void grayScaleImageKernel(const unsigned char* input, unsigned char* 
     }
 }
 
-__global__ void cannyEdgesKernel(const unsigned char* input, unsigned char* output, int cols, int rows, int channels, bool isColor) {
+__global__ void colorEdgesKernel(const unsigned char* input, const unsigned char* edges, unsigned char* output, int cols, int rows, int channels) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
     if (x < cols && y < rows) {
         int idx = y * cols + x;
-        float gradientX = 0.0f, gradientY = 0.0f;
 
-        // Calculate gradients (Sobel operators)
-        if (x > 0 && x < cols - 1 && y > 0 && y < rows - 1) {
-            for (int c = 0; c < (isColor ? 3 : 1); c++) {
-                int offset = c * rows * cols;
-                gradientX += -1.0f * input[offset + (y - 1) * cols + (x - 1)] + 1.0f * input[offset + (y - 1) * cols + (x + 1)]
-                    - 2.0f * input[offset + y * cols + (x - 1)] + 2.0f * input[offset + y * cols + (x + 1)]
-                    - 1.0f * input[offset + (y + 1) * cols + (x - 1)] + 1.0f * input[offset + (y + 1) * cols + (x + 1)];
-
-                gradientY += -1.0f * input[offset + (y - 1) * cols + (x - 1)] - 2.0f * input[offset + (y - 1) * cols + x] - 1.0f * input[offset + (y - 1) * cols + (x + 1)]
-                    + 1.0f * input[offset + (y + 1) * cols + (x - 1)] + 2.0f * input[offset + (y + 1) * cols + x] + 1.0f * input[offset + (y + 1) * cols + (x + 1)];
-            }
-        }
-
-        // Calculate gradient magnitude
-        float gradientMagnitude = sqrtf(gradientX * gradientX + gradientY * gradientY);
-
-        // Apply hysteresis thresholding to detect edges
-        if (gradientMagnitude > 50) {  // Adjust this threshold as needed
-            if (isColor) {
-                output[idx * 3] = 0;       // Blue
-                output[idx * 3 + 1] = 255; // Green
-                output[idx * 3 + 2] = 0;   // Red
-            }
-            else {
-                output[idx] = 255;
-            }
+        if (edges[idx] > 0) {
+            // 엣지가 감지된 픽셀에 대해 초록색으로 설정
+            output[idx * 3] = 0;       // Blue
+            output[idx * 3 + 1] = 255; // Green
+            output[idx * 3 + 2] = 0;   // Red
         }
         else {
-            if (isColor) {
-                output[idx * 3] = input[idx * 3];
-                output[idx * 3 + 1] = input[idx * 3 + 1];
-                output[idx * 3 + 2] = input[idx * 3 + 2];
-            }
-            else {
-                output[idx] = 0;
-            }
+            // 원래 픽셀 유지
+            output[idx * 3] = input[idx * 3];
+            output[idx * 3 + 1] = input[idx * 3 + 1];
+            output[idx * 3 + 2] = input[idx * 3 + 2];
         }
     }
 }
@@ -329,6 +305,33 @@ __global__ void rotateImageKernelR(const unsigned char* input, unsigned char* ou
     }
 }
 
+__global__ void cannyEdgeKernel(uchar* d_inputImage, uchar* d_edges, int cols, int rows, float threshold1, float threshold2) {
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (x >= 1 && x < cols - 1 && y >= 1 && y < rows - 1) {
+        // Sobel 필터를 사용하여 기울기 계산 (간단한 예제)
+        float gx = -d_inputImage[(y - 1) * cols + (x - 1)] + d_inputImage[(y - 1) * cols + (x + 1)]
+            - 2 * d_inputImage[y * cols + (x - 1)] + 2 * d_inputImage[y * cols + (x + 1)]
+            - d_inputImage[(y + 1) * cols + (x - 1)] + d_inputImage[(y + 1) * cols + (x + 1)];
+        float gy = -d_inputImage[(y - 1) * cols + (x - 1)] - 2 * d_inputImage[(y - 1) * cols + x]
+            - d_inputImage[(y - 1) * cols + (x + 1)] + d_inputImage[(y + 1) * cols + (x - 1)]
+            + 2 * d_inputImage[(y + 1) * cols + x] + d_inputImage[(y + 1) * cols + (x + 1)];
+
+        float mag = sqrtf(gx * gx + gy * gy);
+
+        if (mag > threshold2) {
+            d_edges[y * cols + x] = 255; // 강한 엣지
+        }
+        else if (mag > threshold1) {
+            d_edges[y * cols + x] = 128; // 약한 엣지
+        }
+        else {
+            d_edges[y * cols + x] = 0;   // 엣지가 아님
+        }
+    }
+}
+
 void callRotateImageCUDA_R(cv::Mat& inputImage, cv::Mat& outputImage) {
     int cols = inputImage.cols;
     int rows = inputImage.rows;
@@ -503,6 +506,7 @@ void callGrayScaleImageCUDA(cv::Mat& inputImage, cv::Mat& outputImage) {
 
     if (channels != 3) {
         std::cerr << "Input image must be a 3-channel BGR image." << std::endl;
+        outputImage = inputImage.clone();
         return;
     }
 
@@ -558,68 +562,69 @@ void callGrayScaleImageCUDA(cv::Mat& inputImage, cv::Mat& outputImage) {
     cudaFree(d_outputImage);
 }
 
+
 void callCannyEdgesCUDA(cv::Mat& inputImage, cv::Mat& outputImage) {
+
     int cols = inputImage.cols;
     int rows = inputImage.rows;
     int channels = inputImage.channels();
     bool isColor = (channels == 3);
 
+    // 그레이스케일 변환
+    cv::Mat grayImage;
+    if (isColor) {
+        cv::cvtColor(inputImage, grayImage, cv::COLOR_BGR2GRAY);
+    }
+    else {
+        grayImage = inputImage.clone();
+    }
+
     uchar* d_inputImage = nullptr;
-    uchar* d_outputImage = nullptr;
-    size_t inputSize = cols * rows * channels * sizeof(uchar);
-    size_t outputSize = cols * rows * (isColor ? channels : 1) * sizeof(uchar);
+    uchar* d_edges = nullptr;
+    size_t inputSize = cols * rows * sizeof(uchar);
+    size_t edgesSize = cols * rows * sizeof(uchar);
 
-    cudaError_t err;
-    err = cudaMalloc(&d_inputImage, inputSize);
-    if (err != cudaSuccess) {
-        std::cerr << "CUDA malloc error: " << cudaGetErrorString(err) << std::endl;
-        return;
-    }
+    // CUDA 메모리 할당
+    cudaMalloc(&d_inputImage, inputSize);
+    cudaMalloc(&d_edges, edgesSize);
 
-    err = cudaMalloc(&d_outputImage, outputSize);
-    if (err != cudaSuccess) {
-        std::cerr << "CUDA malloc error: " << cudaGetErrorString(err) << std::endl;
-        cudaFree(d_inputImage);
-        return;
-    }
+    // 이미지 데이터를 CUDA 장치로 복사
+    cudaMemcpy(d_inputImage, grayImage.data, inputSize, cudaMemcpyHostToDevice);
 
-    err = cudaMemcpy(d_inputImage, inputImage.data, inputSize, cudaMemcpyHostToDevice);
-    if (err != cudaSuccess) {
-        std::cerr << "CUDA memcpy error: " << cudaGetErrorString(err) << std::endl;
-        cudaFree(d_inputImage);
-        cudaFree(d_outputImage);
-        return;
-    }
-
+    // CUDA 커널 실행
     dim3 threadsPerBlock(16, 16);
     dim3 numBlocks((cols + threadsPerBlock.x - 1) / threadsPerBlock.x, (rows + threadsPerBlock.y - 1) / threadsPerBlock.y);
-
-    cannyEdgesKernel << <numBlocks, threadsPerBlock >> > (d_inputImage, d_outputImage, cols, rows, channels, isColor);
-
-    err = cudaGetLastError();
-    if (err != cudaSuccess) {
-        std::cerr << "CUDA kernel launch error: " << cudaGetErrorString(err) << std::endl;
-        cudaFree(d_inputImage);
-        cudaFree(d_outputImage);
-        return;
-    }
+    cannyEdgeKernel << <numBlocks, threadsPerBlock >> > (d_inputImage, d_edges, cols, rows, 50.0, 150.0);
 
     cudaDeviceSynchronize();
 
+    // CUDA 장치에서 결과를 호스트로 복사
+    cv::Mat edges(rows, cols, CV_8UC1);
+    cudaMemcpy(edges.data, d_edges, edgesSize, cudaMemcpyDeviceToHost);
+
     if (isColor) {
+        // 컬러 이미지로 출력 이미지 초기화
         outputImage.create(rows, cols, CV_8UC3);
+        outputImage = inputImage.clone(); // 원본 이미지를 복사하여 사용
+
+        // 엣지 부분을 초록색으로 표시
+        for (int y = 0; y < rows; ++y) {
+            for (int x = 0; x < cols; ++x) {
+                if (edges.at<uchar>(y, x) == 255) {
+                    outputImage.at<cv::Vec3b>(y, x) = cv::Vec3b(0, 255, 0); // 초록색으로 설정
+                }
+                // 엣지가 아닌 경우 원본 이미지 유지
+            }
+        }
     }
     else {
-        outputImage.create(rows, cols, CV_8UC1);
+        outputImage = edges;
     }
 
-    err = cudaMemcpy(outputImage.data, d_outputImage, outputSize, cudaMemcpyDeviceToHost);
-    if (err != cudaSuccess) {
-        std::cerr << "CUDA memcpy error: " << cudaGetErrorString(err) << std::endl;
-    }
-
+    // CUDA 메모리 해제
     cudaFree(d_inputImage);
-    cudaFree(d_outputImage);
+    cudaFree(d_edges);
+
 }
 
 void callGaussianBlurCUDA(cv::Mat& inputImage, cv::Mat& outputImage, int kernelSize) {

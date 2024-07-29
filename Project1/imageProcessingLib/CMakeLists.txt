@@ -49,6 +49,10 @@ target_link_libraries(imageProcessingLib
     Qt6::Core  # Qt6 Core 라이브러리 링크
 )
 
+# "C:\myLab\Project1\Project1\imageProcessingLib\build\Debug\imageProcessingLib.dll"
+# "C:\myLab\Project1\Project1\imageProcessingLib\build\bin\Debug\imageProcessingLib.lib"
+# "C:\myLab\Project1\Project1\imageProcessingLib\build\lib\Debug\imageProcessingLib.lib"
+
 # 라이브러리의 출력 디렉토리 설정
 set_target_properties(imageProcessingLib PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"  # 정적 라이브러리의 .lib 파일

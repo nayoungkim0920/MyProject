@@ -936,7 +936,7 @@ ImageProcessor::ProcessingResult ImageProcessor::cannyEdgesOpenCV(cv::Mat& input
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "cannyEdges", "OpenCV", elapsedTimeMs
-        , "thresold1:50, thresold2:150");
+        , "K:3, thresold1:50, thresold2:150");
 
     return result;
 }
@@ -952,7 +952,7 @@ ImageProcessor::ProcessingResult ImageProcessor::cannyEdgesIPP(cv::Mat& inputIma
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 경과 시간 계산
 
     result = setResult(result, inputImage, outputImage, "cannyEdges", "IPP", elapsedTimeMs
-        , "");
+        , "K:3, thresold1:50, thresold2:150");
 
     return result;
 }
@@ -969,7 +969,7 @@ ImageProcessor::ProcessingResult ImageProcessor::cannyEdgesCUDA(cv::Mat& inputIm
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "cannyEdges", "CUDA", elapsedTimeMs
-        , "");
+        , "K:3, thresold1:50, thresold2:150");
 
     return result;
 }
@@ -986,7 +986,7 @@ ImageProcessor::ProcessingResult ImageProcessor::cannyEdgesCUDAKernel(cv::Mat& i
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "cannyEdges", "CUDAKernel", elapsedTimeMs
-    , "");
+    , "K:3, thresold1:50, thresold2:150");
 
     return result;
 }
@@ -1003,7 +1003,7 @@ ImageProcessor::ProcessingResult ImageProcessor::cannyEdgesNPP(cv::Mat& inputIma
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "cannyEdges", "NPP", elapsedTimeMs
-        , "");
+        , "K:3, thresold1:50, thresold2:150");
 
     return result;
 }
@@ -1013,14 +1013,14 @@ ImageProcessor::ProcessingResult ImageProcessor::cannyEdgesGStreamer(cv::Mat& in
     ProcessingResult result;
     double startTime = cv::getTickCount(); // 시작 시간 측정
 
-    ImageProcessorNPP IPGStreamer;
+    ImageProcessorGStreamer IPGStreamer;
     cv::Mat outputImage = IPGStreamer.cannyEdges(inputImage);
 
     double endTime = cv::getTickCount(); // 종료 시간 측정
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "cannyEdges", "GStreamer", elapsedTimeMs
-        , "");
+        , "K:3, thresold1:50, thresold2:150");
 
     return result;
 }
@@ -1655,7 +1655,7 @@ ImageProcessor::ProcessingResult ImageProcessor::sobelFilterIPP(cv::Mat& inputIm
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "sobelFilter", "IPP", elapsedTimeMs
-    , "");
+    , "k:5");
 
     return result;
 }

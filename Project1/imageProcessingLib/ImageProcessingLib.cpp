@@ -3,7 +3,10 @@
 #include "pch.h"
 // 그레이스케일 이미지 버퍼 크기 계산
 
-
+Ipp8u* matToIpp8u(cv::Mat& mat)
+{
+    return mat.ptr<Ipp8u>();
+}
 
 // 에러 체크 함수
 void checkCudaError(const char* msg) {

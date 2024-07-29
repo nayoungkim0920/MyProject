@@ -24,6 +24,8 @@
 #include <ipp/ipps.h>
 #include <ipp/ippcv.h>
 
+#include "ImageProcessingLib.h"
+
 class ImageProcessorIPP {
 public:
     ImageProcessorIPP();
@@ -38,10 +40,6 @@ public:
     cv::Mat laplacianFilter(cv::Mat& inputImage);
     cv::Mat bilateralFilter(cv::Mat& inputImage);
     cv::Mat sobelFilter(cv::Mat& inputImage);
-
-private:
-    // 유틸리티 함수 선언
-    Ipp8u* matToIpp8u(cv::Mat& mat);
 };
 
 #endif // IMAGEPROCESSORIPP_H

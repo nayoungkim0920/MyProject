@@ -3,6 +3,7 @@
 #define IMAGE_PROCESSING_CUH_
 
 #include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 #include <cuda_runtime.h>
 #include <thrust/sort.h>
 #include <thrust/device_ptr.h>

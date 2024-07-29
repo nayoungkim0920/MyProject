@@ -527,94 +527,128 @@ cv::Mat ImageProcessorNPP::gaussianBlur(cv::Mat& inputImage, int kernelSize) {
     return outputImage;
 }
 
-
-
-
 cv::Mat ImageProcessorNPP::cannyEdges(cv::Mat& inputImage) {
 
-    cv::Mat grayImage;
-    cv::Mat edgeImage;
+    cv::Mat grayImage, blurredImage, edgeImage;
     cv::Mat outputImage;
 
     // Convert to grayscale if necessary
     if (inputImage.channels() == 3) {
-        //cv::cvtColor(inputImage, grayImage, cv::COLOR_BGR2GRAY);
         grayImage = grayScale(inputImage);
     }
     else {
         grayImage = inputImage.clone();
     }
 
-    // Prepare parameters for NPP function
-    NppiSize oSrcSize = { grayImage.cols, grayImage.rows };
-    NppiSize oSizeROI = { grayImage.cols, grayImage.rows };
-    NppiPoint oSrcOffset = { 0, 0 };
-    int srcStep = static_cast<int>(grayImage.step);
-    int dstStep = srcStep;
-
-    // Allocate GPU memory and upload data
-    cv::cuda::GpuMat d_src, d_dst;
+    // Prepare GPU matrices
+    cv::cuda::GpuMat d_src, d_sobelX, d_sobelY;
     d_src.upload(grayImage);
-    d_dst.create(grayImage.size(), CV_8UC1);
 
-    // Create NPP buffer
+    d_sobelX.create(grayImage.size(), CV_16SC1);
+    d_sobelY.create(grayImage.size(), CV_16SC1);
+
+    // Define Sobel filter parameters
+    NppiSize oSizeROI = { grayImage.cols, grayImage.rows };
+    int srcStep = static_cast<int>(d_src.step);
+    int dstStep = static_cast<int>(d_sobelX.step);
+
+    // Allocate buffer for NPP functions
     int bufferSize = 0;
-    NppStatus status = nppiFilterCannyBorderGetBufferSize(oSizeROI, &bufferSize);
-    checkNPPStatus(status, "nppiFilterCannyBorderGetBufferSize");
+    NppStatus status;
 
-    // Ensure that buffer size is valid
-    if (bufferSize <= 0) {
-        std::cerr << "Invalid buffer size: " << bufferSize << std::endl;
-        return cv::Mat();
+    // Sobel X direction
+    status = nppiFilterSobelHorizBorder_8u16s_C1R(
+        d_src.ptr<Npp8u>(), srcStep, oSizeROI, { 0, 0 },
+        d_sobelX.ptr<Npp16s>(), dstStep, oSizeROI,
+        NPP_MASK_SIZE_3_X_3, NPP_BORDER_REPLICATE
+    );
+    checkNPPStatus(status, "nppiFilterSobelHorizBorder_8u16s_C1R");
+
+    // Sobel Y direction
+    status = nppiFilterSobelVertBorder_8u16s_C1R(
+        d_src.ptr<Npp8u>(), srcStep, oSizeROI, { 0, 0 },
+        d_sobelY.ptr<Npp16s>(), dstStep, oSizeROI,
+        NPP_MASK_SIZE_3_X_3, NPP_BORDER_REPLICATE
+    );
+    checkNPPStatus(status, "nppiFilterSobelVertBorder_8u16s_C1R");
+
+    // Download results from GPU
+    cv::Mat sobelX, sobelY;
+    d_sobelX.download(sobelX);
+    d_sobelY.download(sobelY);
+
+    // Calculate magnitude of gradient
+    cv::Mat magnitude;
+    cv::Mat sobelX_32f, sobelY_32f;
+    sobelX.convertTo(sobelX_32f, CV_32F);
+    sobelY.convertTo(sobelY_32f, CV_32F);
+    cv::magnitude(sobelX_32f, sobelY_32f, magnitude);
+
+    // Non-maximum suppression and hysteresis thresholding
+    cv::Mat nonMaxSuppressed = cv::Mat::zeros(magnitude.size(), CV_8UC1);
+    double lowThreshold = 50.0;
+    double highThreshold = 150.0;
+
+    for (int y = 1; y < magnitude.rows - 1; ++y) {
+        for (int x = 1; x < magnitude.cols - 1; ++x) {
+            float angle = atan2(sobelY_32f.at<float>(y, x), sobelX_32f.at<float>(y, x)) * 180.0 / CV_PI;
+            angle = angle < 0 ? angle + 180 : angle;
+            uchar& pixel = nonMaxSuppressed.at<uchar>(y, x);
+            float currentMagnitude = magnitude.at<float>(y, x);
+
+            // Non-maximum suppression
+            if ((angle >= 0 && angle < 22.5) || (angle >= 157.5 && angle <= 180)) {
+                if (currentMagnitude >= magnitude.at<float>(y, x - 1) && currentMagnitude >= magnitude.at<float>(y, x + 1))
+                    pixel = (currentMagnitude > highThreshold) ? 255 : (currentMagnitude > lowThreshold ? 128 : 0);
+            }
+            else if (angle >= 22.5 && angle < 67.5) {
+                if (currentMagnitude >= magnitude.at<float>(y - 1, x + 1) && currentMagnitude >= magnitude.at<float>(y + 1, x - 1))
+                    pixel = (currentMagnitude > highThreshold) ? 255 : (currentMagnitude > lowThreshold ? 128 : 0);
+            }
+            else if (angle >= 67.5 && angle < 112.5) {
+                if (currentMagnitude >= magnitude.at<float>(y - 1, x) && currentMagnitude >= magnitude.at<float>(y + 1, x))
+                    pixel = (currentMagnitude > highThreshold) ? 255 : (currentMagnitude > lowThreshold ? 128 : 0);
+            }
+            else {
+                if (currentMagnitude >= magnitude.at<float>(y - 1, x - 1) && currentMagnitude >= magnitude.at<float>(y + 1, x + 1))
+                    pixel = (currentMagnitude > highThreshold) ? 255 : (currentMagnitude > lowThreshold ? 128 : 0);
+            }
+        }
     }
 
-    cv::cuda::GpuMat nppBuffer;
-    nppBuffer.create(1, bufferSize, CV_8UC1);
-    Npp8u* pBuffer = nppBuffer.ptr<Npp8u>();
-
-    Npp8u* pSrcData = d_src.ptr<Npp8u>();
-    Npp8u* pDstData = d_dst.ptr<Npp8u>();
-
-    // Call the NPP function
-    status = nppiFilterCannyBorder_8u_C1R(
-        pSrcData, srcStep, oSrcSize, oSrcOffset,
-        pDstData, dstStep, oSizeROI,
-        NPP_FILTER_SOBEL, NPP_MASK_SIZE_3_X_3,
-        50, 150, NppiNorm(nppiNormL2),
-        NPP_BORDER_REPLICATE, pBuffer
-    );
-    checkNPPStatus(status, "nppiFilterCannyBorder_8u_C1R");
-
-    // Download result from GPU
-    d_dst.download(edgeImage);
-
-    // Ensure edgeImage is correctly processed
-    if (edgeImage.empty()) {
-        std::cerr << "Edge image is empty after download." << std::endl;
-        return cv::Mat();
+    // Hysteresis thresholding
+    cv::Mat finalEdges = cv::Mat::zeros(magnitude.size(), CV_8UC1);
+    for (int y = 1; y < nonMaxSuppressed.rows - 1; ++y) {
+        for (int x = 1; x < nonMaxSuppressed.cols - 1; ++x) {
+            if (nonMaxSuppressed.at<uchar>(y, x) == 255) {
+                finalEdges.at<uchar>(y, x) = 255;
+            }
+            else if (nonMaxSuppressed.at<uchar>(y, x) == 128) {
+                // Check surrounding pixels for strong edges
+                if (nonMaxSuppressed.at<uchar>(y - 1, x - 1) == 255 || nonMaxSuppressed.at<uchar>(y - 1, x) == 255 ||
+                    nonMaxSuppressed.at<uchar>(y - 1, x + 1) == 255 || nonMaxSuppressed.at<uchar>(y, x - 1) == 255 ||
+                    nonMaxSuppressed.at<uchar>(y, x + 1) == 255 || nonMaxSuppressed.at<uchar>(y + 1, x - 1) == 255 ||
+                    nonMaxSuppressed.at<uchar>(y + 1, x) == 255 || nonMaxSuppressed.at<uchar>(y + 1, x + 1) == 255) {
+                    finalEdges.at<uchar>(y, x) = 255;
+                }
+            }
+        }
     }
 
     if (inputImage.channels() == 3) {
-        // 컬러 이미지 처리
+        // Color image processing
         outputImage = inputImage.clone();
-        for (int y = 0; y < edgeImage.rows; ++y) {
-            for (int x = 0; x < edgeImage.cols; ++x) {
-                if (edgeImage.at<uchar>(y, x) > 0) {
-                    outputImage.at<cv::Vec3b>(y, x) = cv::Vec3b(0, 255, 0); // 초록색
+        for (int y = 0; y < finalEdges.rows; ++y) {
+            for (int x = 0; x < finalEdges.cols; ++x) {
+                if (finalEdges.at<uchar>(y, x) > 0) {
+                    outputImage.at<cv::Vec3b>(y, x) = cv::Vec3b(0, 255, 0); // Green
                 }
             }
         }
     }
     else {
-        // 흑백 이미지 처리
-        outputImage = cv::Mat(grayImage.size(), CV_8UC1, cv::Scalar(0));
-        for (int y = 0; y < edgeImage.rows; ++y) {
-            for (int x = 0; x < edgeImage.cols; ++x) {
-                if (edgeImage.at<uchar>(y, x) > 0) {
-                    outputImage.at<uchar>(y, x) = 255; // 흰색
-                }
-            }
-        }
+        // Grayscale image processing
+        outputImage = finalEdges.clone();
     }
 
     return outputImage;

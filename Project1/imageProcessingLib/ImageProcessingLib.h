@@ -3,15 +3,16 @@
 
 #include <opencv2/opencv.hpp>
 #include <cuda_runtime.h>
+#include <ipp.h>
+#include <ipp/ippbase.h>
 #include <npp.h>
 #include <nppi.h>
 #include <gst/gst.h>
-#include <ipp.h>
-#include <ipp/ippi.h>
 #include <QString>
 #include <nppi_filtering_functions.h>
 #include <iostream>
 #include <unordered_map>
+
 #include "pch.h"
 
 // EXPORT 매크로 정의 (Windows용)
@@ -24,6 +25,7 @@
 // C++ 인터페이스 함수 선언
 //IMAGEPROCESSINGLIB_API void calculateGrayScaleBufferSize(const NppiSize& oSizeROI, const NppiSize& oMaskSize, Npp32u& nBufferSize);
 //IMAGEPROCESSINGLIB_API void calculateBufferSize(const NppiSize& oSizeROI, const NppiSize& oMaskSize, Npp32u& nBufferSize);
+IMAGEPROCESSINGLIB_API Ipp8u* matToIpp8u(cv::Mat& mat);
 IMAGEPROCESSINGLIB_API void checkNPPError(NppStatus status);
 IMAGEPROCESSINGLIB_API void printImagePixels(cv::Mat& image, int numPixels);
 IMAGEPROCESSINGLIB_API Npp8u* matToNppImage(cv::Mat& mat, NppiSize& size, int& nppSize);

@@ -21,6 +21,14 @@ include_directories(
 )
 link_directories("${GSTREAMER_ROOT}/lib")
 
+# IPP 설정
+set(IPLIB_ROOT "C:/myLab/Project1/Project1/imageProcessingLib")
+include_directories("${IPLIB_ROOT}")
+link_directories(
+    "${IPLIB_ROOT}/build/lib/Debug"
+    "${IPLIB_ROOT}/build/bin/Debug"
+    )
+
 # 추가 포함 디렉터리 설정
 include_directories(
     ${CUDA_INCLUDE_DIRS}
@@ -29,7 +37,6 @@ include_directories(
     ${IPP_ROOT}/include
     "${GSTREAMER_ROOT}/include/gstreamer-1.0"
     "${GSTREAMER_ROOT}/lib/gstreamer-1.0/include"
-    "C:/myLab/Project1/Project1/imageProcessingLib"  # 헤더 파일 포함
 )
 
 # CUDA 파일 설정
@@ -116,24 +123,17 @@ set_target_properties(Project1 PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/Release"
 )
 
-#file(COPY "C:/myLab/Project1/Project1/imageProcessingLib/build/bin/Debug/imageProcessingLib.dll"
-#     DESTINATION "${CMAKE_BINARY_DIR}/Debug"
-#)
-
-file(COPY "C:/myLab/Project1/Project1/imageProcessingLib/build/lib/Debug/imageProcessingLib.lib"
+file(COPY "C:/myLab/Project1/Project1/imageProcessingLib/build/Debug/imageProcessingLib.dll"
      DESTINATION "${CMAKE_BINARY_DIR}/Debug"
 )
 
-add_custom_command(TARGET Project1 POST_BUILD 
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/myLab/Project1/Project1/imageProcessingLib/build/bin/Debug/imageProcessingLib.dll"
-    "$<TARGET_FILE_DIR:Project1>"
-    COMMENT "Copying Debug imageProcessingLib dll to output directory"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "C:/myLab/Project1/Project1/imageProcessingLib/build/lib/Debug/imageProcessingLib.lib"
-    "$<TARGET_FILE_DIR:Project1>"
-    COMMENT "Copying Debug imageProcessingLib lib to output directory"
-)
+#file(COPY "C:/myLab/Project1/Project1/imageProcessingLib/build/bin/Debug/imageProcessingLib.lib"
+#     DESTINATION "${CMAKE_BINARY_DIR}/Debug"
+#)
+
+#file(COPY "C:/myLab/Project1/Project1/imageProcessingLib/build/bin/Debug/imageProcessingLib.lib"
+#     DESTINATION "${CMAKE_BINARY_DIR}/Debug"
+#)
 
 # 디버그 빌드에서의 OpenCV opencv_world DLL 복사
 add_custom_command(TARGET Project1 POST_BUILD
