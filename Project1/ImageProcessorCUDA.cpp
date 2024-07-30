@@ -255,22 +255,101 @@ cv::Mat ImageProcessorCUDA::bilateralFilter(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorCUDA::sobelFilter(cv::Mat& inputImage)
 {
+    //CUDA
+    int numChannels = inputImage.channels();
+    cv::Mat grayImage;
     cv::Mat outputImage;
 
-    // Convert input image to grayscale if necessary
-    cv::Mat grayImage;
-    if (inputImage.channels() > 1) {
-        grayImage = grayScale(inputImage);
+    if (numChannels == 3) {
+        cv::cuda::GpuMat d_inputImage(inputImage);
+        cv::cuda::GpuMat d_grayImage;
+
+        // 컬러 이미지를 그레이스케일로 변환
+        cv::cuda::cvtColor(d_inputImage, d_grayImage, cv::COLOR_BGR2GRAY);
+        grayImage = cv::Mat(d_grayImage.size(), d_grayImage.type());
+        d_grayImage.download(grayImage);
+    }
+    else if (numChannels == 1) {
+        grayImage = inputImage;  // Clone을 사용할 필요 없이 참조만 사용
     }
     else {
-        grayImage = inputImage.clone();
+        std::cerr << __func__ << " : Unsupported number of channels: " << numChannels << std::endl;
+        return cv::Mat(); // 빈 이미지 반환
     }
 
-    // Transfer input image to GPU
+    cv::cuda::GpuMat d_grayImage(grayImage);
+    cv::cuda::GpuMat d_outputImage;
+
+    cv::Ptr<cv::cuda::Filter> sobelFilter = cv::cuda::createSobelFilter(
+        d_grayImage.type(), // srcType
+        CV_8UC1,            // dstType
+        1,                  // dx (x 방향의 미분 차수)
+        0,                  // dy (y 방향의 미분 차수)
+        3                   // 커널 크기, 3x3 소벨
+    );
+
+    // GPU에서 소벨 필터 적용
+    sobelFilter->apply(d_grayImage, d_outputImage);
+
+    // 결과를 호스트로 전송
+    d_outputImage.download(outputImage);
+
+    // 컬러 이미지인 경우, 결과를 원본 컬러 이미지 위에 오버레이
+    if (numChannels == 3) {
+        //채널분리병합
+        /*cv::cuda::GpuMat d_inputImage(inputImage);
+        std::vector<cv::cuda::GpuMat> d_channels(3);
+
+        // 입력 이미지를 채널별로 분리
+        cv::cuda::split(d_inputImage, d_channels);
+
+        // 각 채널에 소벨 결과 오버레이 (원본 컬러 이미지와 합성)
+        cv::cuda::GpuMat d_resizedOutput;
+        if (outputImage.size() != d_channels[0].size()) {
+            cv::cuda::resize(d_outputImage, d_resizedOutput, d_channels[0].size());
+        }
+        else {
+            d_resizedOutput = d_outputImage;
+        }
+
+        for (auto& channel : d_channels) {
+            cv::cuda::addWeighted(channel, 0.5, d_resizedOutput, 0.5, 0, channel);
+        }
+
+        // 채널을 다시 병합
+        cv::cuda::merge(d_channels, d_inputImage);
+        d_inputImage.download(outputImage);*/
+
+        //오버래이
+        cv::Mat coloredEdgeImage;
+        cv::cvtColor(outputImage, coloredEdgeImage, cv::COLOR_GRAY2BGR);
+        cv::addWeighted(inputImage, 0.5, coloredEdgeImage, 0.5, 0, outputImage);
+    }
+
+    return outputImage;
+
+    //CUDA+OpenCV
+    /*
+    int numChannels = inputImage.channels();
+    cv::Mat grayImage;
+    cv::Mat outputImage;
+
+    if (numChannels == 3) {
+        grayImage = grayScale(inputImage);
+    }
+    else if(numChannels == 1) {
+        grayImage = inputImage.clone();
+    }
+    else {
+        std::cerr << __func__ << " : Unsupported number of channels: " << numChannels << std::endl;
+        return cv::Mat(); // 빈 이미지 반환
+    }
+
+    outputImage = cv::Mat::zeros(grayImage.size(), CV_8UC1);
+
     cv::cuda::GpuMat d_inputImage(grayImage);
     cv::cuda::GpuMat d_outputImage;
 
-    // Create Sobel filter on GPU
     cv::Ptr<cv::cuda::Filter> sobelFilter = cv::cuda::createSobelFilter(
         d_inputImage.type(),   // srcType
         CV_8UC1,              // dstType
@@ -285,5 +364,27 @@ cv::Mat ImageProcessorCUDA::sobelFilter(cv::Mat& inputImage)
     // Transfer result back to CPU
     d_outputImage.download(outputImage);
 
+    // 컬러 이미지인 경우, 결과를 원본 컬러 이미지 위에 오버레이
+    if (numChannels == 3) {
+        std::vector<cv::Mat> channels(3);
+        cv::split(inputImage, channels);
+
+        // 각 채널에 소벨 결과 오버레이 (원본 컬러 이미지와 합성)
+        for (auto& channel : channels) {
+            cv::Mat resizedOutput;
+            if (outputImage.size() != channel.size()) {
+                cv::resize(outputImage, resizedOutput, channel.size());
+            }
+            else {
+                resizedOutput = outputImage;
+            }
+            cv::addWeighted(channel, 0.5, resizedOutput, 0.5, 0, channel);
+        }
+
+        cv::merge(channels, outputImage);
+    }
+    
     return outputImage;
+    
+    */    
 }

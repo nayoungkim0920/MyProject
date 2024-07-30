@@ -611,38 +611,71 @@ cv::Mat ImageProcessorGStreamer::sobelFilter(cv::Mat& inputImage)
         return cv::Mat();    
 
     // Apply Sobel filter using OpenCV
-    cv::Mat gradX, gradY, absGradX, absGradY, outputImage;
+    cv::Mat gradX, gradY, absGradX, absGradY, sobelOutput;
+
+    cv::Mat grayImage;
+    int numChannels = inputImage.channels();
+
+    if (numChannels == 3)
+        grayImage = grayScale(inputImage);
+    else if (numChannels == 1)
+        grayImage = inputImage.clone();
+    else {
+        std::cerr << __func__ << " : Unsupported number of channels: " << numChannels << std::endl;
+        return cv::Mat(); // Return an empty image
+    }
 
     // Apply Sobel filter
-    cv::Sobel(inputImage, gradX, CV_16S, 1, 0, 3);
+    cv::Sobel(grayImage, gradX, CV_16S, 1, 0, 3);
     cv::convertScaleAbs(gradX, absGradX);
-    cv::Sobel(inputImage, gradY, CV_16S, 0, 1, 3);
+    cv::Sobel(grayImage, gradY, CV_16S, 0, 1, 3);
     cv::convertScaleAbs(gradY, absGradY);
-    cv::addWeighted(absGradX, 0.5, absGradY, 0.5, 0, outputImage);
+    cv::addWeighted(absGradX, 0.5, absGradY, 0.5, 0, sobelOutput);
 
-    GstBuffer* buffer;
-    GstMapInfo map;
-    if (!createBuffer(buffer, map, outputImage, pipeline, source))
-       return cv::Mat();   
+    if (numChannels == 3) {
 
-    // Set the pipeline to playing
-    gst_element_set_state(pipeline, GST_STATE_PLAYING);
+        //분할병합
+        /*
+        cv::Mat overlayImage = inputImage.clone();
+        std::vector<cv::Mat> channels(3);
+        cv::split(overlayImage, channels);
 
-    if (!getSample(sink, pipeline, sample))
-        return cv::Mat();
+        // Scale sobelOutput to fit the range of color channels
+        for (auto& channel : channels) {
+            cv::addWeighted(channel, 0.5, sobelOutput, 0.5, 0, channel);
+        }
+        cv::merge(channels, overlayImage);
+        */
 
-    GstBuffer* outputBuffer;
-    if (!getSampleBuffer(sample, pipeline, outputBuffer))
-        return cv::Mat();
+        cv::Mat overlayImage;
+        cv::cvtColor(sobelOutput, overlayImage, cv::COLOR_GRAY2BGR);
+        cv::addWeighted(inputImage, 0.5, overlayImage, 0.5, 0, sobelOutput);
 
-    //gst_buffer_map(outputBuffer, &map, GST_MAP_READ);
-    //cv::Mat finalImage(inputImage.rows, inputImage.cols, CV_8UC3, map.data);
-    //finalImage = finalImage.clone(); // Make a deep copy of the data
-    //gst_buffer_unmap(outputBuffer, &map);
+        // Prepare the buffer for GStreamer
+        GstBuffer* buffer;
+        GstMapInfo map;
+        if (!createBuffer(buffer, map, overlayImage, pipeline, source))
+            return cv::Mat();
 
-    gstDestroyAll(outputBuffer, sample, pipeline);
+        gst_element_set_state(pipeline, GST_STATE_PLAYING);
 
-    return outputImage;
+        if (!getSample(sink, pipeline, sample))
+            return cv::Mat();
+
+        GstBuffer* outputBuffer;
+        if (!getSampleBuffer(sample, pipeline, outputBuffer))
+            return cv::Mat();
+
+        // Prepare the final output
+        gst_buffer_map(outputBuffer, &map, GST_MAP_READ);
+        cv::Mat outputImage(inputImage.rows, inputImage.cols, CV_8UC3, map.data);
+        outputImage = outputImage.clone(); // Make a deep copy of the data
+        gst_buffer_unmap(outputBuffer, &map);
+
+        gstDestroyAll(outputBuffer, sample, pipeline);
+    }
+
+    return sobelOutput;
 
 }
 

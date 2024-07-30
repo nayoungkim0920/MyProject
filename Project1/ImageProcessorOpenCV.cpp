@@ -89,8 +89,35 @@ cv::Mat ImageProcessorOpenCV::medianFilter(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorOpenCV::laplacianFilter(cv::Mat& inputImage)
 {
+    std::cout << __func__ << std::endl;
+
+    cv::Mat grayImage;
+    if (inputImage.channels() == 1)
+        grayImage = inputImage.clone();
+    else if(inputImage.channels() == 3)
+        grayImage = grayScale(inputImage);
+    else {
+        std::cerr   << __func__ 
+                    << " : Unsupported number of channels : " 
+                    << inputImage.channels() << std::endl;
+
+        return cv::Mat(); // 빈 이미지 반환
+    }
+
+    cv::Mat laplacianImage;
     cv::Mat outputImage;
-    cv::Laplacian(inputImage, outputImage, CV_8U, 3);
+
+    // Use CV_16S to prevent overflow in edge detection
+    cv::Laplacian(grayImage, outputImage, CV_16S, 3);
+    // Convert to CV_8U
+    cv::convertScaleAbs(outputImage, outputImage);
+
+    if (inputImage.channels() == 3) {
+        // 컬러 이미지에 소벨 필터 결과를 오버레이
+        cv::Mat coloredEdgeImage;
+        cv::cvtColor(outputImage, coloredEdgeImage, cv::COLOR_GRAY2BGR);
+        cv::addWeighted(inputImage, 0.5, coloredEdgeImage, 0.5, 0, outputImage);
+    }
 
     return outputImage;
 }
@@ -105,44 +132,33 @@ cv::Mat ImageProcessorOpenCV::bilateralFilter(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorOpenCV::sobelFilter(cv::Mat& inputImage)
 {
+    cv::Mat grayImage;
+    if (inputImage.channels() == 1)
+        grayImage = inputImage.clone();
+    else
+        grayImage = grayScale(inputImage);
+
+    // 소벨 필터 적용
     cv::Mat gradX, gradY, absGradX, absGradY, outputImage;
 
-    if (inputImage.channels() == 1) {
-        // 그레이스케일 이미지 처리
-        cv::Sobel(inputImage, gradX, CV_16S, 1, 0, 3, 1, 0, cv::BORDER_DEFAULT);
-        cv::Sobel(inputImage, gradY, CV_16S, 0, 1, 3, 1, 0, cv::BORDER_DEFAULT);
+    // X 및 Y 방향의 소벨 필터 적용
+    cv::Sobel(grayImage, gradX, CV_16S, 1, 0
+        , 3 //kernel size
+        , 1, 0, cv::BORDER_DEFAULT);
+    cv::Sobel(grayImage, gradY, CV_16S, 0, 1, 3, 1, 0, cv::BORDER_DEFAULT);
 
-        cv::convertScaleAbs(gradX, absGradX);
-        cv::convertScaleAbs(gradY, absGradY);
+    // 절대값으로 변환
+    cv::convertScaleAbs(gradX, absGradX);
+    cv::convertScaleAbs(gradY, absGradY);
 
-        cv::addWeighted(absGradX, 0.5, absGradY, 0.5, 0, outputImage);
-    }
-    else {
-        // 컬러 이미지 처리
-        std::vector<cv::Mat> channels, gradXChannels, gradYChannels, absGradXChannels, absGradYChannels, outputChannels;
+    // X 및 Y 방향의 그래디언트 합성
+    cv::addWeighted(absGradX, 0.5, absGradY, 0.5, 0, outputImage);
 
-        // 컬러 채널 분리
-        cv::split(inputImage, channels);
-
-        // 각 채널에 Sobel 연산자 적용
-        for (int i = 0; i < channels.size(); ++i) {
-            cv::Sobel(channels[i], gradX, CV_16S, 1, 0, 3, 1, 0, cv::BORDER_DEFAULT);
-            cv::Sobel(channels[i], gradY, CV_16S, 0, 1, 3, 1, 0, cv::BORDER_DEFAULT);
-
-            cv::convertScaleAbs(gradX, absGradX);
-            cv::convertScaleAbs(gradY, absGradY);
-
-            gradXChannels.push_back(absGradX);
-            gradYChannels.push_back(absGradY);
-
-            // 각 채널의 결과를 결합
-            cv::Mat outputChannel;
-            cv::addWeighted(absGradX, 0.5, absGradY, 0.5, 0, outputChannel);
-            outputChannels.push_back(outputChannel);
-        }
-
-        // 채널 병합
-        cv::merge(outputChannels, outputImage);
+    if (inputImage.channels() == 3) {
+        // 컬러 이미지에 소벨 필터 결과를 오버레이
+        cv::Mat coloredEdgeImage;
+        cv::cvtColor(outputImage, coloredEdgeImage, cv::COLOR_GRAY2BGR);
+        cv::addWeighted(inputImage, 0.5, coloredEdgeImage, 0.5, 0, outputImage);
     }
 
     return outputImage;

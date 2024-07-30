@@ -1288,7 +1288,7 @@ ImageProcessor::ProcessingResult ImageProcessor::laplacianFilterOpenCV(cv::Mat& 
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "laplacianFilter", "OpenCV", elapsedTimeMs
-    , "");
+    , "k:3");
 
     return result;
 }
@@ -1307,7 +1307,7 @@ ImageProcessor::ProcessingResult ImageProcessor::laplacianFilterIPP(cv::Mat& inp
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "laplacianFilter", "IPP", elapsedTimeMs
-    , "");
+    , "mask:3x3");
 
     return result;
 }
@@ -1364,7 +1364,7 @@ ImageProcessor::ProcessingResult ImageProcessor::laplacianFilterNPP(cv::Mat& inp
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "laplacianFilter", "NPP", elapsedTimeMs
-        , "");
+        , "k:3x3");
 
     return result;
 }
@@ -1638,7 +1638,7 @@ ImageProcessor::ProcessingResult ImageProcessor::sobelFilterOpenCV(cv::Mat& inpu
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "sobelFilter", "OpenCV", elapsedTimeMs
-    , "");
+    , "k:3");
 
     return result;
 }
@@ -1655,7 +1655,7 @@ ImageProcessor::ProcessingResult ImageProcessor::sobelFilterIPP(cv::Mat& inputIm
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "sobelFilter", "IPP", elapsedTimeMs
-    , "k:5");
+    , "mask:3x3");
 
     return result;
 }
@@ -1672,7 +1672,7 @@ ImageProcessor::ProcessingResult ImageProcessor::sobelFilterCUDA(cv::Mat& inputI
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "sobelFilter", "CUDA", elapsedTimeMs
-    , "");
+    , "k:3");
 
     return result;
 }
@@ -1689,7 +1689,7 @@ ImageProcessor::ProcessingResult ImageProcessor::sobelFilterCUDAKernel(cv::Mat& 
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "sobelFilter", "CUDAKernel", elapsedTimeMs
-    , "");
+    , "k:3x3");
 
     return result;
 }
@@ -1706,7 +1706,7 @@ ImageProcessor::ProcessingResult ImageProcessor::sobelFilterNPP(cv::Mat& inputIm
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "sobelFilter", "NPP", elapsedTimeMs
-        , "");
+        , "mask:3x3");
 
     return result;
 }
@@ -1723,7 +1723,7 @@ ImageProcessor::ProcessingResult ImageProcessor::sobelFilterGStreamer(cv::Mat& i
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "sobelFilter", "GStreamer", elapsedTimeMs
-        , "");
+        , "k:3");
 
     return result;
 }

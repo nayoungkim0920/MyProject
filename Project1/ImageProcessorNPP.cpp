@@ -746,74 +746,54 @@ cv::Mat ImageProcessorNPP::sobelFilter(cv::Mat& inputImage) {
     }
 
     int numChannels = inputImage.channels();
-    cv::Mat outputImage(inputImage.size(), inputImage.type());
+    cv::Mat grayImage, outputImage;
 
-    Npp32s nSrcStep = inputImage.step[0];
-    Npp32s nDstStep = outputImage.step[0];
-    NppiSize oSizeROI = { inputImage.cols, inputImage.rows };
+    // 그레이스케일 이미지로 변환 (컬러 이미지일 경우)
+    if (numChannels == 3) {
+        cv::cvtColor(inputImage, grayImage, cv::COLOR_BGR2GRAY);
+    }
+    else if (numChannels == 1) {
+        grayImage = inputImage.clone();
+    }
+    else {
+        std::cerr << "Unsupported number of channels: " << numChannels << std::endl;
+        return cv::Mat(); // 빈 이미지 반환
+    }
 
+    // NPP 함수에 맞는 타입과 사이즈 설정
+    outputImage = cv::Mat::zeros(grayImage.size(), CV_8UC1);
+
+    Npp8u* d_src;
+    Npp8u* d_dst;
     NppStatus status;
 
-    // CUDA 초기화
-    cudaSetDevice(0);
-
-    size_t imageSize = inputImage.rows * inputImage.step;
-
-    unsigned char* d_src;
-    unsigned char* d_dst;
-
     // CUDA 메모리 할당
-    cudaMalloc(&d_src, imageSize);
-    cudaMalloc(&d_dst, imageSize);
+    cudaMalloc(&d_src, grayImage.rows * grayImage.step);
+    cudaMalloc(&d_dst, grayImage.rows * grayImage.step);
 
     // 입력 이미지를 GPU 메모리로 복사
-    cudaMemcpy(d_src, inputImage.data, imageSize, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_src, grayImage.data, grayImage.rows * grayImage.step, cudaMemcpyHostToDevice);
 
-    // 소벨 필터 처리
+    // IPP 소벨 필터 적용
     try {
-        if (numChannels == 3) {
-            // 수평 소벨 필터
-            status = nppiFilterSobelHoriz_8u_C3R(d_src, nSrcStep, d_dst, nDstStep, oSizeROI);
-            if (status != NPP_SUCCESS) {
-                std::cerr << "nppiFilterSobelHoriz_8u_C3R failed with status: " << status << std::endl;
-                throw std::runtime_error("nppiFilterSobelHoriz_8u_C3R failed.");
-            }
-
-            // 수직 소벨 필터
-            status = nppiFilterSobelVert_8u_C3R(d_dst, nSrcStep, d_dst, nDstStep, oSizeROI);
-            if (status != NPP_SUCCESS) {
-                std::cerr << "nppiFilterSobelVert_8u_C3R failed with status: " << status << std::endl;
-                throw std::runtime_error("nppiFilterSobelVert_8u_C3R failed.");
-            }
+        // 수평 소벨 필터
+        status = nppiFilterSobelHoriz_8u_C1R(d_src, grayImage.step, d_dst, grayImage.step,
+            { grayImage.cols, grayImage.rows });
+        if (status != NPP_SUCCESS) {
+            std::cerr << "nppiFilterSobelHoriz_8u_C1R failed with status: " << status << std::endl;
+            throw std::runtime_error("nppiFilterSobelHoriz_8u_C1R failed.");
         }
-        else if (numChannels == 1) {
-            // 그레이스케일 이미지에서 소벨 필터 적용
 
-            // 수평 소벨 필터
-            status = nppiFilterSobelHoriz_8u_C1R(d_src, nSrcStep, d_dst, nDstStep, oSizeROI);
-            if (status != NPP_SUCCESS) {
-                std::cerr << "nppiFilterSobelHoriz_8u_C1R failed with status: " << status << std::endl;
-                throw std::runtime_error("nppiFilterSobelHoriz_8u_C1R failed.");
-            }
-
-            // 수직 소벨 필터
-            status = nppiFilterSobelVert_8u_C1R(d_dst, nSrcStep, d_dst, nDstStep, oSizeROI);
-            if (status != NPP_SUCCESS) {
-                std::cerr << "nppiFilterSobelVert_8u_C1R failed with status: " << status << std::endl;
-                throw std::runtime_error("nppiFilterSobelVert_8u_C1R failed.");
-            }
-        }
-        else {
-            std::cerr << "Unsupported number of channels: " << numChannels << std::endl;
-            cudaFree(d_src);
-            cudaFree(d_dst);
-            return cv::Mat(); // 빈 이미지 반환
+        // 수직 소벨 필터
+        status = nppiFilterSobelVert_8u_C1R(d_dst, grayImage.step, d_dst, grayImage.step,
+            { grayImage.cols, grayImage.rows });
+        if (status != NPP_SUCCESS) {
+            std::cerr << "nppiFilterSobelVert_8u_C1R failed with status: " << status << std::endl;
+            throw std::runtime_error("nppiFilterSobelVert_8u_C1R failed.");
         }
 
         // 결과를 호스트로 복사
-        cudaMemcpy(outputImage.data, d_dst, imageSize, cudaMemcpyDeviceToHost);
-
-        // CUDA 오류 체크
+        cudaMemcpy(outputImage.data, d_dst, grayImage.rows * grayImage.step, cudaMemcpyDeviceToHost);
         cudaError_t cudaErr = cudaGetLastError();
         if (cudaErr != cudaSuccess) {
             std::cerr << "CUDA error: " << cudaGetErrorString(cudaErr) << std::endl;
@@ -831,21 +811,52 @@ cv::Mat ImageProcessorNPP::sobelFilter(cv::Mat& inputImage) {
     cudaFree(d_src);
     cudaFree(d_dst);
 
+    // 절대값으로 변환하고 8비트로 스케일링하여 시각화
+    cv::convertScaleAbs(outputImage, outputImage);
+
+    // 컬러 이미지인 경우, 결과를 원본 컬러 이미지 위에 오버레이
+    if (numChannels == 3) {
+        std::vector<cv::Mat> channels(3);
+        cv::split(inputImage, channels);
+
+        // 각 채널에 소벨 결과 오버레이 (원본 컬러 이미지와 합성)
+        for (auto& channel : channels) {
+            cv::Mat resizedOutput;
+            if (outputImage.size() != channel.size()) {
+                cv::resize(outputImage, resizedOutput, channel.size());
+            }
+            else {
+                resizedOutput = outputImage;
+            }
+            cv::addWeighted(channel, 0.5, resizedOutput, 0.5, 0, channel);
+        }
+
+        cv::merge(channels, outputImage);
+    }
+
     return outputImage;
 }
 
 cv::Mat ImageProcessorNPP::laplacianFilter(cv::Mat& inputImage)
 {
-    std::cout << "ImageProcessorNPP::laplacianFilter" << std::endl;
+    std::cout << __func__ << std::endl;
 
-    if (inputImage.empty()) {
-        std::cerr << "Input image is empty." << std::endl;
-        return cv::Mat();
+    int numChannels = inputImage.channels();
+    cv::Mat grayImage;
+
+    if (numChannels == 1) {
+        grayImage = inputImage.clone();
+    }
+    else if (numChannels == 3) {
+        grayImage = grayScale(inputImage);
+    }
+    else {
+        std::cerr << __func__ << " : Unsupported number of channels: " << numChannels << std::endl;
+        return cv::Mat(); // 빈 이미지 반환
     }
 
     int srcWidth = inputImage.cols;
     int srcHeight = inputImage.rows;
-    int numChannels = inputImage.channels();
 
     // GPU 메모리로 이미지 업로드
     cv::cuda::GpuMat d_inputImage, d_outputImage;
@@ -873,74 +884,28 @@ cv::Mat ImageProcessorNPP::laplacianFilter(cv::Mat& inputImage)
     cv::Mat outputImage; // Output image declaration
     outputImage.create(srcHeight, srcWidth, inputImage.type()); // Create the output image matrix
 
-    if (numChannels == 1) {
-        // 그레이스케일 이미지에 라플라시안 필터 적용
-        d_outputImage.create(srcHeight, srcWidth, CV_8UC1); // Grayscale image type
+    // 그레이스케일 이미지에 라플라시안 필터 적용
+    d_outputImage.create(srcHeight, srcWidth, CV_8UC1); // Grayscale image type
 
-        nppStatus = nppiFilterLaplaceBorder_8u_C1R(
-            d_inputImage.ptr<Npp8u>(), srcStep,
-            oSrcSize, oSrcOffset,
-            d_outputImage.ptr<Npp8u>(), dstStep,
-            oSizeROI, eMaskSize, eBorderType
-        );
+    nppStatus = nppiFilterLaplaceBorder_8u_C1R(
+        d_inputImage.ptr<Npp8u>(), srcStep,
+        oSrcSize, oSrcOffset,
+        d_outputImage.ptr<Npp8u>(), dstStep,
+        oSizeROI, eMaskSize, eBorderType
+    );    
 
-        if (nppStatus != NPP_SUCCESS) {
-            std::cerr << "NPP Error: " << nppStatus << std::endl;
-            return cv::Mat();
-        }
-    }
-    else if (numChannels == 3) {
-        // 컬러 이미지의 경우, 각 채널에 대해 필터 적용
-        cv::cuda::GpuMat d_channels[3];
-        cv::cuda::split(d_inputImage, d_channels);
-
-        cv::cuda::GpuMat d_outputChannels[3];
-        for (int i = 0; i < 3; ++i) {
-            d_outputChannels[i].create(srcHeight, srcWidth, CV_8UC1);
-        }
-
-        for (int i = 0; i < 3; ++i) {
-            nppStatus = nppiFilterLaplaceBorder_8u_C1R(
-                d_channels[i].ptr<Npp8u>(), d_channels[i].step,
-                oSrcSize, oSrcOffset,
-                d_outputChannels[i].ptr<Npp8u>(), d_outputChannels[i].step,
-                oSizeROI, eMaskSize, eBorderType
-            );
-            if (nppStatus != NPP_SUCCESS) {
-                std::cerr << "NPP Error in channel " << i << ": " << nppStatus << std::endl;
-                return cv::Mat();
-            }
-        }
-
-        // 필터링된 채널을 병합하여 최종 출력 이미지 생성
-        d_outputImage.create(srcHeight, srcWidth, CV_8UC3);
-        std::vector<cv::cuda::GpuMat> channels(d_outputChannels, d_outputChannels + 3);
-        cv::cuda::merge(channels, d_outputImage);
-
-        // GPU 메모리에서 CPU 메모리로 다운로드
-        try {
-            d_outputImage.download(outputImage);
-        }
-        catch (const cv::Exception& e) {
-            std::cerr << "OpenCV Exception during download: " << e.what() << std::endl;
-            return cv::Mat();
-        }
-
-        return outputImage;
-    }
-    else {
-        std::cerr << "Unsupported image format." << std::endl;
+    if (nppStatus != NPP_SUCCESS) {
+        std::cerr << "NPP Error: " << nppStatus << std::endl;
         return cv::Mat();
     }
+    
+    d_outputImage.download(outputImage);
 
-    // 그레이스케일 이미지의 경우
-    try {
-        d_outputImage.download(outputImage);
-    }
-    catch (const cv::Exception& e) {
-        std::cerr << "OpenCV Exception during download: " << e.what() << std::endl;
-        return cv::Mat();
-    }
+    if (numChannels == 3) {        
+        cv::Mat coloredEdgeImage;
+        cv::cvtColor(outputImage, coloredEdgeImage, cv::COLOR_GRAY2BGR);  
+        cv::addWeighted(inputImage, 0.5, coloredEdgeImage, 0.5, 0, outputImage);
+    }      
 
     return outputImage;
 }

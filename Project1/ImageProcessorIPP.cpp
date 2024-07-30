@@ -658,17 +658,20 @@ cv::Mat ImageProcessorIPP::medianFilter(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorIPP::laplacianFilter(cv::Mat& inputImage)
 {
-    std::cout << "Applying Laplacian filter using IPP." << std::endl;
-
-    if (inputImage.empty()) {
-        std::cerr << "Input image is empty." << std::endl;
-        return cv::Mat();
-    }
+    std::cout << __func__ << std::endl;
 
     int numChannels = inputImage.channels();
-    if (numChannels != 1 && numChannels != 3) {
-        std::cerr << "Unsupported image format." << std::endl;
-        return cv::Mat();
+    cv::Mat grayImage;
+
+    if (numChannels == 1) {
+        grayImage = inputImage.clone();
+    }
+    else if (numChannels == 3) {
+        grayImage = grayScale(inputImage);
+    }
+    else {
+        std::cerr << __func__ << " : Unsupported number of channels: " << numChannels << std::endl;
+        return cv::Mat(); // 빈 이미지 반환
     }
 
     // Helper function to apply Laplacian filter to a single channel
@@ -707,32 +710,29 @@ cv::Mat ImageProcessorIPP::laplacianFilter(cv::Mat& inputImage)
 
     if (numChannels == 1) {
         // Apply filter to grayscale image
-        
         bool success = applyFilterToChannel(inputImage, outputImage);
         if (!success) {
             return cv::Mat();
         }
-
         outputImage.convertTo(outputImage, CV_8U);
-
     }
     else if (numChannels == 3) {
-        // Apply filter to each channel of a color image
-        std::vector<cv::Mat> channels;
-        cv::split(inputImage, channels);
-
-        std::vector<cv::Mat> filteredChannels(3);
-        for (int i = 0; i < 3; ++i) {
-            bool success = applyFilterToChannel(channels[i], filteredChannels[i]);
-            if (!success) {
-                return cv::Mat();
-            }
+        // Apply Laplacian filter to grayscale image
+        cv::Mat grayLaplacian;
+        bool success = applyFilterToChannel(grayImage, grayLaplacian);
+        if (!success) {
+            return cv::Mat();
         }
+        grayLaplacian.convertTo(grayLaplacian, CV_8U);
 
-        
-        cv::merge(filteredChannels, outputImage);
-        outputImage.convertTo(outputImage, CV_8U);
-        
+        // Convert the Laplacian result to color
+        cv::Mat coloredEdgeImage(grayImage.size(), CV_8UC3);
+        cv::cvtColor(grayLaplacian, coloredEdgeImage, cv::COLOR_GRAY2BGR);
+
+        // Overlay the Laplacian result on the original color image
+        cv::Mat colorLaplacian;
+        cv::addWeighted(inputImage, 0.5, coloredEdgeImage, 0.5, 0, colorLaplacian);
+        outputImage = colorLaplacian;
     }
 
     return outputImage;
@@ -916,49 +916,39 @@ cv::Mat ImageProcessorIPP::bilateralFilter(cv::Mat& inputImage)
     
 }
 
-
+//이미지의 경계를 강조하기위해 주로 사용됨
 cv::Mat ImageProcessorIPP::sobelFilter(cv::Mat& inputImage)
 {
-    // Convert input image to grayscale if it is not
     cv::Mat grayImage;
-    if (inputImage.channels() > 1) {
-        grayImage = grayScale(inputImage);  // Use OpenCV for conversion
-    }
-    else {
-        grayImage = inputImage.clone();  // If already grayscale, make a copy
-    }
+    if (inputImage.channels() == 1)
+        grayImage = inputImage.clone();
+    else
+        grayImage = grayScale(inputImage);
 
-    // Check if the grayImage is valid
-    if (grayImage.empty()) {
-        std::cerr << "Gray image is empty." << std::endl;
-        return cv::Mat();
-    }
-
-    // Prepare destination image
     cv::Mat outputImage = cv::Mat::zeros(grayImage.size(), CV_16SC1);
 
-    // IPP specific variables
+    // IPP 관련 변수
     IppiSize roiSize = { grayImage.cols, grayImage.rows };
-    IppiMaskSize mask = ippMskSize5x5; // Using 3x3 Sobel kernel
+    IppiMaskSize mask = ippMskSize3x3; // 3x3 소벨 커널 사용
     IppNormType normType = ippNormL1;
     int bufferSize = 0;
     IppStatus status;
 
-    // Calculate buffer size
+    // 버퍼 크기 계산
     status = ippiFilterSobelGetBufferSize(roiSize, mask, normType, ipp8u, ipp16s, 1, &bufferSize);
     if (status != ippStsNoErr) {
-        std::cerr << "Error calculating buffer size: " << status << std::endl;
+        std::cerr << "버퍼 크기 계산 오류: " << status << std::endl;
         return cv::Mat();
     }
 
-    // Allocate buffer
+    // 버퍼 할당
     Ipp8u* pBuffer = ippsMalloc_8u(bufferSize);
     if (!pBuffer) {
-        std::cerr << "Error allocating buffer." << std::endl;
+        std::cerr << "버퍼 할당 오류." << std::endl;
         return cv::Mat();
     }
 
-    // Apply Sobel filter
+    // 소벨 필터 적용
     status = ippiFilterSobel_8u16s_C1R(
         grayImage.data,
         static_cast<int>(grayImage.step),
@@ -972,28 +962,29 @@ cv::Mat ImageProcessorIPP::sobelFilter(cv::Mat& inputImage)
         pBuffer
     );
 
-    if (status != ippStsNoErr) {
-        std::cerr << "Error applying Sobel filter: " << status << std::endl;
-        ippsFree(pBuffer);
-        return cv::Mat();
-    }
-
-    // Free the buffer
+    // 버퍼 해제
     ippsFree(pBuffer);
 
-    // Debug: Check if outputImage is valid
-    if (outputImage.empty()) {
-        std::cerr << "Output image is empty." << std::endl;
+    if (status != ippStsNoErr) {
+        std::cerr << "소벨 필터 적용 오류: " << status << std::endl;
         return cv::Mat();
     }
 
-    // Convert to absolute values and scale to 8-bit for visualization
+    // 절대값으로 변환하고 8비트로 스케일링하여 시각화
     cv::convertScaleAbs(outputImage, outputImage);
 
-    // Debug: Print minimum and maximum values of absOutputImage
-    double minVal, maxVal;
-    cv::minMaxLoc(outputImage, &minVal, &maxVal);
-    std::cout << "Min value: " << minVal << ", Max value: " << maxVal << std::endl;
+    // 컬러 이미지인 경우, 결과를 원본 컬러 이미지 위에 오버레이
+    if (inputImage.channels() == 3) {
+        std::vector<cv::Mat> channels(3);
+        cv::split(inputImage, channels);
+
+        // 각 채널에 소벨 결과 오버레이 (원본 컬러 이미지와 합성)
+        for (auto& channel : channels) {
+            cv::addWeighted(channel, 0.5, outputImage, 0.5, 0, channel);
+        }
+
+        cv::merge(channels, outputImage);
+    }
 
     return outputImage;
 }

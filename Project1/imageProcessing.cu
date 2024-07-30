@@ -248,50 +248,40 @@ __global__ void bilateralKernel(
     }
 }
 
-__global__ void sobelFilterKernel(const unsigned char* d_input, unsigned char* d_output, int width, int height, int channels) {
+// CUDA 커널 함수: 소벨 필터를 사용하여 그레이스케일 이미지 처리
+__global__ void sobelKernel(const uchar* input, uchar* output, int width, int height, int step) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-    if (x >= width || y >= height) return;
+    if (x >= 1 && x < width - 1 && y >= 1 && y < height - 1) {
+        int Gx = -input[(y - 1) * step + (x - 1)] - 2 * input[y * step + (x - 1)] - input[(y + 1) * step + (x - 1)]
+            + input[(y - 1) * step + (x + 1)] + 2 * input[y * step + (x + 1)] + input[(y + 1) * step + (x + 1)];
 
-    int idx = y * width + x;
-    int sobelX[3][3] = { { -1, 0, 1 },
-                         { -2, 0, 2 },
-                         { -1, 0, 1 } };
+        int Gy = -input[(y - 1) * step + (x - 1)] - 2 * input[(y - 1) * step + x] - input[(y - 1) * step + (x + 1)]
+            + input[(y + 1) * step + (x - 1)] + 2 * input[(y + 1) * step + x] + input[(y + 1) * step + (x + 1)];
 
-    int sobelY[3][3] = { { -1, -2, -1 },
-                         { 0, 0, 0 },
-                         { 1, 2, 1 } };
+        int magnitude = sqrtf(float(Gx * Gx + Gy * Gy));
 
-    float gradientX = 0;
-    float gradientY = 0;
-
-    for (int ky = -1; ky <= 1; ++ky) {
-        for (int kx = -1; kx <= 1; ++kx) {
-            int px = min(max(x + kx, 0), width - 1);
-            int py = min(max(y + ky, 0), height - 1);
-            int pixelIdx = py * width + px;
-
-            for (int c = 0; c < channels; ++c) {
-                float pixelValue = d_input[pixelIdx * channels + c];
-                gradientX += pixelValue * sobelX[ky + 1][kx + 1];
-                gradientY += pixelValue * sobelY[ky + 1][kx + 1];
-            }
-        }
-    }
-
-    float magnitude = sqrtf(gradientX * gradientX + gradientY * gradientY);
-    magnitude = min(max(magnitude, 0.0f), 255.0f); // Clip the values to be within 0-255
-
-    if (channels == 1) {
-        d_output[idx] = static_cast<unsigned char>(magnitude);
-    }
-    else if (channels == 3) {
-        d_output[idx * 3 + 0] = static_cast<unsigned char>(magnitude); // Apply the same magnitude to all channels
-        d_output[idx * 3 + 1] = static_cast<unsigned char>(magnitude);
-        d_output[idx * 3 + 2] = static_cast<unsigned char>(magnitude);
+        output[y * step + x] = min(255, magnitude);
     }
 }
+
+// CUDA 커널 함수: 컬러 이미지와 소벨 필터 결과를 오버레이
+__global__ void overlayKernel(const uchar* sobel, uchar* image, int width, int height, int step, int imageStep) {
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (x < width && y < height) {
+        uchar sobelValue = sobel[y * step + x];
+
+        for (int c = 0; c < 3; ++c) {
+            int idx = y * imageStep + 3 * x + c;
+            image[idx] = uchar((image[idx] * 0.5) + (sobelValue * 0.5));
+        }
+    }
+}
+
+
 
 __global__ void rotateImageKernelR(const unsigned char* input, unsigned char* output, int cols, int rows, int channels) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -870,57 +860,68 @@ void callBilateralFilterCUDA(
 }
 
 void callSobelFilterCUDA(cv::Mat& inputImage, cv::Mat& outputImage) {
-    int width = inputImage.cols;
-    int height = inputImage.rows;
-    int channels = inputImage.channels();
+    int numChannels = inputImage.channels();
+    cv::Mat grayImage;
 
-    size_t pitch;
-    unsigned char* d_input;
-    unsigned char* d_output;
-
-    // Allocate CUDA memory
-    cudaMallocPitch(&d_input, &pitch, width * channels * sizeof(unsigned char), height);
-    cudaMallocPitch(&d_output, &pitch, width * channels * sizeof(unsigned char), height);
-
-    // Copy input image to device memory
-    cudaMemcpy2D(d_input, pitch, inputImage.ptr(), inputImage.step[0], width * channels * sizeof(unsigned char), height, cudaMemcpyHostToDevice);
-
-    // Define CUDA block and grid sizes
-    dim3 blockSize(16, 16);
-    dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
-
-    if (channels == 1 || channels == 3) {
-        // Apply Sobel filter
-        sobelFilterKernel << <gridSize, blockSize >> > (d_input, d_output, width, height, channels);
-        cudaDeviceSynchronize(); // Ensure kernel completion
-
-        // Check for CUDA errors
-        cudaError_t cudaErr = cudaGetLastError();
-        if (cudaErr != cudaSuccess) {
-            std::cerr << "CUDA error: " << cudaGetErrorString(cudaErr) << std::endl;
-            cudaFree(d_input);
-            cudaFree(d_output);
-            return;
-        }
+    if (numChannels == 3) {
+        cv::cvtColor(inputImage, grayImage, cv::COLOR_BGR2GRAY);
+    }
+    else if (numChannels == 1) {
+        grayImage = inputImage;
     }
     else {
-        std::cerr << "Unsupported number of channels: " << channels << std::endl;
-        cudaFree(d_input);
-        cudaFree(d_output);
+        std::cerr << "Unsupported number of channels: " << numChannels << std::endl;
+        outputImage = cv::Mat();
         return;
     }
 
-    // Copy the result back to host memory
-    outputImage.create(height, width, inputImage.type());
-    cudaMemcpy2D(outputImage.ptr(), outputImage.step[0], d_output, pitch, width * channels * sizeof(unsigned char), height, cudaMemcpyDeviceToHost);
+    int width = grayImage.cols;
+    int height = grayImage.rows;
+    int grayStep = grayImage.step;
+    int colorStep = inputImage.step;
 
-    // Free CUDA memory
+    // GPU 메모리 할당
+    uchar* d_input;
+    uchar* d_output;
+    uchar* d_image;
+
+    cudaMalloc(&d_input, height * grayStep);
+    cudaMalloc(&d_output, height * grayStep);
+    cudaMalloc(&d_image, height * colorStep);
+
+    // 호스트에서 GPU로 메모리 복사
+    cudaMemcpy(d_input, grayImage.data, height * grayStep, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_image, inputImage.data, height * colorStep, cudaMemcpyHostToDevice);
+
+    // 커널 실행 설정
+    dim3 blockSize(16, 16);
+    dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
+
+    // 소벨 커널 실행
+    sobelKernel << <gridSize, blockSize >> > (d_input, d_output, width, height, grayStep);
+    cudaDeviceSynchronize();
+
+    if (numChannels == 3) {
+        // 오버레이 커널 실행
+        overlayKernel << <gridSize, blockSize >> > (d_output, d_image, width, height, grayStep, colorStep);
+        cudaDeviceSynchronize();
+
+        // GPU에서 호스트로 결과 복사
+        outputImage = cv::Mat(inputImage.size(), inputImage.type());
+        cudaMemcpy(outputImage.data, d_image, height * colorStep, cudaMemcpyDeviceToHost);
+    }
+    else {
+        // GPU에서 호스트로 결과 복사
+        outputImage = cv::Mat(grayImage.size(), grayImage.type());
+        cudaMemcpy(outputImage.data, d_output, height * grayStep, cudaMemcpyDeviceToHost);
+    }
+
+    // GPU 메모리 해제
     cudaFree(d_input);
     cudaFree(d_output);
+    cudaFree(d_image);
+
 }
-
-
-
 
 void createGaussianKernel(float* kernel, int kernelSize, float sigma)
 {
