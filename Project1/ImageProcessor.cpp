@@ -1326,7 +1326,7 @@ ImageProcessor::ProcessingResult ImageProcessor::laplacianFilterCUDA(cv::Mat& in
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "laplacianFilter", "CUDA", elapsedTimeMs
-    , "");
+    , "k:3");
 
     return result;
 }
@@ -1345,7 +1345,7 @@ ImageProcessor::ProcessingResult ImageProcessor::laplacianFilterCUDAKernel(cv::M
     double elapsedTimeMs = (endTime - startTime) / cv::getTickFrequency() * 1000.0; // 시간 계산
 
     result = setResult(result, inputImage, outputImage, "laplacianFilter", "CUDAKernel", elapsedTimeMs
-    , "");
+    , "k:3x3");
 
     return result;
 }

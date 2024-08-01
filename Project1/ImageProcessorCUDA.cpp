@@ -193,6 +193,8 @@ cv::Mat ImageProcessorCUDA::medianFilter(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorCUDA::laplacianFilter(cv::Mat& inputImage)
 {
+    std::cout << __func__ << std::endl;
+    
     // 입력 이미지를 GPU 메모리로 업로드
     cv::cuda::GpuMat d_inputImage;
     d_inputImage.upload(inputImage);
@@ -200,13 +202,14 @@ cv::Mat ImageProcessorCUDA::laplacianFilter(cv::Mat& inputImage)
     // 입력 이미지 타입 확인 및 채널 수 변환
     int inputType = d_inputImage.type();
     int depth = CV_MAT_DEPTH(inputType);
+    int channels = d_inputImage.channels();
 
     // CUDA Laplacian 필터를 적용할 수 있는 데이터 타입으로 변환
     cv::cuda::GpuMat d_grayImage;
     if (depth != CV_8U && depth != CV_16U && depth != CV_32F) {
         d_inputImage.convertTo(d_grayImage, CV_32F);  // 입력 이미지를 CV_32F로 변환
     }
-    else if (d_inputImage.channels() == 3) {
+    else if (channels == 3) {
         cv::cuda::cvtColor(d_inputImage, d_grayImage, cv::COLOR_BGR2GRAY); // RGB 이미지를 grayscale로 변환
     }
     else {
@@ -226,6 +229,12 @@ cv::Mat ImageProcessorCUDA::laplacianFilter(cv::Mat& inputImage)
     // GPU에서 CPU로 결과 이미지 다운로드
     cv::Mat outputImage;
     d_outputImage.download(outputImage);
+
+    if (channels == 3) {
+        cv::Mat coloredEdgeImage;
+        cv::cvtColor(outputImage, coloredEdgeImage, cv::COLOR_GRAY2BGR);
+        cv::addWeighted(inputImage, 0.5, coloredEdgeImage, 0.5, 0, outputImage);
+    }
 
     return outputImage;
 }

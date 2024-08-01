@@ -10,7 +10,7 @@
 #include <iostream>
 #include <windows.h>
 #include <cstdlib>
-
+#include <algorithm>
 #include "ImageProcessingLib.h"
 
 class ImageProcessorGStreamer {

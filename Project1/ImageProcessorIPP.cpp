@@ -236,6 +236,18 @@ cv::Mat ImageProcessorIPP::grayScale(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorIPP::zoom(cv::Mat& inputImage, int newWidth, int newHeight)
 {
+    /*
+    ipptypes.h
+    typedef enum {
+    ippNearest = IPPI_INTER_NN,
+    ippLinear = IPPI_INTER_LINEAR,
+    ippCubic = IPPI_INTER_CUBIC2P_CATMULLROM,
+    ippLanczos = IPPI_INTER_LANCZOS,
+    ippHahn = 0,
+    ippSuper = IPPI_INTER_SUPER
+    } IppiInterpolationType;
+    */
+
     // IPP 변수들 선언
     IppStatus status;
     IppiSize srcSize = { inputImage.cols, inputImage.rows };
@@ -246,7 +258,9 @@ cv::Mat ImageProcessorIPP::zoom(cv::Mat& inputImage, int newWidth, int newHeight
 
     // 크기 및 초기화 버퍼 할당
     int specSize = 0, initSize = 0, bufSize = 0;
-    status = ippiResizeGetSize_8u(srcSize, dstSize, ippNearest, 0, &specSize, &initSize);
+    //ippiResizeNearest -> aliasing발생
+    //status = ippiResizeGetSize_8u(srcSize, dstSize, ippNearest, 0, &specSize, &initSize);
+    status = ippiResizeGetSize_8u(srcSize, dstSize, ippLinear, 0, &specSize, &initSize);
     if (status != ippStsNoErr) {
         std::cerr << "Error: ippiResizeGetSize_8u failed with status code " << status << std::endl;
         return cv::Mat();
@@ -266,7 +280,9 @@ cv::Mat ImageProcessorIPP::zoom(cv::Mat& inputImage, int newWidth, int newHeight
     }
 
     // 크기 조정 스펙 초기화
-    status = ippiResizeNearestInit_8u(srcSize, dstSize, pSpec);
+    //ippiResizeNearest -> aliasing발생
+    //status = ippiResizeNearestInit_8u(srcSize, dstSize, pSpec);
+    status = ippiResizeLinearInit_8u(srcSize, dstSize, pSpec);
     if (status != ippStsNoErr) {
         std::cerr << "Error: ippiResizeNearestInit_8u failed with status code " << status << std::endl;
         ippFree(pSpec);
@@ -293,7 +309,75 @@ cv::Mat ImageProcessorIPP::zoom(cv::Mat& inputImage, int newWidth, int newHeight
     Ipp8u* pSrcData = reinterpret_cast<Ipp8u*>(inputImage.data);
     Ipp8u* pDstData = reinterpret_cast<Ipp8u*>(outputImage.data);
 
-    // 이미지 타입에 따라 IPP 함수 호출
+    //ippiResizeNearest -> aliasing발생
+    if (inputImage.type() == CV_8UC3) { 
+        //std::cerr << "ippiResizeNearest_8u_C3R" << std::endl;
+        //status = ippiResizeNearest_8u_C3R(pSrcData, inputImage.step[0], pDstData, outputImage.step[0], dstOffset, dstSize, pSpec, pBuffer.data());
+        std::cerr << "ippiResizeLinear_8u_C3R" << std::endl;
+        status = ippiResizeLinear_8u_C3R(
+            pSrcData,                    // Source data
+            inputImage.step[0],          // Source step
+            pDstData,                    // Destination data
+            outputImage.step[0],         // Destination step
+            dstOffset,                   // Destination offset
+            dstSize,                     // Destination size
+            ippBorderRepl,               // Border type
+            nullptr,                     // Border value
+            pSpec,                       // Spec structure
+            pBuffer.data()               // Work buffer
+        );
+    }
+    else if (inputImage.type() == CV_16UC3) {
+        status = ippiResizeLinear_16u_C3R(
+            reinterpret_cast<Ipp16u*>(pSrcData), inputImage.step[0],
+            reinterpret_cast<Ipp16u*>(pDstData), outputImage.step[0],
+            dstOffset, dstSize, ippBorderRepl, nullptr, pSpec, pBuffer.data());
+    }
+    else if (inputImage.type() == CV_32FC3) {
+        status = ippiResizeLinear_32f_C3R(
+            reinterpret_cast<Ipp32f*>(pSrcData), inputImage.step[0],
+            reinterpret_cast<Ipp32f*>(pDstData), outputImage.step[0],
+            dstOffset, dstSize, ippBorderRepl, nullptr, pSpec, pBuffer.data());
+    }
+    else if (inputImage.type() == CV_8UC1) {
+        status = ippiResizeLinear_8u_C1R(
+            pSrcData, inputImage.step[0],
+            pDstData, outputImage.step[0],
+            dstOffset, dstSize, ippBorderRepl, nullptr, pSpec, pBuffer.data());
+    }
+    else if (inputImage.type() == CV_16UC1) {
+        status = ippiResizeLinear_16u_C1R(
+            reinterpret_cast<Ipp16u*>(pSrcData), inputImage.step[0],
+            reinterpret_cast<Ipp16u*>(pDstData), outputImage.step[0],
+            dstOffset, dstSize, ippBorderRepl, nullptr, pSpec, pBuffer.data());
+    }
+    else if (inputImage.type() == CV_32FC1) {
+        status = ippiResizeLinear_32f_C1R(
+            reinterpret_cast<Ipp32f*>(pSrcData), inputImage.step[0],
+            reinterpret_cast<Ipp32f*>(pDstData), outputImage.step[0],
+            dstOffset, dstSize, ippBorderRepl, nullptr, pSpec, pBuffer.data());
+    }
+    else if (inputImage.type() == CV_16SC1) {
+        status = ippiResizeLinear_16s_C1R(
+            reinterpret_cast<Ipp16s*>(pSrcData), inputImage.step[0],
+            reinterpret_cast<Ipp16s*>(pDstData), outputImage.step[0],
+            dstOffset, dstSize, ippBorderRepl, nullptr, pSpec, pBuffer.data());
+    }
+    else if (inputImage.type() == CV_16SC3) {
+        status = ippiResizeLinear_16s_C3R(
+            reinterpret_cast<Ipp16s*>(pSrcData), inputImage.step[0],
+            reinterpret_cast<Ipp16s*>(pDstData), outputImage.step[0],
+            dstOffset, dstSize, ippBorderRepl, nullptr, pSpec, pBuffer.data());
+    }
+    else {
+        std::cerr << "Error: Unsupported image type" << std::endl;
+        ippFree(pSpec);
+        return cv::Mat();
+    }
+
+    //Nearest
+    /*
+    * // 이미지 타입에 따라 IPP 함수 호출
     if (inputImage.type() == CV_8UC3) {
         std::cerr << "ippiResizeNearest_8u_C3R" << std::endl;
         status = ippiResizeNearest_8u_C3R(pSrcData, inputImage.step[0], pDstData, outputImage.step[0], dstOffset, dstSize, pSpec, pBuffer.data());
@@ -332,6 +416,8 @@ cv::Mat ImageProcessorIPP::zoom(cv::Mat& inputImage, int newWidth, int newHeight
         return cv::Mat();
     }
 
+    */
+    
     if (status != ippStsNoErr) {
         std::cerr << "Error: ippiResizeNearest_8u failed with status code " << status << std::endl;
         ippFree(pSpec);

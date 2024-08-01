@@ -22,6 +22,44 @@ __device__ float gaussian(float x, float sigma) {
 }
 
 __global__ void resizeImageKernel(const unsigned char* input, unsigned char* output, int oldWidth, int oldHeight, int newWidth, int newHeight, int channels) {
+    
+    //선형 보간법 (Bilinear)
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (x < newWidth && y < newHeight) {
+        float x_ratio = oldWidth / (float)newWidth;
+        float y_ratio = oldHeight / (float)newHeight;
+        float x_l = floor(x * x_ratio);
+        float y_l = floor(y * y_ratio);
+        float x_h = ceil(x * x_ratio);
+        float y_h = ceil(y * y_ratio);
+
+        int x_l_int = (int)x_l;
+        int y_l_int = (int)y_l;
+        int x_h_int = min(oldWidth - 1, (int)x_h);
+        int y_h_int = min(oldHeight - 1, (int)y_h);
+
+        float x_weight = (x * x_ratio) - x_l;
+        float y_weight = (y * y_ratio) - y_l;
+
+        for (int c = 0; c < channels; ++c) {
+            unsigned char top_left = input[(y_l_int * oldWidth + x_l_int) * channels + c];
+            unsigned char top_right = input[(y_l_int * oldWidth + x_h_int) * channels + c];
+            unsigned char bottom_left = input[(y_h_int * oldWidth + x_l_int) * channels + c];
+            unsigned char bottom_right = input[(y_h_int * oldWidth + x_h_int) * channels + c];
+
+            float top = top_left * (1 - x_weight) + top_right * x_weight;
+            float bottom = bottom_left * (1 - x_weight) + bottom_right * x_weight;
+            float value = top * (1 - y_weight) + bottom * y_weight;
+
+            output[(y * newWidth + x) * channels + c] = (unsigned char)value;
+        }
+    }
+
+    //Nearest-Neighbor Interpolation : 계단 현상 (aliasing)이 발생
+    /*
+    
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -35,6 +73,7 @@ __global__ void resizeImageKernel(const unsigned char* input, unsigned char* out
             output[(y * newWidth + x) * channels + c] = input[(py * oldWidth + px) * channels + c];
         }
     }
+    */
 }
 
 __global__ void grayScaleImageKernel(const unsigned char* input, unsigned char* output, int cols, int rows) {
@@ -184,6 +223,7 @@ __global__ void laplacianFilterKernel(const unsigned char* input, unsigned char*
         }
     }
 }
+
 __global__ void bilateralKernel(
     const unsigned char* d_input,
     unsigned char* d_output,
@@ -763,44 +803,84 @@ void callMedianFilterCUDA(cv::Mat & inputImage, cv::Mat& outputImage)
 }
 
 void callLaplacianFilterCUDA(cv::Mat& inputImage, cv::Mat& outputImage) {
+
+    int numChannels = inputImage.channels();
+    cv::Mat grayImage;
     int width = inputImage.cols;
     int height = inputImage.rows;
-    int channels = inputImage.channels();
+
+    // 이미지의 채널 수에 따라 처리
+    if (numChannels == 3) {
+        callGrayScaleImageCUDA(inputImage, grayImage);
+    }
+    else if (numChannels == 1) {
+        grayImage = inputImage;
+    }
+    else {
+        std::cerr << "지원하지 않는 채널 수: " << numChannels << std::endl;
+        outputImage = cv::Mat();
+        return;
+    }
 
     unsigned char* d_input;
     unsigned char* d_output;
-    size_t pitch;
+    unsigned char* d_image;
+    size_t pitch_input, pitch_output, pitch_image;
 
-    // CUDA 메모리 할당
-    cudaMallocPitch(&d_input, &pitch, width * channels * sizeof(unsigned char), height);
-    cudaMallocPitch(&d_output, &pitch, width * channels * sizeof(unsigned char), height);
+    // CUDA 메모리 할당 (채널별로 pitch를 별도로 계산)
+    cudaMallocPitch(&d_input, &pitch_input, width * sizeof(unsigned char), height);
+    cudaMallocPitch(&d_output, &pitch_output, width * sizeof(unsigned char), height);
+    cudaMallocPitch(&d_image, &pitch_image, width * numChannels * sizeof(unsigned char), height);
 
     // 입력 이미지 복사
-    cudaMemcpy2D(d_input, pitch, inputImage.ptr(), inputImage.step[0], width * channels * sizeof(unsigned char), height, cudaMemcpyHostToDevice);
+    cudaMemcpy2D(d_input, pitch_input, grayImage.ptr(), grayImage.step, width * sizeof(unsigned char), height, cudaMemcpyHostToDevice);
+    cudaMemcpy2D(d_image, pitch_image, inputImage.ptr(), inputImage.step, width * numChannels * sizeof(unsigned char), height, cudaMemcpyHostToDevice);
 
     // CUDA 커널 실행 구성
     dim3 blockSize(16, 16);
     dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
 
-    // CUDA 커널 호출
-    laplacianFilterKernel << <gridSize, blockSize >> > (d_input, d_output, width, height, pitch, channels);
+    // Laplacian 필터 CUDA 커널 호출
+    laplacianFilterKernel << <gridSize, blockSize >> > (d_input, d_output, width, height, pitch_input, 1);
 
     // CUDA 오류 체크
     cudaError_t cudaStatus = cudaGetLastError();
     if (cudaStatus != cudaSuccess) {
-        std::cerr << "CUDA kernel launch failed: " << cudaGetErrorString(cudaStatus) << std::endl;
+        std::cerr << "Laplacian CUDA 커널 실행 실패: " << cudaGetErrorString(cudaStatus) << std::endl;
         cudaFree(d_input);
         cudaFree(d_output);
+        cudaFree(d_image);
         return;
     }
 
-    // 결과 이미지 복사
-    outputImage.create(height, width, inputImage.type()); // 올바른 높이와 너비로 이미지 생성
-    cudaMemcpy2D(outputImage.ptr(), outputImage.step[0], d_output, pitch, width * channels * sizeof(unsigned char), height, cudaMemcpyDeviceToHost);
+    if (numChannels == 3) {
+        // 오버레이 커널 실행
+        overlayKernel << <gridSize, blockSize >> > (d_output, d_image, width, height, pitch_output, pitch_image);
+        cudaDeviceSynchronize();
+
+        cudaStatus = cudaGetLastError();
+        if (cudaStatus != cudaSuccess) {
+            std::cerr << "Overlay CUDA 커널 실행 실패: " << cudaGetErrorString(cudaStatus) << std::endl;
+            cudaFree(d_input);
+            cudaFree(d_output);
+            cudaFree(d_image);
+            return;
+        }
+
+        // 결과 이미지 복사 (컬러 이미지로 복사)
+        outputImage.create(height, width, inputImage.type());
+        cudaMemcpy2D(outputImage.ptr(), outputImage.step, d_image, pitch_image, width * numChannels * sizeof(unsigned char), height, cudaMemcpyDeviceToHost);
+    }
+    else {
+        // 결과 이미지 복사 (그레이스케일 이미지로 복사)
+        outputImage.create(height, width, CV_8UC1);
+        cudaMemcpy2D(outputImage.ptr(), outputImage.step, d_output, pitch_output, width * sizeof(unsigned char), height, cudaMemcpyDeviceToHost);
+    }
 
     // 메모리 해제
     cudaFree(d_input);
     cudaFree(d_output);
+    cudaFree(d_image);
 }
 
 void callBilateralFilterCUDA(

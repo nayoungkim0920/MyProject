@@ -112,7 +112,7 @@ bool ImageProcessorGStreamer::CapSet(GstElement*& source, GstCaps*& srcCaps
 bool ImageProcessorGStreamer::createBuffer(GstBuffer*& buffer
     , GstMapInfo& map, cv::Mat& inputImage, GstElement*& pipeline, GstElement*& source) {
     // 입력 이미지를 위한 버퍼 생성
-    buffer = gst_buffer_new_allocate(nullptr, inputImage.total() * inputImage.elemSize(), nullptr);
+    buffer = gst_buffer_new_allocate(nullptr, inputImage.total() * inputImage.elemSize() + 1000, nullptr);
 
     gst_buffer_map(buffer, &map, GST_MAP_WRITE);
     std::memcpy(map.data, inputImage.data, inputImage.total() * inputImage.elemSize());
@@ -169,6 +169,13 @@ bool ImageProcessorGStreamer::getSampleBuffer(GstSample*& sample, GstElement*& p
         gst_object_unref(GST_OBJECT(pipeline));
         return false;
     }
+
+    //Debug output to check buffer details
+    std::cout << "<<Output Buffer obtained.>>" << std::endl;
+    std::cout << "Buffer Address: " << outputBuffer << std::endl;
+    std::cout << "Buffer Size: " << gst_buffer_get_size(outputBuffer) << std::endl;
+
+    return true;
 }
 
 bool ImageProcessorGStreamer::sampleGetCaps(GstCaps*& caps, GstSample*& sample
@@ -235,6 +242,92 @@ void ImageProcessorGStreamer::gstStatePaused(GstElement*& pipeline) {
     } while (state != GST_STATE_PAUSED && pending != GST_STATE_VOID_PENDING);
 }
 
+// Function to safely map buffer and handle potential errors
+bool mapBuffer(GstBuffer* buffer, GstMapInfo& mapInfo) {
+    if (!gst_buffer_map(buffer, &mapInfo, GST_MAP_READ)) {
+        std::cerr << "Failed to map buffer." << std::endl;
+        return false;
+    }
+    return true;
+}
+
+// Function to print buffer data
+void printBufferData(const GstMapInfo& mapInfo) {
+    std::cout << "Buffer Data (First 10 Bytes): ";
+    for (size_t i = 0; i < 10 && i < mapInfo.size; ++i) {
+        std::cout << static_cast<int>(static_cast<unsigned char>(mapInfo.data[i])) << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "Buffer Size: " << mapInfo.size << std::endl;
+}
+
+void configureGStreamerPipeline(GstElement*& pipeline, GstElement*& source, GstElement*& convert, GstElement*& sink) {
+    pipeline = gst_pipeline_new("pipeline");
+    source = gst_element_factory_make("appsrc", "source");
+    convert = gst_element_factory_make("videoconvert", "convert");
+    sink = gst_element_factory_make("appsink", "sink");
+
+    if (!pipeline || !source || !convert || !sink) {
+        std::cerr << "Failed to create GStreamer elements." << std::endl;
+        return;
+    }
+
+    // Create caps for input and output
+    GstCaps* srcCaps = gst_caps_new_simple("video/x-raw",
+        "format", G_TYPE_STRING, "BGR",
+        "width", G_TYPE_INT, 625,
+        "height", G_TYPE_INT, 468,
+        "framerate", GST_TYPE_FRACTION, 30, 1,
+        nullptr);
+
+    GstCaps* sinkCaps = gst_caps_new_simple("video/x-raw",
+        "format", G_TYPE_STRING, "GRAY8",
+        "width", G_TYPE_INT, 625,
+        "height", G_TYPE_INT, 468,
+        nullptr);
+
+    g_object_set(G_OBJECT(source), "caps", srcCaps, nullptr);
+    g_object_set(G_OBJECT(sink), "caps", sinkCaps, nullptr);
+
+    gst_bin_add_many(GST_BIN(pipeline), source, convert, sink, nullptr);
+    gst_element_link_many(source, convert, sink, nullptr);
+}
+
+void displayImageFromGstBuffer(GstBuffer* buffer, int width, int height) {
+    // Ensure buffer is not null
+    if (!buffer) {
+        std::cerr << "GstBuffer is null." << std::endl;
+        return;
+    }
+
+    // Map the buffer to get data
+    GstMapInfo map;
+    if (!gst_buffer_map(buffer, &map, GST_MAP_READ)) {
+        std::cerr << "Failed to map GstBuffer." << std::endl;
+        return;
+    }
+
+    // Check the mapped data size and buffer data
+    std::cout << "Mapped Data Size: " << map.size << std::endl;
+
+    // Create a cv::Mat with GRAY8 format assuming the buffer contains grayscale image data
+    cv::Mat image(height, width, CV_8UC1, map.data);
+
+    // Clone the image to ensure deep copy and avoid issues after unmap
+    cv::Mat imageClone = image.clone();
+
+    // Unmap the buffer
+    gst_buffer_unmap(buffer, &map);
+
+    // Display the image using OpenCV
+    cv::imshow("GStreamer Image", imageClone);
+
+    // Wait for a key press
+    cv::waitKey(0);
+
+    // Destroy the window
+    cv::destroyAllWindows();
+}
 
 cv::Mat ImageProcessorGStreamer::grayScale(cv::Mat& inputImage) {
 
@@ -246,7 +339,7 @@ cv::Mat ImageProcessorGStreamer::grayScale(cv::Mat& inputImage) {
     }
 
     std::cout << __func__ << std::endl;
-    
+
     gst_init(nullptr, nullptr);
 
     GstElement* pipeline = nullptr;
@@ -255,7 +348,7 @@ cv::Mat ImageProcessorGStreamer::grayScale(cv::Mat& inputImage) {
     GstElement* sink = nullptr;
     GstSample* sample = nullptr;
     GstElement* flip = nullptr;
-    
+
     if (!initGst(pipeline, source, convert, sink, flip))
         return cv::Mat();
 
@@ -264,15 +357,15 @@ cv::Mat ImageProcessorGStreamer::grayScale(cv::Mat& inputImage) {
 
     if (!CapSet(source, srcCaps, sinkCaps, inputImage, sink
         , pipeline, convert, flip, __func__))
-        return cv::Mat();    
+        return cv::Mat();
 
     GstBuffer* buffer;
     GstMapInfo map;
     if (!createBuffer(buffer, map, inputImage, pipeline, source))
-        return cv::Mat(); 
+        return cv::Mat();
 
     if (!setPipeline(pipeline))
-        return cv::Mat();   
+        return cv::Mat();
 
     if (!getSample(sink, pipeline, sample))
         return cv::Mat();
@@ -280,10 +373,10 @@ cv::Mat ImageProcessorGStreamer::grayScale(cv::Mat& inputImage) {
     GstBuffer* outputBuffer;
     if (!getSampleBuffer(sample, pipeline, outputBuffer))
         return cv::Mat();
-    
+
     GstCaps* caps;
     if (!sampleGetCaps(caps, sample, pipeline))
-        return cv::Mat();    
+        return cv::Mat();
 
     GstMapInfo outputMap;
     gst_buffer_map(outputBuffer, &outputMap, GST_MAP_READ);
@@ -305,6 +398,8 @@ cv::Mat ImageProcessorGStreamer::grayScale(cv::Mat& inputImage) {
 
     return outputImageClone;
 }
+
+
 
 cv::Mat ImageProcessorGStreamer::rotate(cv::Mat& inputImage, bool isRight) {
 
@@ -700,8 +795,35 @@ cv::Mat ImageProcessorGStreamer::laplacianFilter(cv::Mat& inputImage)
         , pipeline, convert, flip, __func__))
         return cv::Mat();
 
+    std::cout << __func__ << std::endl;
+
+    int numChannels = inputImage.channels();
+    cv::Mat grayImage;
     cv::Mat outputImage;
 
+    if (numChannels == 1) {
+        grayImage = inputImage.clone();
+    }
+    else if (numChannels == 3) {
+        grayImage = grayScale(inputImage);
+    }
+    else {
+        std::cerr << __func__ << " : Unsupported number of channels: " << numChannels << std::endl;
+        return cv::Mat(); // 빈 이미지 반환
+    }
+
+    // For grayscale image
+    cv::Laplacian(grayImage, outputImage, CV_16S, 3);
+    cv::convertScaleAbs(outputImage, outputImage);
+
+    if (numChannels == 3) {
+        cv::Mat coloredEdgeImage;
+        cv::cvtColor(outputImage, coloredEdgeImage, cv::COLOR_GRAY2BGR);
+        cv::addWeighted(inputImage, 0.5, coloredEdgeImage, 0.5, 0, outputImage);
+    }
+
+    //분리병합
+    /*
     if (inputImage.channels() == 3) {
         // Apply Laplacian filter to each channel of the color image
         std::vector<cv::Mat> channels(3);
@@ -715,12 +837,7 @@ cv::Mat ImageProcessorGStreamer::laplacianFilter(cv::Mat& inputImage)
         }
 
         cv::merge(laplacianChannels, outputImage);
-    }
-    else {
-        // For grayscale image
-        cv::Laplacian(inputImage, outputImage, CV_16S, 3);
-        cv::convertScaleAbs(outputImage, outputImage);
-    }
+    }*/
 
     // Convert cv::Mat to GstBuffer
     GstBuffer* buffer;
