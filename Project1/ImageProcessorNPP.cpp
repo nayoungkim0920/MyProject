@@ -9,6 +9,9 @@ ImageProcessorNPP::~ImageProcessorNPP()
 }
 
 cv::Mat ImageProcessorNPP::grayScale(cv::Mat& inputImage) {
+
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     if (inputImage.channels() != 3) {
         std::cerr << "입력 이미지는 컬러 이미지여야 합니다." << std::endl;
         return cv::Mat();
@@ -67,6 +70,7 @@ cv::Mat ImageProcessorNPP::grayScale(cv::Mat& inputImage) {
 
 cv::Mat ImageProcessorNPP::rotate(cv::Mat& inputImage, bool isRight) {
 
+    /*
     std::cout << "ImageProcessorNPP::rotate" << std::endl;
 
     if (inputImage.empty()) {
@@ -212,9 +216,10 @@ cv::Mat ImageProcessorNPP::rotate(cv::Mat& inputImage, bool isRight) {
     std::cout << "CUDA stream destroyed." << std::endl;
 
     return outputImage;
-   
+    */
+
     //cv::warpAffine 사용
-    /* 
+    
     std::cout << "ImageProcessorNPP::rotate" << std::endl;
 
     if (inputImage.empty()) {
@@ -273,10 +278,11 @@ cv::Mat ImageProcessorNPP::rotate(cv::Mat& inputImage, bool isRight) {
         }
     }
 
-    std::cout << "Image rotation complete." << std::endl; */
+    std::cout << "Image rotation complete." << std::endl; 
 
-    //return outputImage;
+    return outputImage;
 }
+
 
 cv::Mat ImageProcessorNPP::zoom(cv::Mat& inputImage, double newWidth, double newHeight) {
     

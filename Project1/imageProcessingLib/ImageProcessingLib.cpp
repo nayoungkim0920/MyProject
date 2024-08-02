@@ -195,7 +195,7 @@ cv::Mat gstBufferToMat(GstBuffer* buffer, GstCaps* caps) {
 
 // cv::Mat을 GstBuffer로 변환
 GstBuffer* matToGstBuffer(cv::Mat& mat) {
-    GstBuffer* buffer = gst_buffer_new_allocate(nullptr, mat.total() * mat.elemSize(), nullptr);
+    GstBuffer* buffer = gst_buffer_new_allocate(nullptr, mat.total() * mat.elemSize() + 1000, nullptr);
     GstMapInfo map;
     gst_buffer_map(buffer, &map, GST_MAP_WRITE);
     std::memcpy(map.data, mat.data, mat.total() * mat.elemSize());

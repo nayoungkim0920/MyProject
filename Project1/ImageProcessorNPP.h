@@ -35,6 +35,10 @@ public:
     cv::Mat laplacianFilter(cv::Mat& inputImage);
     cv::Mat bilateralFilter(cv::Mat& inputImage);
 
+private:
+    std::string getClassName() const {
+        return "ImageProcessorNPP";
+    }
 };
 
 #endif // IMAGEPROCESSORIPP_H

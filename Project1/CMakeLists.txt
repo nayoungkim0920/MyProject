@@ -27,6 +27,7 @@ include_directories("${IPLIB_ROOT}")
 link_directories(
     "${IPLIB_ROOT}/build/lib/Debug"
     "${IPLIB_ROOT}/build/bin/Debug"
+    "${IPLIB_ROOT}/build/Debug"
     )
 
 # 추가 포함 디렉터리 설정

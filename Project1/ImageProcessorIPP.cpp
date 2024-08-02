@@ -1005,36 +1005,41 @@ cv::Mat ImageProcessorIPP::bilateralFilter(cv::Mat& inputImage)
 //이미지의 경계를 강조하기위해 주로 사용됨
 cv::Mat ImageProcessorIPP::sobelFilter(cv::Mat& inputImage)
 {
+    // Convert to grayscale if not already
     cv::Mat grayImage;
-    if (inputImage.channels() == 1)
+    if (inputImage.channels() == 1) {
         grayImage = inputImage.clone();
-    else
+    }
+    else {
         grayImage = grayScale(inputImage);
+        //cv::cvtColor(inputImage, grayImage, cv::COLOR_BGR2GRAY);
+    }
 
+    // Prepare the output image
     cv::Mat outputImage = cv::Mat::zeros(grayImage.size(), CV_16SC1);
 
-    // IPP 관련 변수
+    // IPP variables
     IppiSize roiSize = { grayImage.cols, grayImage.rows };
-    IppiMaskSize mask = ippMskSize3x3; // 3x3 소벨 커널 사용
+    IppiMaskSize mask = ippMskSize3x3; // 3x3 Sobel kernel
     IppNormType normType = ippNormL1;
     int bufferSize = 0;
     IppStatus status;
 
-    // 버퍼 크기 계산
+    // Calculate buffer size
     status = ippiFilterSobelGetBufferSize(roiSize, mask, normType, ipp8u, ipp16s, 1, &bufferSize);
     if (status != ippStsNoErr) {
-        std::cerr << "버퍼 크기 계산 오류: " << status << std::endl;
+        std::cerr << "Buffer size calculation error: " << status << std::endl;
         return cv::Mat();
     }
 
-    // 버퍼 할당
+    // Allocate buffer
     Ipp8u* pBuffer = ippsMalloc_8u(bufferSize);
     if (!pBuffer) {
-        std::cerr << "버퍼 할당 오류." << std::endl;
+        std::cerr << "Buffer allocation error." << std::endl;
         return cv::Mat();
     }
 
-    // 소벨 필터 적용
+    // Apply Sobel filter
     status = ippiFilterSobel_8u16s_C1R(
         grayImage.data,
         static_cast<int>(grayImage.step),
@@ -1048,23 +1053,23 @@ cv::Mat ImageProcessorIPP::sobelFilter(cv::Mat& inputImage)
         pBuffer
     );
 
-    // 버퍼 해제
+    // Free buffer
     ippsFree(pBuffer);
 
     if (status != ippStsNoErr) {
-        std::cerr << "소벨 필터 적용 오류: " << status << std::endl;
+        std::cerr << "Sobel filter application error: " << status << std::endl;
         return cv::Mat();
     }
 
-    // 절대값으로 변환하고 8비트로 스케일링하여 시각화
+    // Convert to 8-bit and scale
     cv::convertScaleAbs(outputImage, outputImage);
 
-    // 컬러 이미지인 경우, 결과를 원본 컬러 이미지 위에 오버레이
+    // Overlay the result on original color image if necessary
     if (inputImage.channels() == 3) {
         std::vector<cv::Mat> channels(3);
         cv::split(inputImage, channels);
 
-        // 각 채널에 소벨 결과 오버레이 (원본 컬러 이미지와 합성)
+        // Overlay Sobel result (original image and Sobel result blend)
         for (auto& channel : channels) {
             cv::addWeighted(channel, 0.5, outputImage, 0.5, 0, channel);
         }
