@@ -60,6 +60,9 @@
     <ClInclude Include="..\ImageProcessorOpenCV.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\AbstractImageProcessor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="C:\myLab\Project1\Project1\build\CMakeFiles\e3bfa16ae2a64154d17a0d78f504b446\moc_MainWindow.cpp.rule">

@@ -97,7 +97,7 @@ public:
 
 signals: //이벤트 발생을 알림
     void imageProcessed(QVector<ImageProcessor::ProcessingResult> results);
-//slots: //이벤트를 처리하는 함수 지칭
+    //slots: //이벤트를 처리하는 함수 지칭
 
 private:
 

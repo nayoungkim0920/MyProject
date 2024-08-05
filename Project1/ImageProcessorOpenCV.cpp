@@ -10,6 +10,8 @@ ImageProcessorOpenCV::~ImageProcessorOpenCV()
 
 cv::Mat ImageProcessorOpenCV::rotate(cv::Mat& inputImage, bool isRight)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     int rotateCode;
 
     if (isRight)
@@ -25,14 +27,28 @@ cv::Mat ImageProcessorOpenCV::rotate(cv::Mat& inputImage, bool isRight)
 
 cv::Mat ImageProcessorOpenCV::grayScale(cv::Mat& inputImage)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     cv::Mat outputImage;
     cv::cvtColor(inputImage, outputImage, cv::COLOR_BGR2GRAY);
 
     return outputImage;
 }
 
+cv::Mat ImageProcessorOpenCV::zoom(cv::Mat& inputImage, int newWidth, int newHeight)
+{
+    return cv::Mat();
+}
+
+cv::Mat ImageProcessorOpenCV::gaussianBlur(cv::Mat& inputImage, int kernelSize)
+{
+    return cv::Mat();
+}
+
 cv::Mat ImageProcessorOpenCV::zoom(cv::Mat& inputImage, int newWidth, int newHeight, double x, double y, int interpolation)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     cv::Mat outputImage;
     cv::resize(inputImage, outputImage, cv::Size(newWidth, newHeight)
         , x, y, interpolation);
@@ -42,14 +58,23 @@ cv::Mat ImageProcessorOpenCV::zoom(cv::Mat& inputImage, int newWidth, int newHei
 
 cv::Mat ImageProcessorOpenCV::gaussianBlur(cv::Mat& inputImage, int kernelSize, int sigmaX, int sigmaY, int borderType)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     cv::Mat outputImage;
     cv::GaussianBlur(inputImage, outputImage, cv::Size(kernelSize, kernelSize), 0, 0, 1);
 
     return outputImage;
 }
 
+std::string ImageProcessorOpenCV::getClassName() const
+{
+    return "ImageProcessorOpenCV";
+}
+
 cv::Mat ImageProcessorOpenCV::cannyEdges(cv::Mat& inputImage)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     cv::Mat grayImage;
     cv::Mat edges;
     cv::Mat outputImage = inputImage.clone();
@@ -81,6 +106,8 @@ cv::Mat ImageProcessorOpenCV::cannyEdges(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorOpenCV::medianFilter(cv::Mat& inputImage)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     cv::Mat outputImage;
     cv::medianBlur(inputImage, outputImage, 5);
 
@@ -89,6 +116,8 @@ cv::Mat ImageProcessorOpenCV::medianFilter(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorOpenCV::laplacianFilter(cv::Mat& inputImage)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     std::cout << __func__ << std::endl;
 
     cv::Mat grayImage;
@@ -124,6 +153,8 @@ cv::Mat ImageProcessorOpenCV::laplacianFilter(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorOpenCV::bilateralFilter(cv::Mat& inputImage)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     cv::Mat outputImage;
     cv::bilateralFilter(inputImage, outputImage, 9, 75, 75);
 
@@ -132,6 +163,8 @@ cv::Mat ImageProcessorOpenCV::bilateralFilter(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorOpenCV::sobelFilter(cv::Mat& inputImage)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     cv::Mat grayImage;
     if (inputImage.channels() == 1)
         grayImage = inputImage.clone();

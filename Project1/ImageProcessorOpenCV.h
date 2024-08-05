@@ -11,24 +11,32 @@
 #include <opencv2/cudafilters.hpp>
 #include <opencv2/cudawarping.hpp>
 
-class ImageProcessorOpenCV {
+#include "AbstractImageProcessor.h"
+
+class ImageProcessorOpenCV : public AbstractImageProcessor {
 public:
     ImageProcessorOpenCV();
     ~ImageProcessorOpenCV();
 
-    cv::Mat rotate(cv::Mat& inputImage, bool isRight);
-    cv::Mat grayScale(cv::Mat& inputImage);
-    cv::Mat zoom(cv::Mat& inputImage, int newWidth, int newHeight, double x, double y, int interpolation);
-    cv::Mat gaussianBlur(cv::Mat& inputImage
-                , int kernelSize
-                , int sigmaX
-                , int sigmaY
-                , int borderType);
-    cv::Mat cannyEdges(cv::Mat& inputImage);
-    cv::Mat medianFilter(cv::Mat& inputImage);
-    cv::Mat laplacianFilter(cv::Mat& inputImage); 
-    cv::Mat bilateralFilter(cv::Mat& inputImage);
-    cv::Mat sobelFilter(cv::Mat& inputImage);
+    // 추상 클래스에서 정의한 함수들
+    cv::Mat rotate(cv::Mat& inputImage, bool isRight) override;
+    cv::Mat grayScale(cv::Mat& inputImage) override;
+    cv::Mat zoom(cv::Mat& inputImage, int newWidth, int newHeight) override;
+    cv::Mat gaussianBlur(cv::Mat& inputImage, int kernelSize) override;
+    cv::Mat cannyEdges(cv::Mat& inputImage) override;
+    cv::Mat medianFilter(cv::Mat& inputImage) override;
+    cv::Mat laplacianFilter(cv::Mat& inputImage) override;
+    cv::Mat bilateralFilter(cv::Mat& inputImage) override;
+    cv::Mat sobelFilter(cv::Mat& inputImage) override;
+
+    // 오버로딩된 메소드들
+    cv::Mat zoom(cv::Mat& inputImage, int newWidth, int newHeight
+        , double x, double y, int interpolation);
+    cv::Mat gaussianBlur(cv::Mat& inputImage, int kernelSize
+        , int sigmaX, int sigmaY, int borderType);
+
+private:
+    std::string getClassName() const override;
 };
 
 #endif // IMAGEPROCESSOROPENCV_H

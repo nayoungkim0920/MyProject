@@ -10,6 +10,8 @@ ImageProcessorCUDA::~ImageProcessorCUDA()
 
 cv::Mat ImageProcessorCUDA::rotate(cv::Mat& inputImage, bool isRight)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     double angle; // 270.0 : 오른쪽 90도, 90.0 : 왼쪽 90도   
 
     if (isRight)
@@ -56,6 +58,8 @@ cv::Mat ImageProcessorCUDA::rotate(cv::Mat& inputImage, bool isRight)
 
 cv::Mat ImageProcessorCUDA::grayScale(cv::Mat& inputImage)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     cv::cuda::GpuMat d_inputImage;
     d_inputImage.upload(inputImage);
 
@@ -70,6 +74,8 @@ cv::Mat ImageProcessorCUDA::grayScale(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorCUDA::zoom(cv::Mat& inputImage, int newWidth, int newHeight)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     // GPU 메모리로 이미지 업로드
     cv::cuda::GpuMat d_image;
     d_image.upload(inputImage);
@@ -89,6 +95,8 @@ cv::Mat ImageProcessorCUDA::zoom(cv::Mat& inputImage, int newWidth, int newHeigh
 
 cv::Mat ImageProcessorCUDA::gaussianBlur(cv::Mat& inputImage, int kernelSize)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     cv::cuda::GpuMat gpuImage;
     gpuImage.upload(inputImage);
 
@@ -109,7 +117,7 @@ cv::Mat ImageProcessorCUDA::gaussianBlur(cv::Mat& inputImage, int kernelSize)
 
 cv::Mat ImageProcessorCUDA::cannyEdges(cv::Mat& inputImage)
 {
-    std::cout << __func__ << ": 시작합니다." << std::endl;
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
 
     cv::Mat grayImage;
 
@@ -161,14 +169,12 @@ cv::Mat ImageProcessorCUDA::cannyEdges(cv::Mat& inputImage)
         }
     }
 
-    std::cout << __func__ << ": 끝납니다." << std::endl;
-
     return outputImage;
 }
 
 cv::Mat ImageProcessorCUDA::medianFilter(cv::Mat& inputImage)
 {
-    std::cout << __func__ << ": 시작합니다." << std::endl;
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
 
     // Upload image to GPU
     cv::cuda::GpuMat gpuImage;
@@ -186,14 +192,12 @@ cv::Mat ImageProcessorCUDA::medianFilter(cv::Mat& inputImage)
     cv::Mat outputImage;
     medianedGpuImage.download(outputImage);
 
-    std::cout << __func__ << ": 끝납니다." << std::endl;
-
     return outputImage;
 }
 
 cv::Mat ImageProcessorCUDA::laplacianFilter(cv::Mat& inputImage)
 {
-    std::cout << __func__ << std::endl;
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
     
     // 입력 이미지를 GPU 메모리로 업로드
     cv::cuda::GpuMat d_inputImage;
@@ -241,6 +245,8 @@ cv::Mat ImageProcessorCUDA::laplacianFilter(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorCUDA::bilateralFilter(cv::Mat& inputImage)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     // 입력 이미지를 GPU 메모리로 업로드
     cv::cuda::GpuMat d_inputImage;
     d_inputImage.upload(inputImage);
@@ -264,6 +270,8 @@ cv::Mat ImageProcessorCUDA::bilateralFilter(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorCUDA::sobelFilter(cv::Mat& inputImage)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     //CUDA
     int numChannels = inputImage.channels();
     cv::Mat grayImage;
@@ -396,4 +404,9 @@ cv::Mat ImageProcessorCUDA::sobelFilter(cv::Mat& inputImage)
     return outputImage;
     
     */    
+}
+
+std::string ImageProcessorCUDA::getClassName() const
+{
+    return "ImageProcessorCUDA";
 }

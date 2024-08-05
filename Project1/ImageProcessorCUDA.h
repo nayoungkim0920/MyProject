@@ -11,20 +11,25 @@
 #include <opencv2/cudafilters.hpp>
 #include <opencv2/cudawarping.hpp>
 
-class ImageProcessorCUDA {
+#include "AbstractImageProcessor.h"
+
+class ImageProcessorCUDA : public AbstractImageProcessor{
 public:
     ImageProcessorCUDA();
     ~ImageProcessorCUDA();
 
-    cv::Mat rotate(cv::Mat& inputImage, bool isRight);
-    cv::Mat grayScale(cv::Mat& inputImage);
-    cv::Mat zoom(cv::Mat& inputImage, int newWidth, int newHeight);
-    cv::Mat gaussianBlur(cv::Mat& inputImage, int kernelSize);
-    cv::Mat cannyEdges(cv::Mat& inputImage);
-    cv::Mat medianFilter(cv::Mat& inputImage);
-    cv::Mat laplacianFilter(cv::Mat& inputImage);
-    cv::Mat bilateralFilter(cv::Mat& inputImage);
-    cv::Mat sobelFilter(cv::Mat& inputImage);
+    cv::Mat rotate(cv::Mat& inputImage, bool isRight) override;
+    cv::Mat grayScale(cv::Mat& inputImage) override;
+    cv::Mat zoom(cv::Mat& inputImage, int newWidth, int newHeight) override;
+    cv::Mat gaussianBlur(cv::Mat& inputImage, int kernelSize) override;
+    cv::Mat cannyEdges(cv::Mat& inputImage) override;
+    cv::Mat medianFilter(cv::Mat& inputImage) override;
+    cv::Mat laplacianFilter(cv::Mat& inputImage) override;
+    cv::Mat bilateralFilter(cv::Mat& inputImage) override;
+    cv::Mat sobelFilter(cv::Mat& inputImage) override;
+
+private:
+    std::string getClassName() const override;
 };
 
 #endif // IMAGEPROCESSORCUDA_H

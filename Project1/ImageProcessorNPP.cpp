@@ -70,6 +70,8 @@ cv::Mat ImageProcessorNPP::grayScale(cv::Mat& inputImage) {
 
 cv::Mat ImageProcessorNPP::rotate(cv::Mat& inputImage, bool isRight) {
 
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     /*
     std::cout << "ImageProcessorNPP::rotate" << std::endl;
 
@@ -284,7 +286,9 @@ cv::Mat ImageProcessorNPP::rotate(cv::Mat& inputImage, bool isRight) {
 }
 
 
-cv::Mat ImageProcessorNPP::zoom(cv::Mat& inputImage, double newWidth, double newHeight) {
+cv::Mat ImageProcessorNPP::zoom(cv::Mat& inputImage, int newWidth, int newHeight) {
+
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
     
     int inputWidth = inputImage.cols;
     int inputHeight = inputImage.rows;
@@ -368,6 +372,9 @@ cv::Mat ImageProcessorNPP::zoom(cv::Mat& inputImage, double newWidth, double new
 
 
 cv::Mat ImageProcessorNPP::gaussianBlur(cv::Mat& inputImage, int kernelSize) {
+
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     if (kernelSize % 2 == 0 || kernelSize < 3) {
         std::cerr << "Kernel size must be an odd number and greater than or equal to 3." << std::endl;
         return cv::Mat();
@@ -535,6 +542,8 @@ cv::Mat ImageProcessorNPP::gaussianBlur(cv::Mat& inputImage, int kernelSize) {
 
 cv::Mat ImageProcessorNPP::cannyEdges(cv::Mat& inputImage) {
 
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     cv::Mat grayImage, blurredImage, edgeImage;
     cv::Mat outputImage;
 
@@ -662,6 +671,8 @@ cv::Mat ImageProcessorNPP::cannyEdges(cv::Mat& inputImage) {
 
 cv::Mat ImageProcessorNPP::medianFilter(cv::Mat& inputImage) {    
 
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     if (inputImage.empty()) {
         std::cerr << "Input image is empty." << std::endl;
         return cv::Mat(); // 빈 이미지 반환
@@ -746,6 +757,9 @@ cv::Mat ImageProcessorNPP::medianFilter(cv::Mat& inputImage) {
 }
 
 cv::Mat ImageProcessorNPP::sobelFilter(cv::Mat& inputImage) {
+
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     if (inputImage.empty()) {
         std::cerr << "Input image is empty." << std::endl;
         return cv::Mat(); // 빈 이미지 반환
@@ -845,7 +859,7 @@ cv::Mat ImageProcessorNPP::sobelFilter(cv::Mat& inputImage) {
 
 cv::Mat ImageProcessorNPP::laplacianFilter(cv::Mat& inputImage)
 {
-    std::cout << __func__ << std::endl;
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
 
     int numChannels = inputImage.channels();
     cv::Mat grayImage;
@@ -918,6 +932,8 @@ cv::Mat ImageProcessorNPP::laplacianFilter(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorNPP::bilateralFilter(cv::Mat& inputImage)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     // 입력 이미지를 GPU 메모리로 복사
     Npp8u* d_inputImage;
     size_t inputImagePitch;
@@ -967,4 +983,9 @@ cv::Mat ImageProcessorNPP::bilateralFilter(cv::Mat& inputImage)
     cudaFree(d_outputImage);
 
     return outputImage;
+}
+
+std::string ImageProcessorNPP::getClassName() const
+{
+    return "ImageProcessorNPP";
 }

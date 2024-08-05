@@ -10,6 +10,8 @@ ImageProcessorCUDAKernel::~ImageProcessorCUDAKernel()
 
 cv::Mat ImageProcessorCUDAKernel::rotate(cv::Mat& inputImage, bool isRight)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     cv::Mat outputImage;
     if (isRight)
         callRotateImageCUDA_R(inputImage, outputImage);
@@ -21,6 +23,8 @@ cv::Mat ImageProcessorCUDAKernel::rotate(cv::Mat& inputImage, bool isRight)
 
 cv::Mat ImageProcessorCUDAKernel::grayScale(cv::Mat& inputImage)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     cv::Mat outputImage;
     callGrayScaleImageCUDA(inputImage, outputImage);
 
@@ -29,6 +33,8 @@ cv::Mat ImageProcessorCUDAKernel::grayScale(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorCUDAKernel::zoom(cv::Mat& inputImage, int newWidth, int newHeight)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     cv::Mat outputImage;
     callZoomImageCUDA(inputImage, outputImage, newWidth, newHeight);
 
@@ -37,6 +43,8 @@ cv::Mat ImageProcessorCUDAKernel::zoom(cv::Mat& inputImage, int newWidth, int ne
 
 cv::Mat ImageProcessorCUDAKernel::gaussianBlur(cv::Mat& inputImage, int kernelSize)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     cv::Mat outputImage;
     callGaussianBlurCUDA(inputImage, outputImage, kernelSize);
 
@@ -45,6 +53,8 @@ cv::Mat ImageProcessorCUDAKernel::gaussianBlur(cv::Mat& inputImage, int kernelSi
 
 cv::Mat ImageProcessorCUDAKernel::cannyEdges(cv::Mat& inputImage)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     //cv::Mat grayImage;
     //if (inputImage.channels() == 3) {
     //    grayImage = grayScale(inputImage);
@@ -61,6 +71,8 @@ cv::Mat ImageProcessorCUDAKernel::cannyEdges(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorCUDAKernel::medianFilter(cv::Mat& inputImage)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     cv::Mat outputImage;
     callMedianFilterCUDA(inputImage, outputImage);
 
@@ -69,6 +81,8 @@ cv::Mat ImageProcessorCUDAKernel::medianFilter(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorCUDAKernel::laplacianFilter(cv::Mat& inputImage)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     cv::Mat outputImage;
     callLaplacianFilterCUDA(inputImage, outputImage);
 
@@ -110,6 +124,8 @@ cv::Mat ImageProcessorCUDAKernel::laplacianFilter(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorCUDAKernel::bilateralFilter(cv::Mat& inputImage)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     cv::Mat outputImage;
     callBilateralFilterCUDA(inputImage, outputImage, 9, 75, 75);
 
@@ -118,9 +134,16 @@ cv::Mat ImageProcessorCUDAKernel::bilateralFilter(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorCUDAKernel::sobelFilter(cv::Mat& inputImage)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     //cv::Mat grayImage = grayScale(inputImage);
     cv::Mat outputImage;
     callSobelFilterCUDA(inputImage, outputImage);
 
     return outputImage;
+}
+
+std::string ImageProcessorCUDAKernel::getClassName() const
+{
+    return "ImageProcessorCUDAKernel";
 }

@@ -9,6 +9,9 @@ ImageProcessorIPP::~ImageProcessorIPP()
 }
 
 cv::Mat ImageProcessorIPP::rotate(cv::Mat& inputImage, bool isRight) {
+
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     std::cout << "Input image size: " << inputImage.cols << " x " << inputImage.rows << std::endl;
 
     double angle; //90.0 오른쪽, 270.0 왼쪽
@@ -197,6 +200,8 @@ cv::Mat ImageProcessorIPP::rotate(cv::Mat& inputImage, bool isRight) {
 
 cv::Mat ImageProcessorIPP::grayScale(cv::Mat& inputImage)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     ippInit();
 
     // 입력 이미지의 채널 수 확인
@@ -236,6 +241,8 @@ cv::Mat ImageProcessorIPP::grayScale(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorIPP::zoom(cv::Mat& inputImage, int newWidth, int newHeight)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     /*
     ipptypes.h
     typedef enum {
@@ -432,6 +439,8 @@ cv::Mat ImageProcessorIPP::zoom(cv::Mat& inputImage, int newWidth, int newHeight
 
 cv::Mat ImageProcessorIPP::gaussianBlur(cv::Mat& inputImage, int kernelSize)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     std::cout << "Starting Gaussian Blur Processing..." << std::endl;
 
     cv::Mat bgrInputImage;
@@ -612,6 +621,8 @@ cv::Mat ImageProcessorIPP::gaussianBlur(cv::Mat& inputImage, int kernelSize)
 
 cv::Mat ImageProcessorIPP::cannyEdges(cv::Mat& inputImage)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     cv::Mat grayImage;
     cv::Mat outputImage;
 
@@ -692,6 +703,8 @@ cv::Mat ImageProcessorIPP::cannyEdges(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorIPP::medianFilter(cv::Mat& inputImage)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     // 입력 이미지가 그레이스케일인지 확인
     bool isGrayScale = (inputImage.channels() == 1);
 
@@ -744,6 +757,8 @@ cv::Mat ImageProcessorIPP::medianFilter(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorIPP::laplacianFilter(cv::Mat& inputImage)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     std::cout << __func__ << std::endl;
 
     int numChannels = inputImage.channels();
@@ -827,6 +842,8 @@ cv::Mat ImageProcessorIPP::laplacianFilter(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorIPP::bilateralFilter(cv::Mat& inputImage)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     int numChannels = inputImage.channels();
     IppiSize roiSize = { inputImage.cols, inputImage.rows };
     int kernelSize = 9; // Filter size
@@ -1005,6 +1022,8 @@ cv::Mat ImageProcessorIPP::bilateralFilter(cv::Mat& inputImage)
 //이미지의 경계를 강조하기위해 주로 사용됨
 cv::Mat ImageProcessorIPP::sobelFilter(cv::Mat& inputImage)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     // Convert to grayscale if not already
     cv::Mat grayImage;
     if (inputImage.channels() == 1) {
@@ -1078,4 +1097,9 @@ cv::Mat ImageProcessorIPP::sobelFilter(cv::Mat& inputImage)
     }
 
     return outputImage;
+}
+
+std::string ImageProcessorIPP::getClassName() const
+{
+    return "ImageProcessorIPP";
 }

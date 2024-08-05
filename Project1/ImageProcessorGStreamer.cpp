@@ -295,7 +295,9 @@ cv::Mat ImageProcessorGStreamer::rotate(cv::Mat& inputImage, bool isRight) {
 }
 
 
-cv::Mat ImageProcessorGStreamer::zoom(cv::Mat& inputImage, double newWidth, double newHeight) {
+cv::Mat ImageProcessorGStreamer::zoom(cv::Mat& inputImage, int newWidth, int newHeight) {
+
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
 
     GstElement* pipeline = nullptr;
     GstElement* source = nullptr;
@@ -410,6 +412,9 @@ cv::Mat ImageProcessorGStreamer::zoom(cv::Mat& inputImage, double newWidth, doub
 }
 
 cv::Mat ImageProcessorGStreamer::gaussianBlur(cv::Mat& inputImage, int kernelSize) {
+
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     GstElement* pipeline = nullptr;
     GstElement* source = nullptr;
     GstElement* convert = nullptr;
@@ -541,6 +546,8 @@ cv::Mat ImageProcessorGStreamer::gaussianBlur(cv::Mat& inputImage, int kernelSiz
 
 cv::Mat ImageProcessorGStreamer::cannyEdges(cv::Mat& inputImage) {
 
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     cv::Mat grayImage;
     cv::Mat edges;
     cv::Mat outputImage;
@@ -572,6 +579,8 @@ cv::Mat ImageProcessorGStreamer::cannyEdges(cv::Mat& inputImage) {
 }
 
 cv::Mat ImageProcessorGStreamer::medianFilter(cv::Mat& inputImage) {
+
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
 
     cv::Mat outputImage;
 
@@ -607,6 +616,8 @@ cv::Mat ImageProcessorGStreamer::medianFilter(cv::Mat& inputImage) {
 
 cv::Mat ImageProcessorGStreamer::sobelFilter(cv::Mat& inputImage)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     GstElement* pipeline = nullptr;
     GstElement* source = nullptr;
     GstElement* convert = nullptr;
@@ -739,29 +750,31 @@ cv::Mat ImageProcessorGStreamer::sobelFilter(cv::Mat& inputImage)
 
 cv::Mat ImageProcessorGStreamer::laplacianFilter(cv::Mat& inputImage)
 {
-    if (inputImage.empty()) {
-        std::cerr << "Input image is empty." << std::endl;
-        return cv::Mat(); // Return empty Mat
-    }
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
 
-    // GStreamer 요소 초기화
     GstElement* pipeline = nullptr;
     GstElement* source = nullptr;
     GstElement* convert = nullptr;
     GstElement* sink = nullptr;
     GstSample* sample = nullptr;
+    int numChannels = inputImage.channels();
 
-    // GStreamer 초기화
+    if (inputImage.empty()) {
+        std::cerr << "Input image is empty." << std::endl;
+        return cv::Mat(); // 빈 이미지 반환
+    }
+
+    // Initialize GStreamer
     gst_init(nullptr, nullptr);
 
-    // Create GStreamer elements
+    // Create elements
     pipeline = gst_pipeline_new("pipeline");
     source = gst_element_factory_make("appsrc", "source");
     convert = gst_element_factory_make("videoconvert", "convert");
     sink = gst_element_factory_make("appsink", "sink");
 
     if (!pipeline || !source || !convert || !sink) {
-        std::cerr << "Failed to create GStreamer elements." << std::endl;
+        std::cerr << "Failed to create elements" << std::endl;
         if (pipeline) gst_object_unref(GST_OBJECT(pipeline));
         if (source) gst_object_unref(GST_OBJECT(source));
         if (convert) gst_object_unref(GST_OBJECT(convert));
@@ -772,7 +785,7 @@ cv::Mat ImageProcessorGStreamer::laplacianFilter(cv::Mat& inputImage)
     // Set appsrc properties
     g_object_set(G_OBJECT(source), "caps",
         gst_caps_new_simple("video/x-raw",
-            "format", G_TYPE_STRING, "GRAY8",
+            "format", G_TYPE_STRING, "BGR",
             "width", G_TYPE_INT, inputImage.cols,
             "height", G_TYPE_INT, inputImage.rows,
             "framerate", GST_TYPE_FRACTION, 30, 1,
@@ -782,95 +795,92 @@ cv::Mat ImageProcessorGStreamer::laplacianFilter(cv::Mat& inputImage)
     // Set appsink properties
     g_object_set(G_OBJECT(sink), "caps",
         gst_caps_new_simple("video/x-raw",
-            "format", G_TYPE_STRING, "GRAY8",
+            "format", G_TYPE_STRING, "BGR",
             nullptr), nullptr);
     g_object_set(G_OBJECT(sink), "sync", FALSE, nullptr);
 
     // Build the pipeline
     gst_bin_add_many(GST_BIN(pipeline), source, convert, sink, nullptr);
     if (!gst_element_link_many(source, convert, sink, nullptr)) {
-        std::cerr << "Failed to link GStreamer elements." << std::endl;
+        std::cerr << "Elements could not be linked." << std::endl;
         gst_object_unref(GST_OBJECT(pipeline));
-        return cv::Mat(); // Return empty Mat on failure
+        return cv::Mat();
     }
 
     // Apply Laplacian filter using OpenCV
-    cv::Mat laplacianImage;
-
-    if (inputImage.channels() == 3) {
-        // Apply Laplacian filter to each channel of the color image
-        std::vector<cv::Mat> channels(3);
-        cv::split(inputImage, channels);
-
-        std::vector<cv::Mat> laplacianChannels(3);
-        for (int i = 0; i < 3; ++i) {
-            cv::Mat grayChannel;
-            cv::Laplacian(channels[i], grayChannel, CV_16S, 3);
-            cv::convertScaleAbs(grayChannel, laplacianChannels[i]);
-        }
-
-        cv::merge(laplacianChannels, laplacianImage);
+    cv::Mat grayImage, laplacianImage, outputImage;
+    if (numChannels == 3) {
+        // Convert color image to grayscale
+        grayImage = grayScale(inputImage); // Assumes grayScale is implemented
     }
     else {
-        // For grayscale image
-        cv::Laplacian(inputImage, laplacianImage, CV_16S, 3);
-        cv::convertScaleAbs(laplacianImage, laplacianImage);
+        grayImage = inputImage;
     }
 
-    // Convert cv::Mat to GstBuffer
-    GstBuffer* buffer = gst_buffer_new_allocate(nullptr, laplacianImage.total() * laplacianImage.elemSize(), nullptr);
-    GstMapInfo map;
-    gst_buffer_map(buffer, &map, GST_MAP_WRITE);
-    memcpy(map.data, laplacianImage.data, laplacianImage.total() * laplacianImage.elemSize());
-    gst_buffer_unmap(buffer, &map);
+    // Apply Laplacian filter
+    cv::Laplacian(grayImage, laplacianImage, CV_16S, 3);
+    cv::convertScaleAbs(laplacianImage, outputImage);
 
-    // Push buffer to appsrc
-    GstFlowReturn ret;
-    g_signal_emit_by_name(source, "push-buffer", buffer, &ret);
-    gst_buffer_unref(buffer);
+    if (numChannels == 3) {
+        cv::Mat overlayImage;
+        cv::cvtColor(outputImage, overlayImage, cv::COLOR_GRAY2BGR);
+        cv::addWeighted(inputImage, 0.5, overlayImage, 0.5, 0, outputImage);
 
-    if (ret != GST_FLOW_OK) {
-        std::cerr << "Failed to push buffer to appsrc." << std::endl;
-        gst_object_unref(GST_OBJECT(pipeline));
-        return cv::Mat(); // Return empty Mat on failure
-    }
+        // Convert cv::Mat to GstBuffer
+        GstBuffer* buffer = gst_buffer_new_allocate(nullptr, outputImage.total() * outputImage.elemSize(), nullptr);
+        GstMapInfo map;
+        gst_buffer_map(buffer, &map, GST_MAP_WRITE);
+        memcpy(map.data, outputImage.data, outputImage.total() * outputImage.elemSize());
+        gst_buffer_unmap(buffer, &map);
 
-    // Set the pipeline to PLAYING state
-    gst_element_set_state(pipeline, GST_STATE_PLAYING);
+        // Push buffer to appsrc
+        GstFlowReturn ret;
+        g_signal_emit_by_name(source, "push-buffer", buffer, &ret);
+        gst_buffer_unref(buffer);
 
-    // Pull sample from appsink
-    sample = gst_app_sink_pull_sample(GST_APP_SINK(sink));
-    if (!sample) {
-        std::cerr << "Failed to pull sample from appsink." << std::endl;
-        gst_element_set_state(pipeline, GST_STATE_NULL);
-        gst_object_unref(GST_OBJECT(pipeline));
-        return cv::Mat(); // Return empty Mat on failure
-    }
+        if (ret != GST_FLOW_OK) {
+            std::cerr << "Failed to push buffer to appsrc" << std::endl;
+            gst_object_unref(GST_OBJECT(pipeline));
+            return cv::Mat(); // Return empty Mat on failure
+        }
 
-    GstBuffer* outputBuffer = gst_sample_get_buffer(sample);
-    if (!outputBuffer) {
-        std::cerr << "Failed to get buffer from sample." << std::endl;
+        // Set the pipeline to playing
+        gst_element_set_state(pipeline, GST_STATE_PLAYING);
+
+        // Pull sample from appsink
+        sample = gst_app_sink_pull_sample(GST_APP_SINK(sink));
+        if (!sample) {
+            std::cerr << "Failed to pull sample from appsink" << std::endl;
+            gst_object_unref(GST_OBJECT(pipeline));
+            return cv::Mat(); // Return empty Mat on failure
+        }
+
+        GstBuffer* outputBuffer = gst_sample_get_buffer(sample);
+        if (!outputBuffer) {
+            std::cerr << "Failed to get buffer from sample" << std::endl;
+            gst_sample_unref(sample);
+            gst_object_unref(GST_OBJECT(pipeline));
+            return cv::Mat(); // Return empty Mat on failure
+        }
+
+        gst_buffer_map(outputBuffer, &map, GST_MAP_READ);
+        cv::Mat finalImage(inputImage.rows, inputImage.cols, CV_8UC3, map.data);
+        outputImage = finalImage.clone(); // Make a deep copy of the data
+        gst_buffer_unmap(outputBuffer, &map);
+
+        // Cleanup
         gst_sample_unref(sample);
         gst_element_set_state(pipeline, GST_STATE_NULL);
-        gst_object_unref(GST_OBJECT(pipeline));
-        return cv::Mat(); // Return empty Mat on failure
+        gst_object_unref(pipeline);
     }
 
-    gst_buffer_map(outputBuffer, &map, GST_MAP_READ);
-    cv::Mat finalImage(inputImage.rows, inputImage.cols, CV_8UC1, map.data);
-    finalImage = finalImage.clone(); // Make a deep copy of the data
-    gst_buffer_unmap(outputBuffer, &map);
-
-    // Cleanup
-    gst_sample_unref(sample);
-    gst_element_set_state(pipeline, GST_STATE_NULL);
-    gst_object_unref(GST_OBJECT(pipeline));
-
-    return finalImage;
+    return outputImage;    
 }
 
 cv::Mat ImageProcessorGStreamer::bilateralFilter(cv::Mat& inputImage)
 {
+    std::cout << "<<<" << getClassName() << "::" << __func__ << ">>>" << std::endl;
+
     if (inputImage.empty()) {
         std::cerr << "입력 이미지가 비어 있습니다." << std::endl;
         return cv::Mat(); // 빈 Mat 반환
@@ -978,4 +988,9 @@ cv::Mat ImageProcessorGStreamer::bilateralFilter(cv::Mat& inputImage)
     gst_object_unref(pipeline);
 
     return outputImage;
+}
+
+std::string ImageProcessorGStreamer::getClassName() const
+{
+    return "ImageProcessorGStreamer";
 }

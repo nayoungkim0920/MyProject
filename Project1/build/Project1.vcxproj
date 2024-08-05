@@ -786,6 +786,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="..\ImageProcessorOpenCV.cpp" />
     <ClCompile Include="C:\myLab\Project1\Project1\main.cpp" />
     <ClCompile Include="C:\myLab\Project1\Project1\MainWindow.cpp" />
+    <ClInclude Include="..\AbstractImageProcessor.h" />
     <ClInclude Include="..\ImageProcessorCUDA.h" />
     <ClInclude Include="..\ImageProcessorCUDAKernel.h" />
     <ClInclude Include="..\ImageProcessorGStreamer.h" />

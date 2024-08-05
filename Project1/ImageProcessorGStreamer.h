@@ -11,26 +11,25 @@
 #include <windows.h>
 #include <cstdlib>
 
+#include "AbstractImageProcessor.h"
 #include "ImageProcessingLib.h"
 
-class ImageProcessorGStreamer {
+class ImageProcessorGStreamer : public AbstractImageProcessor{
 public:
     ImageProcessorGStreamer();
     ~ImageProcessorGStreamer();
 
-    cv::Mat grayScale(cv::Mat& inputImage);
-    cv::Mat rotate(cv::Mat& inputImage, bool isRight);
-    cv::Mat zoom(cv::Mat& inputImage, double newWidth, double newHeight);
-    cv::Mat cannyEdges(cv::Mat& inputImage);
-    cv::Mat gaussianBlur(cv::Mat& inputImage, int kernelSize);
-    cv::Mat medianFilter(cv::Mat& inputImage);
-    cv::Mat sobelFilter(cv::Mat& inputImage);
-    cv::Mat laplacianFilter(cv::Mat& inputImage);
-    cv::Mat bilateralFilter(cv::Mat& inputImage);
+    cv::Mat grayScale(cv::Mat& inputImage) override;
+    cv::Mat rotate(cv::Mat& inputImage, bool isRight) override;
+    cv::Mat zoom(cv::Mat& inputImage, int newWidth, int newHeight) override;
+    cv::Mat cannyEdges(cv::Mat& inputImage) override;
+    cv::Mat gaussianBlur(cv::Mat& inputImage, int kernelSize) override;
+    cv::Mat medianFilter(cv::Mat& inputImage) override;
+    cv::Mat sobelFilter(cv::Mat& inputImage) override;
+    cv::Mat laplacianFilter(cv::Mat& inputImage) override;
+    cv::Mat bilateralFilter(cv::Mat& inputImage) override;
 private:
-    std::string getClassName() const {
-        return "ImageProcessorGStreamer";
-    }
+    std::string getClassName() const;
 };
 
 #endif // IMAGEPROCESSORGSTREAMER_H
