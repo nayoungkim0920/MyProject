@@ -44,6 +44,7 @@ public:
     QAction *actionSobelFilter;
     QAction *actionLaplacianFilter;
     QAction *actionBilateralFilter;
+    QAction *actionYOLOv5;
     QWidget *centralwidget;
     QVBoxLayout *verticalLayout;
     QScrollArea *scrollArea;
@@ -70,6 +71,7 @@ public:
     QMenu *menuFile;
     QMenu *menuEdit;
     QMenu *menuFilters;
+    QMenu *menuDetect;
     QStatusBar *statusbar;
     QToolBar *fileToolBar;
     QToolBar *filtersToolBar;
@@ -112,6 +114,8 @@ public:
         actionLaplacianFilter->setObjectName("actionLaplacianFilter");
         actionBilateralFilter = new QAction(MainWindow);
         actionBilateralFilter->setObjectName("actionBilateralFilter");
+        actionYOLOv5 = new QAction(MainWindow);
+        actionYOLOv5->setObjectName("actionYOLOv5");
         centralwidget = new QWidget(MainWindow);
         centralwidget->setObjectName("centralwidget");
         verticalLayout = new QVBoxLayout(centralwidget);
@@ -255,6 +259,8 @@ public:
         menuEdit->setObjectName("menuEdit");
         menuFilters = new QMenu(menubar);
         menuFilters->setObjectName("menuFilters");
+        menuDetect = new QMenu(menubar);
+        menuDetect->setObjectName("menuDetect");
         MainWindow->setMenuBar(menubar);
         statusbar = new QStatusBar(MainWindow);
         statusbar->setObjectName("statusbar");
@@ -272,6 +278,7 @@ public:
         menubar->addAction(menuFile->menuAction());
         menubar->addAction(menuEdit->menuAction());
         menubar->addAction(menuFilters->menuAction());
+        menubar->addAction(menuDetect->menuAction());
         menuFile->addAction(actionOpen);
         menuFile->addAction(actionSave);
         menuFile->addAction(actionExit);
@@ -288,6 +295,7 @@ public:
         menuFilters->addAction(actionSobelFilter);
         menuFilters->addAction(actionLaplacianFilter);
         menuFilters->addAction(actionBilateralFilter);
+        menuDetect->addAction(actionYOLOv5);
         fileToolBar->addAction(actionOpen);
         fileToolBar->addAction(actionSave);
         fileToolBar->addAction(actionExit);
@@ -328,6 +336,7 @@ public:
         actionSobelFilter->setText(QCoreApplication::translate("MainWindow", "&Sobel Filter", nullptr));
         actionLaplacianFilter->setText(QCoreApplication::translate("MainWindow", "&Laplacian Filter", nullptr));
         actionBilateralFilter->setText(QCoreApplication::translate("MainWindow", "&Bilateral Filter", nullptr));
+        actionYOLOv5->setText(QCoreApplication::translate("MainWindow", "&YOLOv5", nullptr));
         label_opencv->setText(QCoreApplication::translate("MainWindow", "label_opencv", nullptr));
         label_ipp->setText(QCoreApplication::translate("MainWindow", "label_ipp", nullptr));
         label_npp->setText(QCoreApplication::translate("MainWindow", "label_npp", nullptr));
@@ -343,6 +352,7 @@ public:
         menuFile->setTitle(QCoreApplication::translate("MainWindow", "File", nullptr));
         menuEdit->setTitle(QCoreApplication::translate("MainWindow", "Edit", nullptr));
         menuFilters->setTitle(QCoreApplication::translate("MainWindow", "Filters", nullptr));
+        menuDetect->setTitle(QCoreApplication::translate("MainWindow", "Detect", nullptr));
         (void)MainWindow;
     } // retranslateUi
 

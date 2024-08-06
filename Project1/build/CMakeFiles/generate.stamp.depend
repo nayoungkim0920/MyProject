@@ -1,4 +1,6 @@
 # CMake generation dependency list for this directory.
+C:/Program Files (x86)/Intel/oneAPI/mkl/2024.1/lib/cmake/mkl/MKLConfig.cmake
+C:/Program Files (x86)/Intel/oneAPI/mkl/2024.1/lib/cmake/mkl/MKLConfigVersion.cmake
 C:/Program Files/CMake/share/cmake-3.29/Modules/CMakeCUDACompiler.cmake.in
 C:/Program Files/CMake/share/cmake-3.29/Modules/CMakeCUDACompilerABI.cu
 C:/Program Files/CMake/share/cmake-3.29/Modules/CMakeCUDAInformation.cmake
@@ -97,7 +99,6 @@ C:/Program Files/CMake/share/cmake-3.29/Modules/Compiler/zOS-C-DetermineCompiler
 C:/Program Files/CMake/share/cmake-3.29/Modules/Compiler/zOS-CXX-DetermineCompiler.cmake
 C:/Program Files/CMake/share/cmake-3.29/Modules/CompilerId/VS-10.vcxproj.in
 C:/Program Files/CMake/share/cmake-3.29/Modules/FindCUDA.cmake
-C:/Program Files/CMake/share/cmake-3.29/Modules/FindCUDA/run_nvcc.cmake
 C:/Program Files/CMake/share/cmake-3.29/Modules/FindCUDA/select_compute_arch.cmake
 C:/Program Files/CMake/share/cmake-3.29/Modules/FindOpenMP.cmake
 C:/Program Files/CMake/share/cmake-3.29/Modules/FindPackageHandleStandardArgs.cmake
@@ -315,6 +316,23 @@ C:/Qt/6.7.1/msvc2019_64/lib/cmake/Qt6ZlibPrivate/Qt6ZlibPrivateConfigVersion.cma
 C:/Qt/6.7.1/msvc2019_64/lib/cmake/Qt6ZlibPrivate/Qt6ZlibPrivateConfigVersionImpl.cmake
 C:/Qt/6.7.1/msvc2019_64/lib/cmake/Qt6ZlibPrivate/Qt6ZlibPrivateTargets.cmake
 C:/Qt/6.7.1/msvc2019_64/lib/cmake/Qt6ZlibPrivate/Qt6ZlibPrivateVersionlessTargets.cmake
+C:/libtorch/share/cmake/Caffe2/Caffe2Config.cmake
+C:/libtorch/share/cmake/Caffe2/Caffe2Targets-release.cmake
+C:/libtorch/share/cmake/Caffe2/Caffe2Targets.cmake
+C:/libtorch/share/cmake/Caffe2/FindCUDAToolkit.cmake
+C:/libtorch/share/cmake/Caffe2/Modules_CUDA_fix/FindCUDA.cmake
+C:/libtorch/share/cmake/Caffe2/Modules_CUDA_fix/upstream/CMakeInitializeConfigs.cmake
+C:/libtorch/share/cmake/Caffe2/Modules_CUDA_fix/upstream/FindCUDA.cmake
+C:/libtorch/share/cmake/Caffe2/Modules_CUDA_fix/upstream/FindCUDA/run_nvcc.cmake
+C:/libtorch/share/cmake/Caffe2/Modules_CUDA_fix/upstream/FindCUDA/select_compute_arch.cmake
+C:/libtorch/share/cmake/Caffe2/Modules_CUDA_fix/upstream/FindPackageHandleStandardArgs.cmake
+C:/libtorch/share/cmake/Caffe2/Modules_CUDA_fix/upstream/FindPackageMessage.cmake
+C:/libtorch/share/cmake/Caffe2/public/cuda.cmake
+C:/libtorch/share/cmake/Caffe2/public/mkl.cmake
+C:/libtorch/share/cmake/Caffe2/public/mkldnn.cmake
+C:/libtorch/share/cmake/Caffe2/public/utils.cmake
+C:/libtorch/share/cmake/Torch/TorchConfig.cmake
+C:/libtorch/share/cmake/Torch/TorchConfigVersion.cmake
 C:/myLab/Project1/Project1/CMakeLists.txt
 C:/myLab/Project1/Project1/build/CMakeFiles/3.29.3/CMakeCUDACompiler.cmake
 C:/myLab/Project1/Project1/build/CMakeFiles/3.29.3/CMakeCXXCompiler.cmake
@@ -322,6 +340,8 @@ C:/myLab/Project1/Project1/build/CMakeFiles/3.29.3/CMakeRCCompiler.cmake
 C:/myLab/Project1/Project1/build/CMakeFiles/3.29.3/CMakeSystem.cmake
 C:/myLab/Project1/Project1/build/CMakeFiles/image_processing.dir/image_processing_generated_imageProcessing.cu.obj.cmake.pre-gen
 C:/myLab/Project1/Project1/build/CMakeFiles/image_processing.dir/image_processing_generated_imageProcessing.cu.obj.depend
+C:/myLab/Project1/Project1/build/detect_cuda_compute_capabilities.cu
+C:/myLab/Project1/Project1/build/detect_cuda_version.cc
 C:/opencv/build/OpenCVConfig-version.cmake
 C:/opencv/build/OpenCVConfig.cmake
 C:/opencv/build/OpenCVModules.cmake

@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>YOLOv5Dialog</class>
+ <widget class="QDialog" name="YOLOv5Dialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>YOLOv5 Detection Results</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_main">
+   <!-- 이미지 및 처리 시간 레이아웃 -->
+   <item>
+    <layout class="QVBoxLayout" name="verticalLayout_images_and_times">
+     <!-- 첫 번째 이미지 행 -->
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_row1">
+       <item>
+        <widget class="QLabel" name="label_opencv">
+         <property name="text">
+          <string>OpenCV</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+         <property name="scaledContents">
+          <bool>true</bool>
+         </property>
+         <property name="fixedSize">
+          <size>
+           <width>400</width>
+           <height>300</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_ipp">
+         <property name="text">
+          <string>IPP</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+         <property name="scaledContents">
+          <bool>true</bool>
+         </property>
+         <property name="fixedSize">
+          <size>
+           <width>400</width>
+           <height>300</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_npp">
+         <property name="text">
+          <string>NPP</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+         <property name="scaledContents">
+          <bool>true</bool>
+         </property>
+         <property name="fixedSize">
+          <size>
+           <width>400</width>
+           <height>300</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <!-- 첫 번째 처리 시간 행 -->
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_row2">
+       <item>
+        <widget class="QLabel" name="label_opencv_time">
+         <property name="text">
+          <string>Processing Time: N/A</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignLeft</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_ipp_time">
+         <property name="text">
+          <string>Processing Time: N/A</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignLeft</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_npp_time">
+         <property name="text">
+          <string>Processing Time: N/A</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignLeft</set>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <!-- 두 번째 이미지 행 -->
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_row3">
+       <item>
+        <widget class="QLabel" name="label_cuda">
+         <property name="text">
+          <string>CUDA</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+         <property name="scaledContents">
+          <bool>true</bool>
+         </property>
+         <property name="fixedSize">
+          <size>
+           <width>400</width>
+           <height>300</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_cudakernel">
+         <property name="text">
+          <string>CUDA Kernel</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+         <property name="scaledContents">
+          <bool>true</bool>
+         </property>
+         <property name="fixedSize">
+          <size>
+           <width>400</width>
+           <height>300</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_gstreamer">
+         <property name="text">
+          <string>GStreamer</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+         <property name="scaledContents">
+          <bool>true</bool>
+         </property>
+         <property name="fixedSize">
+          <size>
+           <width>400</width>
+           <height>300</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <!-- 두 번째 처리 시간 행 -->
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_row4">
+       <item>
+        <widget class="QLabel" name="label_cuda_time">
+         <property name="text">
+          <string>Processing Time: N/A</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignLeft</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_cudakernel_time">
+         <property name="text">
+          <string>Processing Time: N/A</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignLeft</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_gstreamer_time">
+         <property name="text">
+          <string>Processing Time: N/A</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignLeft</set>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+</ui>

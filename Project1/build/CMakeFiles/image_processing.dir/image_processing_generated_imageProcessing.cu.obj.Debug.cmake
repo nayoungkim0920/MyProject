@@ -52,6 +52,7 @@
 
 cmake_policy(PUSH)
 cmake_policy(SET CMP0007 NEW)
+cmake_policy(SET CMP0010 NEW)
 if(NOT generated_file)
   message(FATAL_ERROR "You must specify generated_file on the command line")
 endif()
@@ -61,8 +62,8 @@ set(CMAKE_COMMAND "C:/Program Files/CMake/bin/cmake.exe") # path
 set(source_file "C:/myLab/Project1/Project1/imageProcessing.cu") # path
 set(NVCC_generated_dependency_file "C:/myLab/Project1/Project1/build/CMakeFiles/image_processing.dir//image_processing_generated_imageProcessing.cu.obj.NVCC-depend") # path
 set(cmake_dependency_file "C:/myLab/Project1/Project1/build/CMakeFiles/image_processing.dir//image_processing_generated_imageProcessing.cu.obj.depend") # path
-set(CUDA_make2cmake "C:/Program Files/CMake/share/cmake-3.29/Modules/FindCUDA/make2cmake.cmake") # path
-set(CUDA_parse_cubin "C:/Program Files/CMake/share/cmake-3.29/Modules/FindCUDA/parse_cubin.cmake") # path
+set(CUDA_make2cmake "C:/libtorch/share/cmake/Caffe2/Modules_CUDA_fix/upstream/FindCUDA/make2cmake.cmake") # path
+set(CUDA_parse_cubin "C:/libtorch/share/cmake/Caffe2/Modules_CUDA_fix/upstream/FindCUDA/parse_cubin.cmake") # path
 set(build_cubin OFF) # bool
 set(CUDA_HOST_COMPILER "$(VCInstallDir)Tools/MSVC/$(VCToolsVersion)/bin/Host$(Platform)/$(PlatformTarget)") # path
 # We won't actually use these variables for now, but we need to set this, in
@@ -72,14 +73,14 @@ set(generated_file_internal "C:/myLab/Project1/Project1/build/CMakeFiles/image_p
 set(generated_cubin_file_internal "C:/myLab/Project1/Project1/build/CMakeFiles/image_processing.dir//$(Configuration)/image_processing_generated_imageProcessing.cu.obj.cubin.txt") # path
 
 set(CUDA_NVCC_EXECUTABLE "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.1/bin/nvcc.exe") # path
-set(CUDA_NVCC_FLAGS -std=c++14;--expt-relaxed-constexpr;-gencode;arch=compute_86,code=sm_86 ;; ) # list
+set(CUDA_NVCC_FLAGS -DONNX_NAMESPACE=onnx_c2;-gencode;arch=compute_89,code=sm_89;-Xcudafe;--diag_suppress=cc_clobber_ignored,--diag_suppress=field_without_dll_interface,--diag_suppress=base_class_has_different_dll_interface,--diag_suppress=dll_interface_conflict_none_assumed,--diag_suppress=dll_interface_conflict_dllexport_assumed,--diag_suppress=bad_friend_decl;--Werror;cross-execution-space-call;--no-host-device-move-forward;--expt-relaxed-constexpr;--expt-extended-lambda;-std=c++14;--expt-relaxed-constexpr;-gencode;arch=compute_86,code=sm_86 ;; ) # list
 # Build specific configuration flags
 set(CUDA_NVCC_FLAGS_DEBUG  ; )
 set(CUDA_NVCC_FLAGS_RELEASE  ; )
 set(CUDA_NVCC_FLAGS_MINSIZEREL  ; )
 set(CUDA_NVCC_FLAGS_RELWITHDEBINFO  ; )
 set(nvcc_flags -m64) # list
-set(CUDA_NVCC_INCLUDE_DIRS [==[C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.1/include;C:/Program Files (x86)/Intel/oneAPI/ipp/2021.11/include;C:/gstreamer/1.0/msvc_x86_64/include/gstreamer-1.0;C:/gstreamer/1.0/msvc_x86_64/include/glib-2.0;C:/gstreamer/1.0/msvc_x86_64/lib/glib-2.0/include;C:/myLab/Project1/Project1/imageProcessingLib;C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.1/include;C:/opencv/build;C:/opencv/sources/include;C:/opencv_contrib/modules/cudev/include;C:/opencv/sources/modules/core/include;C:/opencv_contrib/modules/cudaarithm/include;C:/opencv/sources/modules/flann/include;C:/opencv/sources/modules/imgproc/include;C:/opencv_contrib/modules/intensity_transform/include;C:/opencv/sources/modules/ml/include;C:/opencv_contrib/modules/phase_unwrapping/include;C:/opencv_contrib/modules/plot/include;C:/opencv_contrib/modules/quality/include;C:/opencv_contrib/modules/reg/include;C:/opencv_contrib/modules/signal/include;C:/opencv_contrib/modules/surface_matching/include;C:/opencv_contrib/modules/cudafilters/include;C:/opencv_contrib/modules/cudaimgproc/include;C:/opencv_contrib/modules/cudawarping/include;C:/opencv/sources/modules/dnn/include;C:/opencv_contrib/modules/dnn_superres/include;C:/opencv/sources/modules/features2d/include;C:/opencv_contrib/modules/fuzzy/include;C:/opencv_contrib/modules/hfs/include;C:/opencv_contrib/modules/img_hash/include;C:/opencv/sources/modules/imgcodecs/include;C:/opencv_contrib/modules/line_descriptor/include;C:/opencv/sources/modules/photo/include;C:/opencv_contrib/modules/saliency/include;C:/opencv_contrib/modules/text/include;C:/opencv/sources/modules/videoio/include;C:/opencv_contrib/modules/xphoto/include;C:/opencv/sources/modules/calib3d/include;C:/opencv_contrib/modules/cudacodec/include;C:/opencv_contrib/modules/cudafeatures2d/include;C:/opencv_contrib/modules/cudastereo/include;C:/opencv_contrib/modules/datasets/include;C:/opencv/sources/modules/highgui/include;C:/opencv_contrib/modules/mcc/include;C:/opencv/sources/modules/objdetect/include;C:/opencv_contrib/modules/rapid/include;C:/opencv_contrib/modules/rgbd/include;C:/opencv_contrib/modules/shape/include;C:/opencv_contrib/modules/structured_light/include;C:/opencv/sources/modules/ts/include;C:/opencv/sources/modules/video/include;C:/opencv_contrib/modules/wechat_qrcode/include;C:/opencv_contrib/modules/xfeatures2d/include;C:/opencv_contrib/modules/ximgproc/include;C:/opencv_contrib/modules/xobjdetect/include;C:/opencv_contrib/modules/aruco/include;C:/opencv_contrib/modules/bgsegm/include;C:/opencv_contrib/modules/bioinspired/include;C:/opencv_contrib/modules/ccalib/include;C:/opencv_contrib/modules/cudabgsegm/include;C:/opencv_contrib/modules/cudalegacy/include;C:/opencv_contrib/modules/cudaobjdetect/include;C:/opencv_contrib/modules/dnn_objdetect/include;C:/opencv_contrib/modules/dpm/include;C:/opencv_contrib/modules/face/include;C:/opencv/sources/modules/gapi/include;C:/opencv_contrib/modules/optflow/include;C:/opencv/sources/modules/stitching/include;C:/opencv_contrib/modules/tracking/include;C:/opencv_contrib/modules/cudaoptflow/include;C:/opencv_contrib/modules/stereo/include;C:/opencv_contrib/modules/superres/include;C:/opencv_contrib/modules/videostab/include;C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.1/include;C:/Program Files (x86)/Intel/oneAPI/ipp/2021.11/include;C:/gstreamer/1.0/msvc_x86_64/include/gstreamer-1.0;C:/gstreamer/1.0/msvc_x86_64/lib/gstreamer-1.0/include]==]) # list (needs to be in lua quotes to address backslashes)
+set(CUDA_NVCC_INCLUDE_DIRS [==[C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.1/include;C:/Program Files (x86)/Intel/oneAPI/ipp/2021.11/include;C:/gstreamer/1.0/msvc_x86_64/include/gstreamer-1.0;C:/gstreamer/1.0/msvc_x86_64/include/glib-2.0;C:/gstreamer/1.0/msvc_x86_64/lib/glib-2.0/include;C:/myLab/Project1/Project1/imageProcessingLib;C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.1/include;C:/opencv/build;C:/opencv/sources/include;C:/opencv_contrib/modules/cudev/include;C:/opencv/sources/modules/core/include;C:/opencv_contrib/modules/cudaarithm/include;C:/opencv/sources/modules/flann/include;C:/opencv/sources/modules/imgproc/include;C:/opencv_contrib/modules/intensity_transform/include;C:/opencv/sources/modules/ml/include;C:/opencv_contrib/modules/phase_unwrapping/include;C:/opencv_contrib/modules/plot/include;C:/opencv_contrib/modules/quality/include;C:/opencv_contrib/modules/reg/include;C:/opencv_contrib/modules/signal/include;C:/opencv_contrib/modules/surface_matching/include;C:/opencv_contrib/modules/cudafilters/include;C:/opencv_contrib/modules/cudaimgproc/include;C:/opencv_contrib/modules/cudawarping/include;C:/opencv/sources/modules/dnn/include;C:/opencv_contrib/modules/dnn_superres/include;C:/opencv/sources/modules/features2d/include;C:/opencv_contrib/modules/fuzzy/include;C:/opencv_contrib/modules/hfs/include;C:/opencv_contrib/modules/img_hash/include;C:/opencv/sources/modules/imgcodecs/include;C:/opencv_contrib/modules/line_descriptor/include;C:/opencv/sources/modules/photo/include;C:/opencv_contrib/modules/saliency/include;C:/opencv_contrib/modules/text/include;C:/opencv/sources/modules/videoio/include;C:/opencv_contrib/modules/xphoto/include;C:/opencv/sources/modules/calib3d/include;C:/opencv_contrib/modules/cudacodec/include;C:/opencv_contrib/modules/cudafeatures2d/include;C:/opencv_contrib/modules/cudastereo/include;C:/opencv_contrib/modules/datasets/include;C:/opencv/sources/modules/highgui/include;C:/opencv_contrib/modules/mcc/include;C:/opencv/sources/modules/objdetect/include;C:/opencv_contrib/modules/rapid/include;C:/opencv_contrib/modules/rgbd/include;C:/opencv_contrib/modules/shape/include;C:/opencv_contrib/modules/structured_light/include;C:/opencv/sources/modules/ts/include;C:/opencv/sources/modules/video/include;C:/opencv_contrib/modules/wechat_qrcode/include;C:/opencv_contrib/modules/xfeatures2d/include;C:/opencv_contrib/modules/ximgproc/include;C:/opencv_contrib/modules/xobjdetect/include;C:/opencv_contrib/modules/aruco/include;C:/opencv_contrib/modules/bgsegm/include;C:/opencv_contrib/modules/bioinspired/include;C:/opencv_contrib/modules/ccalib/include;C:/opencv_contrib/modules/cudabgsegm/include;C:/opencv_contrib/modules/cudalegacy/include;C:/opencv_contrib/modules/cudaobjdetect/include;C:/opencv_contrib/modules/dnn_objdetect/include;C:/opencv_contrib/modules/dpm/include;C:/opencv_contrib/modules/face/include;C:/opencv/sources/modules/gapi/include;C:/opencv_contrib/modules/optflow/include;C:/opencv/sources/modules/stitching/include;C:/opencv_contrib/modules/tracking/include;C:/opencv_contrib/modules/cudaoptflow/include;C:/opencv_contrib/modules/stereo/include;C:/opencv_contrib/modules/superres/include;C:/opencv_contrib/modules/videostab/include;C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.1/include;C:/Program Files (x86)/Intel/oneAPI/ipp/2021.11/include;C:/gstreamer/1.0/msvc_x86_64/include/gstreamer-1.0;C:/gstreamer/1.0/msvc_x86_64/lib/gstreamer-1.0/include;C:/libtorch/include]==]) # list (needs to be in lua quotes to address backslashes)
 string(REPLACE "\\" "/" CUDA_NVCC_INCLUDE_DIRS "${CUDA_NVCC_INCLUDE_DIRS}")
 set(CUDA_NVCC_COMPILE_DEFINITIONS [==[_ITERATOR_DEBUG_LEVEL=2]==]) # list (needs to be in lua quotes see #16510 ).
 set(format_flag "-c") # string
@@ -163,7 +164,7 @@ macro(cuda_execute_process status command)
     # copy and paste a runnable command line.
     set(cuda_execute_process_string)
     foreach(arg ${ARGN})
-      # If there are quotes, escape them, so they come through.
+      # If there are quotes, excape them, so they come through.
       string(REPLACE "\"" "\\\"" arg ${arg})
       # Args with spaces need quotes around them to get them to be parsed as a single argument.
       if(arg MATCHES " ")
@@ -182,17 +183,13 @@ endmacro()
 # Delete the target file
 cuda_execute_process(
   "Removing ${generated_file}"
-  COMMAND "${CMAKE_COMMAND}" -E rm -f "${generated_file}"
+  COMMAND "${CMAKE_COMMAND}" -E remove "${generated_file}"
   )
 
 # For CUDA 2.3 and below, -G -M doesn't work, so remove the -G flag
 # for dependency generation and hope for the best.
 set(depends_CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS}")
 set(CUDA_VERSION 12.1)
-if(CUDA_VERSION VERSION_LESS "3.0")
-  # Note that this will remove all occurrences of -G.
-  list(REMOVE_ITEM depends_CUDA_NVCC_FLAGS "-G")
-endif()
 
 # nvcc doesn't define __CUDACC__ for some reason when generating dependency files.  This
 # can cause incorrect dependencies when #including files based on this macro which is
@@ -249,7 +246,7 @@ endif()
 # Delete the temporary file
 cuda_execute_process(
   "Removing ${cmake_dependency_file}.tmp and ${NVCC_generated_dependency_file}"
-  COMMAND "${CMAKE_COMMAND}" -E rm -f "${cmake_dependency_file}.tmp" "${NVCC_generated_dependency_file}"
+  COMMAND "${CMAKE_COMMAND}" -E remove "${cmake_dependency_file}.tmp" "${NVCC_generated_dependency_file}"
   )
 
 if(CUDA_result)
@@ -275,7 +272,7 @@ if(CUDA_result)
   # Since nvcc can sometimes leave half done files make sure that we delete the output file.
   cuda_execute_process(
     "Removing ${generated_file}"
-    COMMAND "${CMAKE_COMMAND}" -E rm -f "${generated_file}"
+    COMMAND "${CMAKE_COMMAND}" -E remove "${generated_file}"
     )
   message(FATAL_ERROR "Error generating file ${generated_file}")
 else()

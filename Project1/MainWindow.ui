@@ -241,9 +241,16 @@
     <addaction name="actionLaplacianFilter"/> <!-- Laplacian Filter 추가 -->
     <addaction name="actionBilateralFilter"/> <!-- Bilateral Filter 추가 -->
    </widget>
+   <widget class="QMenu" name="menuDetect"> <!-- Detect 메뉴 추가 -->
+    <property name="title">
+     <string>Detect</string>
+    </property>
+    <addaction name="actionYOLOv5"/> <!-- YOLOv5 메뉴 항목 추가 -->
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuFilters"/>
+   <addaction name="menuDetect"/> <!-- Detect 메뉴 추가 -->
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QToolBar" name="fileToolBar">
@@ -364,6 +371,11 @@
   <action name="actionBilateralFilter">
    <property name="text">
     <string>&amp;Bilateral Filter</string>
+   </property>
+  </action>
+  <action name="actionYOLOv5"> <!-- YOLOv5 액션 추가 -->
+   <property name="text">
+    <string>&amp;YOLOv5</string>
    </property>
   </action>
  </widget>

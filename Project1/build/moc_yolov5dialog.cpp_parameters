@@ -79,5 +79,5 @@
 -DWIN32
 --compiler-flavor=msvc
 -o
-C:/myLab/Project1/Project1/build/moc_ImageProcessor.cpp
-C:/myLab/Project1/Project1/ImageProcessor.h
+C:/myLab/Project1/Project1/build/moc_yolov5dialog.cpp
+C:/myLab/Project1/Project1/yolov5dialog.h

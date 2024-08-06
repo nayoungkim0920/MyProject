@@ -22,9 +22,7 @@ MainWindow::MainWindow(QWidget* parent)
 
     //처음로딩 후 필터처리가 너무 느려 추가함
     imageProcessor->initializeCUDA();
-
     connectImageProcessor();
-
     setInitialWindowGeometry();
 }
 
@@ -522,6 +520,16 @@ void MainWindow::handleImageProcessed(QVector<ImageProcessor::ProcessingResult> 
 
 }
 
+void MainWindow::openYOLOv5Dialog()
+{
+    YOLOv5Dialog dialog(this);
+
+    // 다이얼로그에 이미지 설정
+    dialog.setImages(currentImageOpenCV, currentImageIPP, currentImageNPP
+                    , currentImageCUDA, currentImageCUDAKernel, currentImageGStreamer);
+
+    dialog.exec();
+}
 
 void MainWindow::connectActions()
 {
@@ -544,6 +552,8 @@ void MainWindow::connectActions()
     connect(ui->actionSobelFilter, &QAction::triggered, this, &MainWindow::sobelFilter);
 
     connect(ui->actionFirst, &QAction::triggered, this, &MainWindow::first);
+
+    connect(ui->actionYOLOv5, &QAction::triggered, this, &MainWindow::openYOLOv5Dialog);
 
 }
 

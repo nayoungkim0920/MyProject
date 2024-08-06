@@ -11,6 +11,7 @@
 #include <QGuiApplication>
 #include "ImageProcessor.h"
 #include "ui_MainWindow.h"
+#include "yolov5dialog.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -43,6 +44,7 @@ private slots:
     void first();
     void displayImage(cv::Mat image, QLabel* label);
     void handleImageProcessed(QVector<ImageProcessor::ProcessingResult> results);
+    void openYOLOv5Dialog();
 
 private:
     Ui::MainWindow* ui;

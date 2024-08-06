@@ -7,6 +7,17 @@ find_package(Qt6 REQUIRED COMPONENTS Widgets Core Gui)
 find_package(OpenCV REQUIRED COMPONENTS core imgproc highgui cudaarithm cudafilters cudawarping cudacodec cudafeatures2d cudaimgproc)
 find_package(CUDA REQUIRED)
 
+# LibTorch 설정
+set(TORCH_ROOT "C:/libtorch")
+#if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+#    set(TORCH_ROOT "C:/myLab/libtorch_Debug")
+#else()
+#    set(TORCH_ROOT "C:/myLab/libtorch_Release")
+#endif()
+
+set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${TORCH_ROOT}")
+find_package(Torch REQUIRED)
+
 # IPP 설정
 set(IPP_ROOT "C:/Program Files (x86)/Intel/oneAPI/ipp/2021.11")
 include_directories("${IPP_ROOT}/include")
@@ -38,6 +49,7 @@ include_directories(
     ${IPP_ROOT}/include
     "${GSTREAMER_ROOT}/include/gstreamer-1.0"
     "${GSTREAMER_ROOT}/lib/gstreamer-1.0/include"
+    ${TORCH_ROOT}/include  # LibTorch 포함 디렉토리
 )
 
 # CUDA 파일 설정
@@ -47,6 +59,7 @@ set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -std=c++14 --expt-relaxed-constexpr -genc
 qt6_wrap_cpp(MOC_FILES
     MainWindow.h
     ImageProcessor.h
+    yolov5dialog.h
 )
 
 # CUDA 파일 컴파일 및 라이브러리 생성
@@ -110,6 +123,7 @@ target_link_libraries(Project1
     ${CUDA_LIBRARIES}
     ${CUDNN_LIBRARIES}
     ${GSTREAMER_LIBRARIES}
+    ${TORCH_ROOT}/lib # LibTorch 링크
 )
 
 # 빌드 후 TARGET_FILE_DIR 출력

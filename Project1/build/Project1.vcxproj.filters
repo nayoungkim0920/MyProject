@@ -16,6 +16,9 @@
     <ClCompile Include="C:\myLab\Project1\Project1\build\moc_ImageProcessor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="C:\myLab\Project1\Project1\build\moc_yolov5dialog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\ImageProcessorCUDA.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -34,12 +37,21 @@
     <ClCompile Include="..\ImageProcessorOpenCV.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\ImageTypeConverter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\yolov5dialog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="C:\myLab\Project1\Project1\MainWindow.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="C:\myLab\Project1\Project1\ImageProcessor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\AbstractImageProcessor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\ImageProcessorCUDA.h">
@@ -60,7 +72,13 @@
     <ClInclude Include="..\ImageProcessorOpenCV.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\AbstractImageProcessor.h">
+    <ClInclude Include="..\ui_MainWindow.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ui_yolov5_result.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\yolov5dialog.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -69,6 +87,9 @@
       <Filter>CMake Rules</Filter>
     </CustomBuild>
     <CustomBuild Include="C:\myLab\Project1\Project1\build\CMakeFiles\e3bfa16ae2a64154d17a0d78f504b446\moc_ImageProcessor.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\myLab\Project1\Project1\build\CMakeFiles\e3bfa16ae2a64154d17a0d78f504b446\moc_yolov5dialog.cpp.rule">
       <Filter>CMake Rules</Filter>
     </CustomBuild>
     <CustomBuild Include="C:\myLab\Project1\Project1\CMakeLists.txt" />
